@@ -1,0 +1,149 @@
+import 'dotenv/config';
+import express from 'express';
+import firebase from 'firebase';
+import admin from 'firebase-admin';
+import cors from 'cors';
+
+import axios from 'axios'
+
+import intrinioSDK from 'intrinio-sdk';
+import * as getCompanyData from './intrinio/get_company_data';
+import * as getNews from './intrinio/get_news';
+import * as getIndexData from './intrinio/get_index_data';
+import * as getSecurityData from './intrinio/get_security_data';
+import * as lookupCompany from './intrinio/get_company_fundamentals';
+
+// init firebase
+const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://tower-93be8.firebaseio.com"
+});
+
+// init intrinio
+intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_SANDBOX;
+
+const companyAPI = new intrinioSDK.CompanyApi();
+const securityAPI = new intrinioSDK.SecurityApi();
+const indexAPI = new intrinioSDK.IndexApi();
+//
+
+const expiresIn = 60 * 60 * 24 * 5 * 1000;
+
+const app = express();
+app.use(cors());
+
+function checkAuth(req, res, next) {
+  if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') { // Authorization: Bearer g1jipjgi1ifjioj
+      // Handle token presented as a Bearer token in the Authorization header
+      session = req.headers.authorization.split(' ')[1];
+      admin.auth().verifySessionCookie(
+        session, true /** checkRevoked */)
+        .then((decodedClaims) => {
+          req.user = decodedClaims.name
+          next();
+        })
+        .catch(error => {
+          // Session is unavailable or invalid. Force user to login.
+          res.status(403).send('Unauthorized');
+        });
+    } else {
+      res.status(403).send('Unauthorized');
+    }
+
+}
+
+// index
+app.get('/', async (req, res) => {
+    res.send('hello');
+});
+
+// exchange firebase token
+app.post('/getToken', function(req, res, next) {
+  idToken = req.body.token.toString();
+  admin.auth().verifyIdToken(idToken)
+  .then((decodedToken) => {
+    if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
+      admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
+        res.json({token: sessionToken});
+      });
+    }
+  })
+});
+
+// auth check
+app.use('/profile', checkAuth)
+app.get('/profile', function(req, res, next) {
+  axios.get(`https://jsonplaceholder.typicode.com/users`)
+      .then(resp => {
+        res.json(resp.data);
+      })
+});
+
+// general
+app.use('/all-news', checkAuth)
+app.get('/all-news', async (req, res) => {
+    const news = await getNews.getAllNews(companyAPI)
+    res.send(news);
+});
+
+// getCompanyFundamentals
+app.use('/company/:symbol', checkAuth)
+app.get('/company/:symbol', async (req, res) => {
+    const companyFundamentals = await getCompanyData.lookupCompany(companyAPI, req.params.symbol)
+    res.send(companyFundamentals);
+});
+
+app.use('/company-news/:symbol', checkAuth)
+app.get('/company-news/:symbol', async (req, res) => {
+    const companyNews = await getCompanyData.companyNews(companyAPI, req.params.symbol)
+    res.send(companyNews);
+});
+
+app.use('/company-fundamentals/:symbol', checkAuth)
+app.get('/company-fundamentals/:symbol', async (req, res) => {
+    const companyFundamentals = await getCompanyData.companyFundamentals(companyAPI, req.params.symbol)
+    res.send(companyFundamentals );
+});
+
+app.use('/sec-intraday-prices/:symbol', checkAuth)
+app.get('/sec-intraday-prices/:symbol', async( req, res ) => {
+    const intradayPrices= await getSecurityData.getIntradayPrices(securityAPI, req.params.symbol)
+})
+
+app.use('/sec-current-price/:symbol', checkAuth)
+app.get('/sec-current-price/:symbol', async( req, res ) => {
+    const intradayPrices= await getSecurityData.getRealtimePrice(securityAPI, req.params.symbol)
+    res.send(intradayPrices)
+})
+
+app.use('/search/:query', checkAuth)
+app.get('/search/:query', async (req, res) => {
+    const query = req.query["search"]
+    const results = await getCompanyData.searchCompanies(companyAPI, query)
+    res.send(results);
+});
+
+app.use('/search-sec/:query', checkAuth)
+app.get('/search-sec/:query', async (req, res) => {
+    const query = req.query["search"]
+    const results = await getCompanyData.searchSec(securityAPI, query)
+    res.send(results);
+});
+
+app.use('/get-index-price/:symbol', checkAuth)
+app.get('/get-index-price/:symbol', async(req,res) => {
+    const level = await getIndexData.getIndexPrice(indexAPI, req.params.symbol)
+    res.json({'price': level})
+});
+
+app.use('/index-historical/:symbol', checkAuth)
+app.get('/index-historical/:symbol', async (req, res) => {
+    const results = await getIndexData.indexHistorical(indexAPI, req.params.symbol)
+    res.send(results);
+});
+
+app.listen(process.env.PORT, () =>
+    console.log(`listening on ${process.env.PORT}`)
+);
