@@ -28,9 +28,15 @@ intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.en
 const companyAPI = new intrinioSDK.CompanyApi();
 const securityAPI = new intrinioSDK.SecurityApi();
 const indexAPI = new intrinioSDK.IndexApi();
-//
 
+// configure secure cookies
 const expiresIn = 60 * 60 * 24 * 5 * 1000;
+const cookieParams = {
+  maxAge: expiresIn,
+  httpOnly: true,  // dont let browser javascript access cookie ever
+  secure: true, // only use cookie over https
+  ephemeral: true // delete this cookie while browser close
+}
 
 // configure CORS
 var corsOptions = {
@@ -83,7 +89,7 @@ app.post('/getToken', function(req, res, next) {
 
     } else if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
 
-      admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
+      admin.auth().createSessionCookie(idToken, cookieParams).then((sessionToken) => {
 
         res.cookie('access_token', 'Bearer ' + sessionToken, {
           expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
@@ -96,7 +102,7 @@ app.post('/getToken', function(req, res, next) {
     } else {
       res.json({status: "error", message: "Your login session has expired, please try logging in again."});
     }
-    
+
   }).catch(error => {
     res.json({status: "error", message: "Unable to verify your login information, please try logging in again."});
   })
