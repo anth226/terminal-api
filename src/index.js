@@ -69,7 +69,7 @@ app.post('/getToken', function(req, res, next) {
       admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
         res.cookie('access_token', 'Bearer ' + token, {
           expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
-        }).json({"success": "success"});
+        }).end(JSON.stringify({status: "success"}));
       });
     }
   })
