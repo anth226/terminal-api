@@ -73,20 +73,32 @@ app.get('/', async (req, res) => {
 // exchange firebase token
 app.post('/getToken', function(req, res, next) {
   const idToken = req.body.token.toString();
-  console.log(idToken);
+
   admin.auth().verifyIdToken(idToken)
   .then((decodedToken) => {
-    if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
+
+    if(decodedToken.email_verified == false) {
+
+      res.json({ status: "verify_email", message: "Please verify your email address: " + decodedToken.email });
+
+    } else if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
+
       admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
+
         res.cookie('access_token', 'Bearer ' + sessionToken, {
           expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
         }).end(JSON.stringify({status: "success"}));
+
       }).catch(error => {
-        res.send("1"+error);
+        res.json({status:"error", message: "Unable to create session token, please try logging in again."});
       });
+
+    } else {
+      res.json({status: "error", message: "Your login session has expired, please try logging in again."});
     }
+    
   }).catch(error => {
-    res.send("2"+error);
+    res.json({status: "error", message: "Unable to verify your login information, please try logging in again."});
   })
 });
 
