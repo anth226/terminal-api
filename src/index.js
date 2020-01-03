@@ -3,8 +3,8 @@ import express from 'express';
 import firebase from 'firebase';
 import admin from 'firebase-admin';
 import cors from 'cors';
-
-import axios from 'axios'
+import cookieParser from 'cookie-parser';
+import axios from 'axios';
 
 import intrinioSDK from 'intrinio-sdk';
 import * as getCompanyData from './intrinio/get_company_data';
@@ -33,11 +33,12 @@ const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
 const app = express();
 app.use(cors());
+app.use(cookieParser());
 
 function checkAuth(req, res, next) {
-  if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') { // Authorization: Bearer g1jipjgi1ifjioj
+  if (req.cookies.access_token && req.cookies.access_token.split(' ')[0] === 'Bearer') { // Authorization: Bearer g1jipjgi1ifjioj
       // Handle token presented as a Bearer token in the Authorization header
-      session = req.headers.authorization.split(' ')[1];
+      session = req.cookies.access_token.split(' ')[1];
       admin.auth().verifySessionCookie(
         session, true /** checkRevoked */)
         .then((decodedClaims) => {
@@ -66,7 +67,9 @@ app.post('/getToken', function(req, res, next) {
   .then((decodedToken) => {
     if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
       admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
-        res.json({token: sessionToken});
+        res.cookie('access_token', 'Bearer ' + token, {
+          expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
+        }).json({"success": "success"});
       });
     }
   })
