@@ -34,7 +34,7 @@ const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
 // configure CORS
 var corsOptions = {
-  origin: 'http://localhost:3001',
+  origin: 'http://localhost:3001, http://terminal-frontend.s3-website-us-east-1.amazonaws.com',
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true,
 }
