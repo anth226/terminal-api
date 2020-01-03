@@ -12,6 +12,7 @@ import * as getNews from './intrinio/get_news';
 import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
+import bodyParser from 'body-parser';
 
 // init firebase
 const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
@@ -31,14 +32,23 @@ const indexAPI = new intrinioSDK.IndexApi();
 
 const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
+// configure CORS
+var corsOptions = {
+  origin: 'http://localhost:3001',
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+  credentials: true,
+}
+
+// set up middlewares
 const app = express();
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(cookieParser());
+app.use(express.json());
 
 function checkAuth(req, res, next) {
   if (req.cookies.access_token && req.cookies.access_token.split(' ')[0] === 'Bearer') { // Authorization: Bearer g1jipjgi1ifjioj
       // Handle token presented as a Bearer token in the Authorization header
-      session = req.cookies.access_token.split(' ')[1];
+      const session = req.cookies.access_token.split(' ')[1];
       admin.auth().verifySessionCookie(
         session, true /** checkRevoked */)
         .then((decodedClaims) => {
@@ -62,16 +72,21 @@ app.get('/', async (req, res) => {
 
 // exchange firebase token
 app.post('/getToken', function(req, res, next) {
-  idToken = req.body.token.toString();
+  const idToken = req.body.token.toString();
+  console.log(idToken);
   admin.auth().verifyIdToken(idToken)
   .then((decodedToken) => {
     if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
       admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
-        res.cookie('access_token', 'Bearer ' + token, {
+        res.cookie('access_token', 'Bearer ' + sessionToken, {
           expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
         }).end(JSON.stringify({status: "success"}));
+      }).catch(error => {
+        res.send("1"+error);
       });
     }
+  }).catch(error => {
+    res.send("2"+error);
   })
 });
 
