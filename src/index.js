@@ -28,9 +28,15 @@ intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.en
 const companyAPI = new intrinioSDK.CompanyApi();
 const securityAPI = new intrinioSDK.SecurityApi();
 const indexAPI = new intrinioSDK.IndexApi();
-//
 
+// configure secure cookies
 const expiresIn = 60 * 60 * 24 * 5 * 1000;
+const cookieParams = {
+  maxAge: expiresIn,
+  httpOnly: true,  // dont let browser javascript access cookie ever
+  secure: true, // only use cookie over https
+  ephemeral: true // delete this cookie while browser close
+}
 
 const whitelist = ["http://localhost:3000"]
 // configure CORS
@@ -83,6 +89,7 @@ app.get('/', async (req, res) => {
 
 // exchange firebase token
 app.post('/getToken', function(req, res, next) {
+
     const idToken = req.body.token.toString();
     console.log(idToken);
     admin.auth().verifyIdToken(idToken)
@@ -99,6 +106,7 @@ app.post('/getToken', function(req, res, next) {
     }).catch(error => {
         res.send("2"+error);
     })
+
 });
 
 // auth check
