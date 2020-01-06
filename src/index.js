@@ -13,18 +13,24 @@ import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
 import bodyParser from 'body-parser';
+import Stripe from 'stripe';
+
+/*
+~~~~~~Configuration Stuff~~~~~~
+*/
 
 // init firebase
 const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://tower-93be8.firebaseio.com"
 });
 
+// init stripe
+const stripe = Stripe('pk_test_FeiZaW7GZitv7d2wZzwNx2Kr00FOgraGW4');
+
 // init intrinio
 intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_SANDBOX;
-
 const companyAPI = new intrinioSDK.CompanyApi();
 const securityAPI = new intrinioSDK.SecurityApi();
 const indexAPI = new intrinioSDK.IndexApi();
@@ -51,6 +57,11 @@ app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
 
+
+/*
+~~~~~~Middlewares~~~~~~
+*/
+
 function checkAuth(req, res, next) {
   if (req.cookies.access_token && req.cookies.access_token.split(' ')[0] === 'Bearer') { // Authorization: Bearer g1jipjgi1ifjioj
       // Handle token presented as a Bearer token in the Authorization header
@@ -71,13 +82,18 @@ function checkAuth(req, res, next) {
 
 }
 
+
+/*
+~~~~~~Routes~~~~~~
+*/
+
 // index
 app.get('/', async (req, res) => {
     res.send('hello');
 });
 
 // exchange firebase token
-app.post('/getToken', function(req, res, next) {
+app.post('/getToken', async (req, res) => {
   const idToken = req.body.token.toString();
 
   admin.auth().verifyIdToken(idToken)
@@ -106,6 +122,43 @@ app.post('/getToken', function(req, res, next) {
   }).catch(error => {
     res.json({status: "error", message: "Unable to verify your login information, please try logging in again."});
   })
+});
+
+app.use('/payment', checkAuth)
+app.post('/payment', async (req, res) => {
+
+  // verify firebase id token here and don't use checkAuth middleware?
+
+  const customer = await stripe.customers.create({
+
+    payment_method: req.body.payment_method,
+    email: req.body_email,
+    invoice_settings: {
+      default_payment_method: req.body.payment_method,
+    },
+
+  }).catch(error => {
+
+    res.json({status: "error"});
+    return
+
+  });
+
+  const subscription = await stripe.subscriptions.create({
+
+    customer: customer.id,
+    items: [{ plan: "prod_GTx1D3iN163Dw5" }],
+    expand: ["latest_invoice.payment_intent"]
+
+  }).catch(error => {
+
+    res.json({status: "error"});
+    return
+
+  });
+
+  // make db insert call with customer id and subscription id attached to this firebase user id
+
 });
 
 // auth check
