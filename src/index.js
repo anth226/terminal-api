@@ -18,12 +18,12 @@ import bodyParser from 'body-parser';
 const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://tower-93be8.firebaseio.com"
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://tower-93be8.firebaseio.com"
 });
 
 // init intrinio
-intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_SANDBOX;
+intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_PROD;
 
 const companyAPI = new intrinioSDK.CompanyApi();
 const securityAPI = new intrinioSDK.SecurityApi();
@@ -32,35 +32,46 @@ const indexAPI = new intrinioSDK.IndexApi();
 
 const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
+const whitelist = ["http://localhost:3000"]
 // configure CORS
 var corsOptions = {
-  origin: 'http://localhost:3001',
-  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-  credentials: true,
+    origin: function (origin, callback) {
+        //console.log(origin)
+        if (whitelist.indexOf(origin) !== -1) {
+            callback(null, true)
+        } else {
+            callback(new Error('Not allowed by CORS'))
+        }
+    },
+    optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+    credentials: true,
+    enablePreflight: true
+
 }
 
 // set up middlewares
 const app = express();
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions))
 app.use(cookieParser());
 app.use(express.json());
 
 function checkAuth(req, res, next) {
-  if (req.cookies.access_token && req.cookies.access_token.split(' ')[0] === 'Bearer') { // Authorization: Bearer g1jipjgi1ifjioj
-      // Handle token presented as a Bearer token in the Authorization header
-      const session = req.cookies.access_token.split(' ')[1];
-      admin.auth().verifySessionCookie(
-        session, true /** checkRevoked */)
-        .then((decodedClaims) => {
-          req.user = decodedClaims.name
-          next();
-        })
-        .catch(error => {
-          // Session is unavailable or invalid. Force user to login.
-          res.status(403).send('Unauthorized');
-        });
+    if (req.cookies.access_token && req.cookies.access_token.split(' ')[0] === 'Bearer') { // Authorization: Bearer g1jipjgi1ifjioj
+        // Handle token presented as a Bearer token in the Authorization header
+        const session = req.cookies.access_token.split(' ')[1];
+        admin.auth().verifySessionCookie(
+            session, true /** checkRevoked */)
+            .then((decodedClaims) => {
+                req.user = decodedClaims.name
+                next();
+            })
+            .catch(error => {
+                // Session is unavailable or invalid. Force user to login.
+                res.status(403).send('Unauthorized');
+            });
     } else {
-      res.status(403).send('Unauthorized');
+        res.status(403).send('Unauthorized');
     }
 
 }
@@ -72,31 +83,31 @@ app.get('/', async (req, res) => {
 
 // exchange firebase token
 app.post('/getToken', function(req, res, next) {
-  const idToken = req.body.token.toString();
-  console.log(idToken);
-  admin.auth().verifyIdToken(idToken)
-  .then((decodedToken) => {
-    if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
-      admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
-        res.cookie('access_token', 'Bearer ' + sessionToken, {
-          expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
-        }).end(JSON.stringify({status: "success"}));
-      }).catch(error => {
-        res.send("1"+error);
-      });
-    }
-  }).catch(error => {
-    res.send("2"+error);
-  })
+    const idToken = req.body.token.toString();
+    console.log(idToken);
+    admin.auth().verifyIdToken(idToken)
+    .then((decodedToken) => {
+        if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
+            admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
+                res.cookie('access_token', 'Bearer ' + sessionToken, {
+                    expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
+                }).end(JSON.stringify({status: "success"}));
+            }).catch(error => {
+                res.send("1"+error);
+            });
+        }
+    }).catch(error => {
+        res.send("2"+error);
+    })
 });
 
 // auth check
 app.use('/profile', checkAuth)
 app.get('/profile', function(req, res, next) {
-  axios.get(`https://jsonplaceholder.typicode.com/users`)
-      .then(resp => {
+    axios.get(`https://jsonplaceholder.typicode.com/users`)
+        .then(resp => {
         res.json(resp.data);
-      })
+    })
 });
 
 // general
@@ -163,5 +174,5 @@ app.get('/index-historical/:symbol', async (req, res) => {
 });
 
 app.listen(process.env.PORT, () =>
-    console.log(`listening on ${process.env.PORT}`)
-);
+           console.log(`listening on ${process.env.PORT}`)
+          );
