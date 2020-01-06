@@ -115,7 +115,7 @@ app.post('/getToken', async (req, res) => {
         }).end(JSON.stringify({status: "success"}));
 
       }).catch(error => {
-        res.json({status:"error", message: "Unable to create session token, please try logging in again."});
+        res.json({status:"error", message: error + " Unable to create session token, please try logging in again."});
       });
 
     } else {
