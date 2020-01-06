@@ -26,7 +26,7 @@ export function companyFundamentals(intrinioApi, ticker){
     }
 
     let res =
-        intrinioApi.getCompanyFundamentals(ticker)
+        intrinioApi.getCompanyFundamentals(ticker, opts)
     .then(function(data) {
         return data;
     })
