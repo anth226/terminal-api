@@ -46,7 +46,7 @@ const cookieParams = {
 
 // configure CORS
 var corsOptions = {
-  origin: 'http://localhost:3001, http://terminal-frontend.s3-website-us-east-1.amazonaws.com',
+  origin: 'http://localhost:3001',
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true,
 }
@@ -85,6 +85,13 @@ function checkAuth(req, res, next) {
 
 /*
 ~~~~~~Routes~~~~~~
+
+
+v  if(decodedToken.email_verified == false) {
+
+    res.json({ status: "verify_email", message: "Please verify your email address: " + decodedToken.email });
+
+  } else
 */
 
 // index
@@ -99,11 +106,7 @@ app.post('/getToken', async (req, res) => {
   admin.auth().verifyIdToken(idToken)
   .then((decodedToken) => {
 
-    if(decodedToken.email_verified == false) {
-
-      res.json({ status: "verify_email", message: "Please verify your email address: " + decodedToken.email });
-
-    } else if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
+   if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
 
       admin.auth().createSessionCookie(idToken, cookieParams).then((sessionToken) => {
 
