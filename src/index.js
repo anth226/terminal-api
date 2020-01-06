@@ -30,7 +30,7 @@ admin.initializeApp({
 const stripe = Stripe('pk_test_FeiZaW7GZitv7d2wZzwNx2Kr00FOgraGW4');
 
 // init intrinio
-intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_SANDBOX;
+intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_PROD;
 const companyAPI = new intrinioSDK.CompanyApi();
 const securityAPI = new intrinioSDK.SecurityApi();
 const indexAPI = new intrinioSDK.IndexApi();
@@ -108,11 +108,9 @@ app.post('/getToken', async (req, res) => {
 
    if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
 
-      admin.auth().createSessionCookie(idToken, cookieParams).then((sessionToken) => {
+      admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
 
-        res.cookie('access_token', 'Bearer ' + sessionToken, {
-          expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
-        }).end(JSON.stringify({status: "success"}));
+        res.cookie('access_token', 'Bearer ' + sessionToken, cookieParams).end(JSON.stringify({status: "success"}));
 
       }).catch(error => {
         res.json({status:"error", message: error + " Unable to create session token, please try logging in again."});
