@@ -38,3 +38,24 @@ export function getRealtimePrice(intrinioApi, identifier) {
 
     return res;
 }
+
+export function getHistoricalData(intrinioApi, identifier) {
+
+  var opts = {
+    'frequency': "daily", // String | Return historical data in the given frequency
+    'type': null, // String | Filter by type, when applicable
+    'startDate': new Date("2018-01-01"), // Date | Get historical data on or after this date
+    'endDate': null, // Date | Get historical date on or before this date
+    'sortOrder': "desc", // String | Sort by date `asc` or `desc`
+    'pageSize': 100, // Number | The number of results to return
+    'nextPage': null // String | Gets the next page of data from a previous API call
+  };
+
+  let res = intrinioApi.getSecurityHistoricalData(identifier, "adj_close_price", opts).then(function(data) {
+    return data;
+  }, function(error) {
+    return error;
+  });
+
+  return res
+}
