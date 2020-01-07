@@ -12,6 +12,7 @@ import * as getNews from './intrinio/get_news';
 import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
+import * as getGainersLosers from './polygon/get_gainers_losers';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
 
@@ -54,7 +55,6 @@ var corsOptions = {
     origin: `http://${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`,
     optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
     credentials: true,
-
 }
 
 // set up middlewares
@@ -179,72 +179,79 @@ app.get('/profile', function(req, res, next) {
 });
 
 // general
-app.use('/all-news', checkAuth)
+//app.use('/all-news', checkAuth)
 app.get('/all-news', async (req, res) => {
     const news = await getNews.getAllNews(companyAPI)
     res.send(news);
 });
 
 // getCompanyFundamentals
-app.use('/company/:symbol', checkAuth)
+//app.use('/company/:symbol', checkAuth)
 app.get('/company/:symbol', async (req, res) => {
     const companyFundamentals = await getCompanyData.lookupCompany(companyAPI, req.params.symbol)
     res.send(companyFundamentals);
 });
 
-app.use('/company-news/:symbol', checkAuth)
+//app.use('/company-news/:symbol', checkAuth)
 app.get('/company-news/:symbol', async (req, res) => {
     const companyNews = await getCompanyData.companyNews(companyAPI, req.params.symbol)
     res.send(companyNews);
 });
 
-app.use('/company-fundamentals/:symbol', checkAuth)
+//app.use('/company-fundamentals/:symbol', checkAuth)
 app.get('/company-fundamentals/:symbol', async (req, res) => {
     const companyFundamentals = await getCompanyData.companyFundamentals(companyAPI, req.params.symbol)
     res.send(companyFundamentals );
 });
 
-app.use('/sec-intraday-prices/:symbol', checkAuth)
+//app.use('/sec-intraday-prices/:symbol', checkAuth)
 app.get('/sec-intraday-prices/:symbol', async( req, res ) => {
     const intradayPrices= await getSecurityData.getIntradayPrices(securityAPI, req.params.symbol)
 })
 
-app.use('/sec-current-price/:symbol', checkAuth)
+//app.use('/sec-current-price/:symbol', checkAuth)
 app.get('/sec-current-price/:symbol', async( req, res ) => {
     const intradayPrices= await getSecurityData.getRealtimePrice(securityAPI, req.params.symbol)
     res.send(intradayPrices)
 })
 
-app.use('/sec-historical-price/:symbol', checkAuth)
+//app.use('/sec-historical-price/:symbol', checkAuth)
 app.get('/sec-historical-price/:symbol', async( req, res ) => {
     const intradayPrices= await getSecurityData.getHistoricalData(securityAPI, req.params.symbol)
     res.send(intradayPrices)
 })
 
-app.use('/search/:query', checkAuth)
+//app.use('/search/:query', checkAuth)
 app.get('/search/:query', async (req, res) => {
     const query = req.query["search"]
     const results = await getCompanyData.searchCompanies(companyAPI, query)
     res.send(results);
 });
 
-app.use('/search-sec/:query', checkAuth)
+//app.use('/search-sec/:query', checkAuth)
 app.get('/search-sec/:query', async (req, res) => {
     const query = req.query["search"]
     const results = await getCompanyData.searchSec(securityAPI, query)
     res.send(results);
 });
 
-app.use('/get-index-price/:symbol', checkAuth)
+//app.use('/get-index-price/:symbol', checkAuth)
 app.get('/get-index-price/:symbol', async(req,res) => {
     const level = await getIndexData.getIndexPrice(indexAPI, req.params.symbol)
     res.json({'price': level})
 });
 
-app.use('/index-historical/:symbol', checkAuth)
+//app.use('/index-historical/:symbol', checkAuth)
 app.get('/index-historical/:symbol', async (req, res) => {
     const results = await getIndexData.indexHistorical(indexAPI, req.params.symbol)
     res.send(results);
+});
+
+
+/// POLYGON GAINERS LOSERS
+app.get('/gainers', async (req, res) => {
+    const gainers = await getGainersLosers.getGainers()
+    res.send(gainers);
 });
 
 app.listen(process.env.PORT, () =>
