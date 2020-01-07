@@ -24,7 +24,7 @@ export function getGainers() {
     //function getGainers() {
     let gainers = axios.get(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/gainers?apiKey=${process.env.POLYGON_API_KEY}`)
         .then(function(res) {
-        return(res)
+        return res
 
     }).catch(function(err){
         return err
