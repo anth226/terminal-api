@@ -51,7 +51,7 @@ const cookieParams = {
 const whitelist = ["http://localhost:3000"]
 // configure CORS
 var corsOptions = {
-    origin: 'http://' + process.env.FRONTEND_URL + ':' + process.env.FRONTEND_PORT,
+    origin: `http://${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`,
     optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
     credentials: true,
 
@@ -248,5 +248,6 @@ app.get('/index-historical/:symbol', async (req, res) => {
 });
 
 app.listen(process.env.PORT, () =>
+           //console.log(`http://${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`)
            console.log(`listening on ${process.env.PORT}`)
           );
