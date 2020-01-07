@@ -11,6 +11,7 @@ import * as getNews from './intrinio/get_news';
 import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
+import * as gainersLosers from './polygon/get_gainers_losers';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
 /*
@@ -186,6 +187,21 @@ app.get('/index-historical/:symbol', async (req, res) => {
     const results = await getIndexData.indexHistorical(indexAPI, req.params.symbol)
     res.send(results);
 });
+
+app.use('/gainers', checkAuth)
+app.get('/gainers', async (req, res) => {
+    const gainers = await gainersLosers.getGainers()
+    console.log(gainers)
+    res.send(gainers);
+});
+
+app.use('/losers', checkAuth)
+app.get('/losers', async (req, res) => {
+    const losers = await gainersLosers.getLosers()
+    console.log(losers.tickers)
+    res.send(losers);
+});
+
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
 );
