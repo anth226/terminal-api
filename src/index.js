@@ -31,6 +31,10 @@ const stripe = Stripe('pk_test_FeiZaW7GZitv7d2wZzwNx2Kr00FOgraGW4');
 
 // init intrinio
 intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_PROD;
+
+
+// init intrinio
+intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_PROD;
 const companyAPI = new intrinioSDK.CompanyApi();
 const securityAPI = new intrinioSDK.SecurityApi();
 const indexAPI = new intrinioSDK.IndexApi();
@@ -44,16 +48,19 @@ const cookieParams = {
     ephemeral: true // delete this cookie while browser close
 }
 
+const whitelist = ["http://localhost:3000"]
 // configure CORS
 var corsOptions = {
     origin: 'http://' + process.env.FRONTEND_URL + ':' + process.env.FRONTEND_PORT,
     optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
     credentials: true,
+
 }
 
 // set up middlewares
 const app = express();
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions))
 app.use(cookieParser());
 app.use(express.json());
 
