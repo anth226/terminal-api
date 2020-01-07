@@ -208,6 +208,12 @@ app.get('/sec-current-price/:symbol', async( req, res ) => {
     res.send(intradayPrices)
 })
 
+app.use('/sec-historical-price/:symbol', checkAuth)
+app.get('/sec-historical-price/:symbol', async( req, res ) => {
+    const intradayPrices= await getSecurityData.getHistoricalData(securityAPI, req.params.symbol)
+    res.send(intradayPrices)
+})
+
 app.use('/search/:query', checkAuth)
 app.get('/search/:query', async (req, res) => {
     const query = req.query["search"]
