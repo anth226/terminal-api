@@ -13,18 +13,28 @@ import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
 import bodyParser from 'body-parser';
+import Stripe from 'stripe';
+
+/*
+   ~~~~~~Configuration Stuff~~~~~~
+   */
 
 // init firebase
 const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
-
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     databaseURL: "https://tower-93be8.firebaseio.com"
 });
 
+// init stripe
+const stripe = Stripe('pk_test_FeiZaW7GZitv7d2wZzwNx2Kr00FOgraGW4');
+
 // init intrinio
 intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_PROD;
 
+
+// init intrinio
+intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_PROD;
 const companyAPI = new intrinioSDK.CompanyApi();
 const securityAPI = new intrinioSDK.SecurityApi();
 const indexAPI = new intrinioSDK.IndexApi();
@@ -32,26 +42,18 @@ const indexAPI = new intrinioSDK.IndexApi();
 // configure secure cookies
 const expiresIn = 60 * 60 * 24 * 5 * 1000;
 const cookieParams = {
-  maxAge: expiresIn,
-  httpOnly: true,  // dont let browser javascript access cookie ever
-  secure: true, // only use cookie over https
-  ephemeral: true // delete this cookie while browser close
+    maxAge: expiresIn,
+    httpOnly: true,  // dont let browser javascript access cookie ever
+    secure: true, // only use cookie over https
+    ephemeral: true // delete this cookie while browser close
 }
 
 const whitelist = ["http://localhost:3000"]
 // configure CORS
 var corsOptions = {
-    origin: function (origin, callback) {
-        //console.log(origin)
-        if (whitelist.indexOf(origin) !== -1) {
-            callback(null, true)
-        } else {
-            callback(new Error('Not allowed by CORS'))
-        }
-    },
+    origin: 'http://' + process.env.FRONTEND_URL + ':' + process.env.FRONTEND_PORT,
     optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
     credentials: true,
-    enablePreflight: true
 
 }
 
@@ -61,6 +63,11 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions))
 app.use(cookieParser());
 app.use(express.json());
+
+
+/*
+   ~~~~~~Middlewares~~~~~~
+   */
 
 function checkAuth(req, res, next) {
     if (req.cookies.access_token && req.cookies.access_token.split(' ')[0] === 'Bearer') { // Authorization: Bearer g1jipjgi1ifjioj
@@ -82,30 +89,83 @@ function checkAuth(req, res, next) {
 
 }
 
+
+/*
+   ~~~~~~Routes~~~~~~
+
+
+   v  if(decodedToken.email_verified == false) {
+
+   res.json({ status: "verify_email", message: "Please verify your email address: " + decodedToken.email });
+
+   } else
+   */
+
 // index
 app.get('/', async (req, res) => {
     res.send('hello');
 });
 
 // exchange firebase token
-app.post('/getToken', function(req, res, next) {
-
+app.post('/getToken', async (req, res) => {
     const idToken = req.body.token.toString();
-    console.log(idToken);
+
     admin.auth().verifyIdToken(idToken)
     .then((decodedToken) => {
+
         if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
+
             admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
-                res.cookie('access_token', 'Bearer ' + sessionToken, {
-                    expires: new Date(Date.now() + 8 * 3600000) // cookie will be removed after 8 hours
-                }).end(JSON.stringify({status: "success"}));
+
+                res.cookie('access_token', 'Bearer ' + sessionToken, cookieParams).end(JSON.stringify({status: "success"}));
+
             }).catch(error => {
-                res.send("1"+error);
+                res.json({status:"error", message: error + " Unable to create session token, please try logging in again."});
             });
+
+        } else {
+            res.json({status: "error", message: "Your login session has expired, please try logging in again."});
         }
+
     }).catch(error => {
-        res.send("2"+error);
+        res.json({status: "error", message: "Unable to verify your login information, please try logging in again."});
     })
+});
+
+app.use('/payment', checkAuth)
+app.post('/payment', async (req, res) => {
+
+    // verify firebase id token here and don't use checkAuth middleware?
+
+    const customer = await stripe.customers.create({
+
+        payment_method: req.body.payment_method,
+        email: req.body_email,
+        invoice_settings: {
+            default_payment_method: req.body.payment_method,
+        },
+
+    }).catch(error => {
+
+        res.json({status: "error"});
+        return
+
+    });
+
+    const subscription = await stripe.subscriptions.create({
+
+        customer: customer.id,
+        items: [{ plan: "prod_GTx1D3iN163Dw5" }],
+        expand: ["latest_invoice.payment_intent"]
+
+    }).catch(error => {
+
+        res.json({status: "error"});
+        return
+
+    });
+
+    // make db insert call with customer id and subscription id attached to this firebase user id
 
 });
 
@@ -152,6 +212,12 @@ app.get('/sec-intraday-prices/:symbol', async( req, res ) => {
 app.use('/sec-current-price/:symbol', checkAuth)
 app.get('/sec-current-price/:symbol', async( req, res ) => {
     const intradayPrices= await getSecurityData.getRealtimePrice(securityAPI, req.params.symbol)
+    res.send(intradayPrices)
+})
+
+app.use('/sec-historical-price/:symbol', checkAuth)
+app.get('/sec-historical-price/:symbol', async( req, res ) => {
+    const intradayPrices= await getSecurityData.getHistoricalData(securityAPI, req.params.symbol)
     res.send(intradayPrices)
 })
 
