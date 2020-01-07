@@ -46,7 +46,7 @@ const cookieParams = {
 
 // configure CORS
 var corsOptions = {
-  origin: 'http://localhost:3001',
+  origin: `http://${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`,
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true,
 }
