@@ -13,6 +13,7 @@ import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
 import * as gainersLosers from './polygon/get_gainers_losers';
 import * as newsHelper from './newsApi/newsHelper';
+import * as finviz from './scrape/finviz';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
 /*
@@ -207,6 +208,12 @@ app.get('/news-sources', async (req, res) => {
     res.send(sources);
 });
 
+app.use('/all-insider', checkAuth)
+app.get('/all-insider', async (req, res) => {
+    const allInsider = await finviz.getAllInsider().then(data => data)
+    console.log(allInsider)
+    res.send(allInsider );
+});
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
 );
