@@ -12,6 +12,7 @@ import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
 import * as gainersLosers from './polygon/get_gainers_losers';
+import * as newsHelper from './newsApi/newsHelper';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
 /*
@@ -198,6 +199,12 @@ app.use('/losers', checkAuth)
 app.get('/losers', async (req, res) => {
     const losers = await gainersLosers.getLosers()
     res.send(losers);
+});
+
+app.use('/news-sources', checkAuth)
+app.get('/news-sources', async (req, res) => {
+    const sources = await newsHelper.getSources()
+    res.send(sources.sources);
 });
 
 app.listen(process.env.PORT, () =>

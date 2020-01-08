@@ -1,0 +1,13 @@
+import axios from 'axios';
+
+export function getSources(apiKey){
+    let sources = axios.get(`https://newsapi.org/v2/sources?apiKey=${apiKey}`)
+        .then(function(res) {
+            return res
+        }).catch(function(err){
+            return err
+        })
+
+        return sources.then((data) => data.data)
+}
+
