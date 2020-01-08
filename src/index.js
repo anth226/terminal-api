@@ -211,7 +211,6 @@ app.get('/news-sources', async (req, res) => {
 app.use('/all-insider', checkAuth)
 app.get('/all-insider', async (req, res) => {
     const allInsider = await finviz.getAllInsider().then(data => data)
-    console.log(allInsider)
     res.send(allInsider );
 });
 app.listen(process.env.PORT, () =>
