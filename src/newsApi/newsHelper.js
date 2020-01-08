@@ -8,6 +8,7 @@ export function getSources(apiKey){
             return err
         })
 
+        // sources.then(data => console.log(data.data))
         return sources.then((data) => data.data)
 }
 

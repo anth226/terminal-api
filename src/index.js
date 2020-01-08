@@ -203,8 +203,8 @@ app.get('/losers', async (req, res) => {
 
 app.use('/news-sources', checkAuth)
 app.get('/news-sources', async (req, res) => {
-    const sources = await newsHelper.getSources()
-    res.send(sources.sources);
+    const sources = await newsHelper.getSources(process.env.NEWS_API_KEY)
+    res.send(sources);
 });
 
 app.listen(process.env.PORT, () =>
