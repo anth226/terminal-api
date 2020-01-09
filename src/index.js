@@ -218,7 +218,14 @@ app.get('/news/headlines/:source', async (req, res) => {
 app.use('/all-insider', checkAuth)
 app.get('/all-insider', async (req, res) => {
     const allInsider = await finviz.getAllInsider().then(data => data)
-    res.send(allInsider );
+    res.send(allInsider);
+});
+
+app.use('/company-insider/:ticker', checkAuth)
+app.get('/company-insider/:ticker', async (req, res) => {
+    const companyRatings = await finviz.getCompanyRatings(req.params.ticker).then(data => data)
+    console.log(companyRatings)
+    res.send(companyRatings);
 });
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
