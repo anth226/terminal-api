@@ -211,6 +211,7 @@ app.get('/news-sources', async (req, res) => {
 app.use('/news/headlines/:source', checkAuth)
 app.get('/news/headlines/:source', async (req, res) => {
     const headlines = await newsHelper.getSourceHeadlines(process.env.NEWS_API_KEY, req.params.source)
+    console.log(headlines);
     res.send(headlines);
 });
 
