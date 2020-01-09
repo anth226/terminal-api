@@ -4,39 +4,64 @@ import cheerio from 'cheerio';
 const siteUrl = "https://finviz.com/";
 const insiderPage = "https://finviz.com/insidertrading.ashx"
 
-const fetchData = async () => {
-	const result = await axios.get(insiderPage);
-	return cheerio.load(result.data);
+const fetchDataAllInsider = async () => {
+    const result = await axios.get(insiderPage);
+    return cheerio.load(result.data);
 };
 
-const tickers = new Set();
-const owners = new Set();
-const relationships = new Set();
-const dates = new Set();
-const transactions = new Set();
-const costs = new Set();
-const numShares = new Set();
-const values = new Set();
-
-
 export async function getAllInsider()  {
-	let data = []
+    let data = []
 
-	const $ = await fetchData();
+    const $ = await fetchDataAllInsider();
 
-	$('.body-table tr td').each(function(idx, element) {
-		data.push($(element).text().trim())
-	});
+    $('.body-table tr td').each(function(idx, element) {
+        data.push($(element).text().trim())
+    });
 
-	data = data.slice(10,)
+    data = data.slice(10,)
 
-	let insiderArrays = [], chunkSize = 10;
+    let insiderArrays = [], chunkSize = 10;
 
-	while (data.length > 0) {
-		insiderArrays.push(data.splice(0, chunkSize));
-	}
+    while (data.length > 0) {
+        insiderArrays.push(data.splice(0, chunkSize));
+    }
 
 
-	return insiderArrays;
+    return insiderArrays;
 }
 
+const companyPage = "https://finviz.com/quote.ashx?t="
+
+const fetchDataCompanyRatings = async (ticker) => {
+    const result = await axios.get(companyPage + ticker);
+    return cheerio.load(result.data);
+};
+
+export async function getCompanyRatings(ticker) {
+    let data = []
+
+    const $ = await fetchDataCompanyRatings(ticker);
+
+    $('table.fullview-ratings-outer td.fullview-ratings-inner tr').each(function(idx, element) {
+        data.push($(element).text())
+    });
+
+    let splitData = []
+    for (let item of data) {
+        let colData = item.split(/\n/)
+        //console.log(colData)
+        splitData.push(colData)
+    }
+
+    let clean = [];
+    for (let row of splitData) {
+        let date = row[0].slice(0, 9)
+        let position = row[0].slice(9, )
+        row.splice(0,0, date)
+        row.splice(1,0, position)
+        row.splice(2, 1)
+        clean.push(row)
+    }
+
+    return clean;
+}
