@@ -12,3 +12,7 @@ export function getSources(apiKey){
         return sources.then((data) => data.data)
 }
 
+
+//export function getArticles(apiKey) {
+//}
+
