@@ -214,6 +214,12 @@ app.get('/news/headlines/:source', async (req, res) => {
     res.send(headlines);
 });
 
+app.use('/news/home-headlines', checkAuth)
+app.get('/news/home-headlines', async (req, res) => {
+    const headlines = await newsHelper.getHomeHeadlines(process.env.NEWS_API_KEY)
+    res.send(headlines);
+});
+
 app.use('/all-insider', checkAuth)
 app.get('/all-insider', async (req, res) => {
     const allInsider = await finviz.getAllInsider().then(data => data)
