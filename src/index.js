@@ -211,7 +211,6 @@ app.get('/news-sources', async (req, res) => {
 app.use('/news/headlines/:source', checkAuth)
 app.get('/news/headlines/:source', async (req, res) => {
     const headlines = await newsHelper.getSourceHeadlines(process.env.NEWS_API_KEY, req.params.source)
-    console.log(headlines);
     res.send(headlines);
 });
 
@@ -224,7 +223,6 @@ app.get('/all-insider', async (req, res) => {
 app.use('/company-insider/:ticker', checkAuth)
 app.get('/company-insider/:ticker', async (req, res) => {
     const companyRatings = await finviz.getCompanyRatings(req.params.ticker).then(data => data)
-    console.log(companyRatings)
     res.send(companyRatings);
 });
 app.listen(process.env.PORT, () =>
