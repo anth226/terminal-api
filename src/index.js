@@ -12,6 +12,7 @@ import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
 import * as gainersLosers from './polygon/get_gainers_losers';
+import * as forexPairs from './polygon/get_forex_last_quote';
 import * as newsHelper from './newsApi/newsHelper';
 import * as finviz from './scrape/finviz';
 import bodyParser from 'body-parser';
@@ -231,6 +232,18 @@ app.get('/company-insider/:ticker', async (req, res) => {
     const companyRatings = await finviz.getCompanyRatings(req.params.ticker).then(data => data)
     res.send(companyRatings);
 });
+
+app.use('/forex-pairs', checkAuth)
+app.get('/forex-pairs', async (req, res) => {
+    let pairs = {} 
+    pairs['EURUSD'] = await forexPairs.getLastQuoteEurUsd();
+    pairs['GBPUSD'] = await forexPairs.getLastQuoteGbpUsd();
+    pairs['USDCAD'] = await forexPairs.getLastQuoteUsdCad();
+    pairs['USDJPY'] = await forexPairs.getLastQuoteUsdJpy();
+    pairs['XAUUSD'] = await forexPairs.getLastQuoteXauUsd();
+    res.send(pairs);
+});
+
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
 );
