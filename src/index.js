@@ -14,6 +14,7 @@ import * as lookupCompany from './intrinio/get_company_fundamentals';
 import * as gainersLosers from './polygon/get_gainers_losers';
 import * as newsHelper from './newsApi/newsHelper';
 import * as finviz from './scrape/finviz';
+import * as futures from './scrape/finviz_futures';
 import * as cnn from './scrape/cnn';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
@@ -142,6 +143,12 @@ app.use('/all-news', checkAuth)
 app.get('/all-news', async (req, res) => {
     const news = await getNews.getAllNews(companyAPI)
     res.send(news);
+});
+
+app.use('/futures', checkAuth)
+app.get('/futures', async (req, res) => {
+    const futuresData = await futures.getFutures()
+    res.send(futuresData);
 });
 
 // Companies
