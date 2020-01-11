@@ -15,6 +15,7 @@ import * as gainersLosers from './polygon/get_gainers_losers';
 import * as forexPairs from './polygon/get_forex_last_quote';
 import * as newsHelper from './newsApi/newsHelper';
 import * as finviz from './scrape/finviz';
+import * as finvizForex from './scrape/finviz_forex';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
 /*
@@ -233,6 +234,14 @@ app.get('/company-insider/:ticker', async (req, res) => {
     res.send(companyRatings);
 });
 
+
+app.use('/forex', checkAuth)
+app.get('/forex', async (req, res) => {
+    const pairs = await finvizForex.getForex();
+    res.send(pairs)
+});
+
+// FROM POLYGON< SHOULD REMOVE
 app.use('/forex-pairs', checkAuth)
 app.get('/forex-pairs', async (req, res) => {
     let pairs = {} 
