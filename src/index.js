@@ -12,9 +12,11 @@ import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
 import * as gainersLosers from './polygon/get_gainers_losers';
+import * as forexPairs from './polygon/get_forex_last_quote';
 import * as newsHelper from './newsApi/newsHelper';
 import * as finviz from './scrape/finviz';
 import * as cnn from './scrape/cnn';
+import * as finvizForex from './scrape/finviz_forex';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
 
@@ -239,6 +241,11 @@ app.get('/news/headlines/:source', async (req, res) => {
 });
 
 /* Insider */
+app.use('/news/home-headlines', checkAuth)
+app.get('/news/home-headlines', async (req, res) => {
+    const headlines = await newsHelper.getHomeHeadlines(process.env.NEWS_API_KEY)
+    res.send(headlines);
+});
 
 app.use('/all-insider', checkAuth)
 app.get('/all-insider', async (req, res) => {
@@ -253,6 +260,23 @@ app.get('/company-insider/:ticker', async (req, res) => {
 });
 
 // server
+app.use('/forex', checkAuth)
+app.get('/forex', async (req, res) => {
+    const pairs = await finvizForex.getForex();
+    res.send(pairs)
+});
+
+// FROM POLYGON< SHOULD REMOVE
+app.use('/forex-pairs', checkAuth)
+app.get('/forex-pairs', async (req, res) => {
+    let pairs = {} 
+    pairs['EURUSD'] = await forexPairs.getLastQuoteEurUsd();
+    pairs['GBPUSD'] = await forexPairs.getLastQuoteGbpUsd();
+    pairs['USDCAD'] = await forexPairs.getLastQuoteUsdCad();
+    pairs['USDJPY'] = await forexPairs.getLastQuoteUsdJpy();
+    pairs['XAUUSD'] = await forexPairs.getLastQuoteXauUsd();
+    res.send(pairs);
+});
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
 );
