@@ -15,12 +15,15 @@ import * as gainersLosers from './polygon/get_gainers_losers';
 import * as forexPairs from './polygon/get_forex_last_quote';
 import * as newsHelper from './newsApi/newsHelper';
 import * as finviz from './scrape/finviz';
+import * as cnn from './scrape/cnn';
 import * as finvizForex from './scrape/finviz_forex';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
+
 /*
 ~~~~~~Configuration Stuff~~~~~~
 */
+
 // init firebase
 const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
 admin.initializeApp({
@@ -53,6 +56,7 @@ const app = express();
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
+
 /*
 ~~~~~~Middlewares~~~~~~
 */
@@ -74,6 +78,7 @@ function checkAuth(req, res, next) {
       res.status(403).send('Unauthorized');
     }
 }
+
 /*
 ~~~~~~Routes~~~~~~
 v  if(decodedToken.email_verified == false) {
@@ -133,13 +138,15 @@ app.get('/profile', function(req, res, next) {
         res.json(resp.data);
       })
 });
+
 // general
 app.use('/all-news', checkAuth)
 app.get('/all-news', async (req, res) => {
     const news = await getNews.getAllNews(companyAPI)
     res.send(news);
 });
-// getCompanyFundamentals
+
+// Companies
 app.use('/company/:symbol', checkAuth)
 app.get('/company/:symbol', async (req, res) => {
     const companyFundamentals = await getCompanyData.lookupCompany(companyAPI, req.params.symbol)
@@ -155,6 +162,9 @@ app.get('/company-fundamentals/:symbol', async (req, res) => {
     const companyFundamentals = await getCompanyData.companyFundamentals(companyAPI, req.params.symbol)
     res.send(companyFundamentals );
 });
+
+/* Securities */
+
 app.use('/sec-intraday-prices/:symbol', checkAuth)
 app.get('/sec-intraday-prices/:symbol', async( req, res ) => {
     const intradayPrices= await getSecurityData.getIntradayPrices(securityAPI, req.params.symbol)
@@ -181,6 +191,9 @@ app.get('/search-sec/:query', async (req, res) => {
     const results = await getCompanyData.searchSec(securityAPI, query)
     res.send(results);
 });
+
+/* Index Endpoints */
+
 app.use('/get-index-price/:symbol', checkAuth)
 app.get('/get-index-price/:symbol', async(req,res) => {
     const level = await getIndexData.getIndexPrice(indexAPI, req.params.symbol)
@@ -191,6 +204,15 @@ app.get('/index-historical/:symbol', async (req, res) => {
     const results = await getIndexData.indexHistorical(indexAPI, req.params.symbol)
     res.send(results);
 });
+
+app.use('/index-data', checkAuth)
+app.get('/index-data', async (req, res) => {
+    const results = await cnn.getIndexData()
+    res.json(results);
+});
+
+
+/* Gainers & Losers */
 
 app.use('/gainers', checkAuth)
 app.get('/gainers', async (req, res) => {
@@ -204,6 +226,8 @@ app.get('/losers', async (req, res) => {
     res.send(losers);
 });
 
+/* News */
+
 app.use('/news-sources', checkAuth)
 app.get('/news-sources', async (req, res) => {
     const sources = await newsHelper.getSources(process.env.NEWS_API_KEY)
@@ -216,6 +240,7 @@ app.get('/news/headlines/:source', async (req, res) => {
     res.send(headlines);
 });
 
+/* Insider */
 app.use('/news/home-headlines', checkAuth)
 app.get('/news/home-headlines', async (req, res) => {
     const headlines = await newsHelper.getHomeHeadlines(process.env.NEWS_API_KEY)
@@ -234,7 +259,7 @@ app.get('/company-insider/:ticker', async (req, res) => {
     res.send(companyRatings);
 });
 
-
+// server
 app.use('/forex', checkAuth)
 app.get('/forex', async (req, res) => {
     const pairs = await finvizForex.getForex();
@@ -252,7 +277,6 @@ app.get('/forex-pairs', async (req, res) => {
     pairs['XAUUSD'] = await forexPairs.getLastQuoteXauUsd();
     res.send(pairs);
 });
-
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
 );

@@ -34,4 +34,3 @@ export function getIndexPrice(intrinioApi, identifier) {
 
     return res;
 }
-
