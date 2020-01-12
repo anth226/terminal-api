@@ -18,12 +18,15 @@ import * as finviz from './scrape/finviz';
 import * as futures from './scrape/finviz_futures';
 import * as cnn from './scrape/cnn';
 import * as finvizForex from './scrape/finviz_forex';
+import * as nerdwallet from './scrape/nerdwallet';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
 
 /*
 ~~~~~~Configuration Stuff~~~~~~
 */
+
+nerdwallet.getAllCards()
 
 // init firebase
 const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
@@ -276,7 +279,7 @@ app.get('/forex', async (req, res) => {
 // FROM POLYGON< SHOULD REMOVE
 app.use('/forex-pairs', checkAuth)
 app.get('/forex-pairs', async (req, res) => {
-    let pairs = {} 
+    let pairs = {}
     pairs['EURUSD'] = await forexPairs.getLastQuoteEurUsd();
     pairs['GBPUSD'] = await forexPairs.getLastQuoteGbpUsd();
     pairs['USDCAD'] = await forexPairs.getLastQuoteUsdCad();
