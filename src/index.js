@@ -19,6 +19,7 @@ import * as futures from './scrape/finviz_futures';
 import * as cnn from './scrape/cnn';
 import * as finvizForex from './scrape/finviz_forex';
 import * as nerdwallet from './scrape/nerdwallet';
+import * as nerdwalletSavings from './scrape/nerdwallet_savings';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
 
@@ -26,7 +27,7 @@ import Stripe from 'stripe';
 ~~~~~~Configuration Stuff~~~~~~
 */
 
-nerdwallet.getAllCards()
+//nerdwallet.getAllCards()
 
 // init firebase
 const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
@@ -269,12 +270,24 @@ app.get('/company-insider/:ticker', async (req, res) => {
     res.send(companyRatings);
 });
 
+app.use('/company-metrics/:ticker', checkAuth)
+app.get('/company-metrics/:ticker', async (req, res) => {
+    const companyRatings = await finviz.getCompanyMetrics(req.params.ticker).then(data => data)
+    res.send(companyRatings);
+});
 // server
 app.use('/forex', checkAuth)
 app.get('/forex', async (req, res) => {
     const pairs = await finvizForex.getForex();
     res.send(pairs)
 });
+
+app.use('/savings-accounts', checkAuth)
+app.get('/savings-accounts', async (req, res) => {
+    const accounts = await nerdwalletSavings.getSavingsAccountsList();
+    res.send(accounts)
+});
+
 
 // FROM POLYGON< SHOULD REMOVE
 app.use('/forex-pairs', checkAuth)
