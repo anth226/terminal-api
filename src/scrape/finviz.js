@@ -32,7 +32,7 @@ export async function getAllInsider()  {
 
 const companyPage = "https://finviz.com/quote.ashx?t="
 
-const fetchDataCompanyRatings = async (ticker) => {
+const fetchDataCompany = async (ticker) => {
     const result = await axios.get(companyPage + ticker);
     return cheerio.load(result.data);
 };
@@ -40,7 +40,7 @@ const fetchDataCompanyRatings = async (ticker) => {
 export async function getCompanyRatings(ticker) {
     let data = []
 
-    const $ = await fetchDataCompanyRatings(ticker);
+    const $ = await fetchDataCompany(ticker);
 
     $('table.fullview-ratings-outer td.fullview-ratings-inner tr').each(function(idx, element) {
         data.push($(element).text())
@@ -65,3 +65,20 @@ export async function getCompanyRatings(ticker) {
 
     return clean;
 }
+
+
+// SCRAPE FINANCIAL RATIOS
+export async function getCompanyMetrics(ticker) {
+    let data = []
+
+    const $ = await fetchDataCompany(ticker);
+
+    $('table.snapshot-table2 tr.table-dark-row').each(function(idx, element) {
+        console.log($(element).text())
+        data.push($(element).text())
+    });
+
+    return data
+}
+
+
