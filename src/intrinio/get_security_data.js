@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export function getIntradayPrices(intrinioApi, identifier) {
     const opts = {
         'source': null, // String | Return intraday prices from the specified data source
@@ -11,24 +13,6 @@ export function getIntradayPrices(intrinioApi, identifier) {
 
     let res =
         intrinioApi.getSecurityIntradayPrices(identifier, opts)
-    .then(function(data) {
-        return data;
-    })
-    .catch(function(error) {
-        return error;
-    })
-
-    return res;
-}
-
-export function getRealtimePrice(intrinioApi, identifier) {
-
-    var opts = {
-        'source': 'iex'// String | Return the realtime price from the specified data source. If no source is specified, the best source available is used.
-    };
-
-    let res =
-        intrinioApi.getSecurityRealtimePrice(identifier, opts)
     .then(function(data) {
         return data;
     })
@@ -59,3 +43,32 @@ export function getHistoricalData(intrinioApi, identifier) {
 
   return res
 }
+
+export function getSecurityLastPrice(symbol) {
+    let lastPrice = axios.get(`https://api-v2.intrinio.com/securities/${symbol}/prices/realtime?source=iex&api_key=${process.env.INTRINIO_API_KEY_PROD}`)
+        .then(function(res) {
+        return res
+    }).catch(function(err){
+        return err
+    })
+
+    return lastPrice.then((data) => data.data)
+}
+// export function getRealtimePrice(intrinioApi, identifier) {
+
+//     var opts = {
+//         'source': 'iex'// String | Return the realtime price from the specified data source. If no source is specified, the best source available is used.
+//     };
+
+//     let res =
+//         intrinioApi.getSecurityRealtimePrice(identifier, opts)
+//     .then(function(data) {
+//         return data;
+//     })
+//     .catch(function(error) {
+//         return error;
+//     })
+
+//     return res;
+// }
+
