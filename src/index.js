@@ -233,14 +233,14 @@ app.get('/index-data', async (req, res) => {
 app.use('/gainers', checkAuth)
 app.get('/gainers', async (req, res) => {
     const gainers = await gainersLosers.getGainers()
-    console.log(gainers)
+    // console.log(gainers)
     res.send(gainers);
 });
 
 app.use('/losers', checkAuth)
 app.get('/losers', async (req, res) => {
     const losers = await gainersLosers.getLosers()
-    console.log(losers)
+    // console.log(losers)
     res.send(losers);
 });
 
