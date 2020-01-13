@@ -20,6 +20,7 @@ import * as cnn from './scrape/cnn';
 import * as finvizForex from './scrape/finviz_forex';
 import * as cnnSectors from './scrape/cnn_sectors';
 import * as nerdwallet from './scrape/nerdwallet';
+import * as finvizGroups from './scrape/finviz_groups';
 import * as nerdwalletSavings from './scrape/nerdwallet_savings';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
@@ -27,8 +28,6 @@ import Stripe from 'stripe';
 /*
 ~~~~~~Configuration Stuff~~~~~~
 */
-
-//nerdwallet.getAllCards()
 
 // init firebase
 const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
@@ -306,11 +305,18 @@ app.get('/forex-pairs', async (req, res) => {
     res.send(pairs);
 });
 
-app.use('/sector-performance', checkAuth) 
+app.use('/sector-performance', checkAuth)
 app.use('/sector-performance', async (req, res) => {
-  const sectorPerf = await cnnSectors.getSectorPerformance()
-  console.log(sectorPerf)
-  res.send(sectorPerf)
+  const sectorPerf = await finvizGroups.getSectorsPerformance();
+  console.log(sectorPerf);
+  res.send(sectorPerf);
+})
+
+app.use('/industry-performance', checkAuth)
+app.use('/industry-performance', async (req, res) => {
+  const industryPerf = await finvizGroups.getIndustriesPerformance();
+  console.log(industryPerf);
+  res.send(industryPerf);
 })
 
 app.listen(process.env.PORT, () =>
