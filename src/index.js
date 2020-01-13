@@ -179,18 +179,22 @@ app.get('/company-fundamentals/:symbol', async (req, res) => {
 
 app.use('/sec-intraday-prices/:symbol', checkAuth)
 app.get('/sec-intraday-prices/:symbol', async( req, res ) => {
-    const intradayPrices= await getSecurityData.getIntradayPrices(securityAPI, req.params.symbol)
+    const intradayPrices = await getSecurityData.getIntradayPrices(securityAPI, req.params.symbol)
 })
-app.use('/sec-current-price/:symbol', checkAuth)
-app.get('/sec-current-price/:symbol', async( req, res ) => {
-    const intradayPrices= await getSecurityData.getRealtimePrice(securityAPI, req.params.symbol)
-    res.send(intradayPrices)
+
+app.use('/sec-last-price/:symbol', checkAuth)
+app.get('/sec-last-price/:symbol', async( req, res ) => {
+    const lastPrice = await getSecurityData.getSecurityLastPrice(req.params.symbol)
+    console.log(lastPrice)
+    res.send(lastPrice)
 })
 app.use('/sec-historical-price/:symbol', checkAuth)
 app.get('/sec-historical-price/:symbol', async( req, res ) => {
     const intradayPrices = await getSecurityData.getHistoricalData(securityAPI, req.params.symbol)
     res.send(intradayPrices)
 })
+
+// SEARCH
 app.use('/search/:query', checkAuth)
 app.get('/search/:query', async (req, res) => {
     const query = req.query["search"]
