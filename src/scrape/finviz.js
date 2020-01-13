@@ -74,7 +74,7 @@ export async function getCompanyMetrics(ticker) {
     const $ = await fetchDataCompany(ticker);
 
     $('table.snapshot-table2 tr.table-dark-row').each(function(idx, element) {
-        console.log($(element).text())
+        //console.log($(element).text())
         data.push($(element).text())
     });
 

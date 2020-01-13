@@ -264,16 +264,17 @@ app.get('/all-insider', async (req, res) => {
     res.send(allInsider);
 });
 
-app.use('/company-insider/:ticker', checkAuth)
-app.get('/company-insider/:ticker', async (req, res) => {
+app.use('/company-ratings/:ticker', checkAuth)
+app.get('/company-ratings/:ticker', async (req, res) => {
     const companyRatings = await finviz.getCompanyRatings(req.params.ticker).then(data => data)
     res.send(companyRatings);
 });
 
 app.use('/company-metrics/:ticker', checkAuth)
 app.get('/company-metrics/:ticker', async (req, res) => {
-    const companyRatings = await finviz.getCompanyMetrics(req.params.ticker).then(data => data)
-    res.send(companyRatings);
+    const companyMetrics = await finviz.getCompanyMetrics(req.params.ticker).then(data => data)
+    console.log(companyMetrics)
+    res.send(companyMetrics);
 });
 // server
 app.use('/forex', checkAuth)
