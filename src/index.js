@@ -185,7 +185,6 @@ app.get('/sec-intraday-prices/:symbol', async( req, res ) => {
 app.use('/sec-last-price/:symbol', checkAuth)
 app.get('/sec-last-price/:symbol', async( req, res ) => {
     const lastPrice = await getSecurityData.getSecurityLastPrice(req.params.symbol)
-    console.log(lastPrice)
     res.send(lastPrice)
 })
 app.use('/sec-historical-price/:symbol', checkAuth)
@@ -233,14 +232,12 @@ app.get('/index-data', async (req, res) => {
 app.use('/gainers', checkAuth)
 app.get('/gainers', async (req, res) => {
     const gainers = await gainersLosers.getGainers()
-    // console.log(gainers)
     res.send(gainers);
 });
 
 app.use('/losers', checkAuth)
 app.get('/losers', async (req, res) => {
     const losers = await gainersLosers.getLosers()
-    // console.log(losers)
     res.send(losers);
 });
 
@@ -280,7 +277,6 @@ app.get('/company-ratings/:ticker', async (req, res) => {
 app.use('/company-metrics/:ticker', checkAuth)
 app.get('/company-metrics/:ticker', async (req, res) => {
     const companyMetrics = await finviz.getCompanyMetrics(req.params.ticker).then(data => data)
-    console.log(companyMetrics)
     res.send(companyMetrics);
 });
 // server
@@ -311,14 +307,12 @@ app.get('/forex-pairs', async (req, res) => {
 app.use('/sector-performance', checkAuth)
 app.use('/sector-performance', async (req, res) => {
   const sectorPerf = await finvizGroups.getSectorsPerformance();
-  console.log(sectorPerf);
   res.send(sectorPerf);
 })
 
 app.use('/industry-performance', checkAuth)
 app.use('/industry-performance', async (req, res) => {
   const industryPerf = await finvizGroups.getIndustriesPerformance();
-  console.log(industryPerf);
   res.send(industryPerf);
 })
 
