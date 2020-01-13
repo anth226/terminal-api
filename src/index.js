@@ -18,6 +18,7 @@ import * as finviz from './scrape/finviz';
 import * as futures from './scrape/finviz_futures';
 import * as cnn from './scrape/cnn';
 import * as finvizForex from './scrape/finviz_forex';
+import * as cnnSectors from './scrape/cnn_sectors';
 import * as nerdwallet from './scrape/nerdwallet';
 import * as nerdwalletSavings from './scrape/nerdwallet_savings';
 import bodyParser from 'body-parser';
@@ -289,7 +290,6 @@ app.get('/savings-accounts', async (req, res) => {
     res.send(accounts)
 });
 
-
 // FROM POLYGON< SHOULD REMOVE
 app.use('/forex-pairs', checkAuth)
 app.get('/forex-pairs', async (req, res) => {
@@ -301,6 +301,14 @@ app.get('/forex-pairs', async (req, res) => {
     pairs['XAUUSD'] = await forexPairs.getLastQuoteXauUsd();
     res.send(pairs);
 });
+
+app.use('/sector-performance', checkAuth) 
+app.use('/sector-performance', async (req, res) => {
+  const sectorPerf = await cnnSectors.getSectorPerformance()
+  console.log(sectorPerf)
+  res.send(sectorPerf)
+})
+
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
 );
