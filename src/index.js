@@ -11,6 +11,7 @@ import * as getNews from './intrinio/get_news';
 import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
+import * as screener from './intrinio/screener';
 // import * as gainersLosers from './polygon/get_gainers_losers';
 import * as gainersLosers from './scrape/get_gainers_losers';
 import * as forexPairs from './polygon/get_forex_last_quote';
@@ -176,6 +177,13 @@ app.get('/company-fundamentals/:symbol', async (req, res) => {
 });
 
 /* Securities */
+
+//app.use('/sec-screener', checkAuth)
+app.get('/sec-screener', async( req, res ) => {
+    const result = await screener.screen(securityAPI, "")
+    console.log(result)
+    res.send(result)
+})
 
 app.use('/sec-intraday-prices/:symbol', checkAuth)
 app.get('/sec-intraday-prices/:symbol', async( req, res ) => {
