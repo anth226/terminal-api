@@ -22,6 +22,7 @@ import * as cnn from './scrape/cnn';
 import * as finvizForex from './scrape/finviz_forex';
 import * as cnnSectors from './scrape/cnn_sectors';
 import * as nerdwallet from './scrape/nerdwallet';
+import * as titans from './finbox/titans';
 import * as finvizGroups from './scrape/finviz_groups';
 import * as nerdwalletSavings from './scrape/nerdwallet_savings';
 import bodyParser from 'body-parser';
@@ -322,6 +323,12 @@ app.use('/industry-performance', checkAuth)
 app.use('/industry-performance', async (req, res) => {
   const industryPerf = await finvizGroups.getIndustriesPerformance();
   res.send(industryPerf);
+})
+
+app.use('/titans', checkAuth)
+app.use('/titans', async (req, res) => {
+  const portfolios = await titans.getPortfolios();
+  res.send(portfolios);
 })
 
 app.listen(process.env.PORT, () =>
