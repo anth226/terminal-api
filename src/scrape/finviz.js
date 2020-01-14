@@ -92,5 +92,8 @@ export async function getCompanyMetrics(ticker) {
         }
     });
 
+    delete res["Price"];
+    delete res["Employees"];
+
     return res
 }
