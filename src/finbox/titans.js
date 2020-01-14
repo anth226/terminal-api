@@ -3,7 +3,7 @@ import axios from 'axios';
 export async function getPortfolios(investor_type) {
     let portfolio = axios.post('https://makeshift.finbox.com/v4/ideas/query', {
         filters: {
-            investor_types: [investor_type],
+            investor_types: ["Billionaire"],
             limit: 100,
             skip: 0
         }
