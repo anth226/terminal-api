@@ -73,12 +73,24 @@ export async function getCompanyMetrics(ticker) {
 
     const $ = await fetchDataCompany(ticker);
 
+    let res = {}
+
     $('table.snapshot-table2 tr.table-dark-row').each(function(idx, element) {
-        //console.log($(element).text())
-        data.push($(element).text())
+        let keys = []
+        let vals = []
+
+        $(element).find('td').each(function(i, e) {
+          if(i%2==0) {
+            keys.push($(e).text());
+          } else {
+            vals.push($(e).text());
+          }
+        });
+
+        for(let i = 0; i<keys.length; i++) {
+          res[keys[i]] = vals[i]
+        }
     });
 
-    return data
+    return res
 }
-
-
