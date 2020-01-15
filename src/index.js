@@ -325,9 +325,9 @@ app.use('/industry-performance', async (req, res) => {
   res.send(industryPerf);
 })
 
-app.use('/titans', checkAuth)
-app.use('/titans', async (req, res) => {
-  const portfolios = await titans.getPortfolios();
+app.use('/titans/:investor_type/:sectors', checkAuth)
+app.use('/titans/:investor_type/:sectors', async (req, res) => {
+  const portfolios = await titans.getPortfolios(req.params.investor_type, req.params.sectors);
   res.send(portfolios);
 })
 
