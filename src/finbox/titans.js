@@ -37,3 +37,7 @@ export async function getPortfolios(investorTypes, ...sectors) {
 
 }
 // {"filters":{"investor_types":["Activist Investor"]},"limit":30,"skip":0}
+
+export async function getSinglePortfolioData(investorName){
+
+}
