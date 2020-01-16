@@ -327,8 +327,19 @@ app.use('/industry-performance', async (req, res) => {
 
 app.use('/titans', checkAuth)
 app.use('/titans', async (req, res) => {
-  const portfolios = await titans.getPortfolios();
+  const portfolios = await titans.getAll();
   res.send(portfolios);
+})
+
+app.use('/titans/:investorType/:sectors', checkAuth)
+app.use('/titans/:investorType/:sectors', async (req, res) => {
+  const portfolios = await titans.getPortfolios(req.params.investorTypes, req.params.sectors);
+  res.send(portfolios);
+})
+
+app.use('/titans/:investorName', checkAuth) 
+app.use('/titans/:investorName', async (req, res) => {
+  res.send("Single Titan Portfolio Data")
 })
 
 app.listen(process.env.PORT, () =>
