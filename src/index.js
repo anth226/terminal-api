@@ -337,6 +337,11 @@ app.use('/titans/:investorType/:sectors', async (req, res) => {
   res.send(portfolios);
 })
 
+app.use('/titans/:investorName', checkAuth) 
+app.use('/titans/:investorName', async (req, res) => {
+  res.send("Single Titan Portfolio Data")
+})
+
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
 );
