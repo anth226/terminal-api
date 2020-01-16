@@ -27,8 +27,8 @@ export function getSourceHeadlines(apiKey, source) {
 }
 
 export function getHomeHeadlines(apiKey) {
-    //https://newsapi.org/v2/top-headlines?sources=the-american-conservative,breitbart-news,cnbc,fox-news&apiKey=43930d76478b4b38bd98622496ebca13
-    let headlines = axios.get(`https://newsapi.org/v2/top-headlines?sources=the-american-conservative,breitbar-news,cnbc,fox-news&apiKey=${apiKey}`)
+    // let headlines = axios.get(`https://newsapi.org/v2/top-headlines?sources=the-american-conservative,breitbar-news,cnbc,fox-news&apiKey=${apiKey}`)
+    let headlines = axios.get(`https://newsapi.org/v2/top-headlines?sources=business-insider&apiKey=${apiKey}`)
         .then(function(res) {
         return res
     }).catch(function(err){
