@@ -1,8 +1,19 @@
 import axios from 'axios';
 
-export async function getPortfolios(investor_type, ...sectors) {
+export async function getAll() {
+    let portfolios = axios.get('https://makeshift.finbox.com/v4/ideas?limit=30&skip=0')
+    .then(function(res) {
+        return res
+    }).catch(function(err) {
+        return err
+    })
+
+    return portfolios.then((data) => data.data)
+}
+
+export async function getPortfolios(investorTypes, ...sectors) {
     let sectorsArr = sectors[0].split(",")
-    let cleanInvestorType = investor_type.charAt(0).toUpperCase() + investor_type.substring(1);
+    let cleanInvestorType = investorType.charAt(0).toUpperCase() + investorType.substring(1);
     let cleanSectors = [];
 
     for (let s of sectorsArr) {
