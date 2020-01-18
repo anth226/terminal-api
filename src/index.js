@@ -325,23 +325,25 @@ app.get('/industry-performance', async (req, res) => {
   res.send(industryPerf);
 })
 
-app.use('/titans/:investorTypes/:sectors', checkAuth)
-app.get('/titans/:investorTypes/:sectors', async (req, res) => {
-  const portfolios = await titans.getPortfolios(req.params.investorTypes, req.params.sectors);
+app.use('/titans', checkAuth)
+app.post('/titans', async (req, res) => {
+  console.log(req.body)
+  const portfolios = await titans.getPortfolios(req.body);
   res.send(portfolios);
 })
 
-// app.use('/titans/:investorName', checkAuth) 
-// app.use('/titans/:investorName', async (req, res) => {
-//   res.send("Single Titan Portfolio Data")
+// app.use('/titans/:investorType', checkAuth) 
+// app.get('/titans/:investorType', async (req, res) => {
+//   console.log("JUST RAN SINGLE")
+//   const portfolios = await titans.getPortfolios(req.params.investorType);
+//   res.send(portfolios);
 // })
 
-app.use('/titans', checkAuth)
-app.get('/titans', async (req, res) => {
-  const portfolios = await titans.getAll();
-  console.log("TITANS")
-  res.send(portfolios);
-})
+// app.use('/titans', checkAuth)
+// app.get('/titans', async (req, res) => {
+//   const portfolios = await titans.getAll();
+//   res.send(portfolios);
+// })
 
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)

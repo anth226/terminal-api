@@ -11,17 +11,25 @@ export async function getAll() {
     return portfolios.then((data) => data.data)
 }
 
-export async function getPortfolios(investorTypes, ...sectors) {
-    let sectorsArr = sectors[0].split(",")
+// export async function getPortfolios(investorTypes, ...sectors) {
+export async function getPortfolios({investorTypes, sectors}) {
     let cleanInvestorType = investorTypes.charAt(0).toUpperCase() + investorTypes.substring(1);
-    let cleanSectors = [];
 
-    for (let s of sectorsArr) {
-        let capitalized = s.charAt(0).toUpperCase() + s.substring(1)
-        cleanSectors.push(capitalized)
+    let paramFilters;
+    let cleanSectors = [];
+    let sectorsArr;
+    if (sectors) {
+        sectorsArr = sectors[0].split(",")
+        for (let s of sectorsArr) {
+            let capitalized = s.charAt(0).toUpperCase() + s.substring(1)
+            cleanSectors.push(capitalized)
+        }
+        
+        paramFilters = {"filters":{"investor_types":[cleanInvestorType],"sectors": cleanSectors},"limit":30,"skip":0}
+    } else {
+        paramFilters = {"filters":{"investor_types":[cleanInvestorType], "sectors": []},"limit":30,"skip":0}
     }
 
-    let paramFilters = {"filters":{"investor_types":[cleanInvestorType],"sectors": cleanSectors},"limit":30,"skip":0}
     // {"filters":{"asset_price_return_1y":{"$gte":-0.19999999999999993,"$lte":0.17999999999999983},"investor_types":["Billionaire"],"sectors":["Financials"]},"limit":30,"skip":0}
 
     let portfolios = axios.post('https://makeshift.finbox.com/v4/ideas/query', paramFilters)
