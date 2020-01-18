@@ -314,32 +314,33 @@ app.get('/forex-pairs', async (req, res) => {
 });
 
 app.use('/sector-performance', checkAuth)
-app.use('/sector-performance', async (req, res) => {
+app.get('/sector-performance', async (req, res) => {
   const sectorPerf = await finvizGroups.getSectorsPerformance();
   res.send(sectorPerf);
 })
 
 app.use('/industry-performance', checkAuth)
-app.use('/industry-performance', async (req, res) => {
+app.get('/industry-performance', async (req, res) => {
   const industryPerf = await finvizGroups.getIndustriesPerformance();
   res.send(industryPerf);
 })
 
-app.use('/titans', checkAuth)
-app.use('/titans', async (req, res) => {
-  const portfolios = await titans.getAll();
-  res.send(portfolios);
-})
-
-app.use('/titans/:investorType/:sectors', checkAuth)
-app.use('/titans/:investorType/:sectors', async (req, res) => {
+app.use('/titans/:investorTypes/:sectors', checkAuth)
+app.get('/titans/:investorTypes/:sectors', async (req, res) => {
   const portfolios = await titans.getPortfolios(req.params.investorTypes, req.params.sectors);
   res.send(portfolios);
 })
 
-app.use('/titans/:investorName', checkAuth) 
-app.use('/titans/:investorName', async (req, res) => {
-  res.send("Single Titan Portfolio Data")
+// app.use('/titans/:investorName', checkAuth) 
+// app.use('/titans/:investorName', async (req, res) => {
+//   res.send("Single Titan Portfolio Data")
+// })
+
+app.use('/titans', checkAuth)
+app.get('/titans', async (req, res) => {
+  const portfolios = await titans.getAll();
+  console.log("TITANS")
+  res.send(portfolios);
 })
 
 app.listen(process.env.PORT, () =>

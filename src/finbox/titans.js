@@ -13,7 +13,7 @@ export async function getAll() {
 
 export async function getPortfolios(investorTypes, ...sectors) {
     let sectorsArr = sectors[0].split(",")
-    let cleanInvestorType = investorType.charAt(0).toUpperCase() + investorType.substring(1);
+    let cleanInvestorType = investorTypes.charAt(0).toUpperCase() + investorTypes.substring(1);
     let cleanSectors = [];
 
     for (let s of sectorsArr) {
@@ -22,10 +22,10 @@ export async function getPortfolios(investorTypes, ...sectors) {
     }
 
     let paramFilters = {"filters":{"investor_types":[cleanInvestorType],"sectors": cleanSectors},"limit":30,"skip":0}
+    // {"filters":{"asset_price_return_1y":{"$gte":-0.19999999999999993,"$lte":0.17999999999999983},"investor_types":["Billionaire"],"sectors":["Financials"]},"limit":30,"skip":0}
 
     let portfolios = axios.post('https://makeshift.finbox.com/v4/ideas/query', paramFilters)
     .then(function(res) {
-        console.log(res)
         return res
     }).catch(function(err) {
         console.log(err)
