@@ -327,7 +327,6 @@ app.get('/industry-performance', async (req, res) => {
 
 app.use('/titans', checkAuth)
 app.post('/titans', async (req, res) => {
-  console.log(req.body)
   const portfolios = await titans.getPortfolios(req.body);
   res.send(portfolios);
 })

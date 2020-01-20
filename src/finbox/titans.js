@@ -15,7 +15,6 @@ export async function getAll() {
 export async function getPortfolios({investorTypes, sectors}) {
     let cleanInvestorType = investorTypes.charAt(0).toUpperCase() + investorTypes.substring(1);
 
-    console.log(sectors)
     // let paramFilters = {"filters":{"investor_types":[cleanInvestorType], "sectors": []},"limit":30,"skip":0}
     let cleanSectors = [];
     let sectorsArr;
