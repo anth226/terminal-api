@@ -44,6 +44,13 @@ export async function getPortfolios({investorTypes, sectors}) {
 }
 // {"filters":{"investor_types":["Activist Investor"]},"limit":30,"skip":0}
 
-export async function getSinglePortfolioData(investorName){
-
+export async function getSinglePortfolioData(portfolioName){
+        let portfolio = axios.get(`https://makeshift.finbox.com/v4/ideas/${portfolioName}`)
+        .then(function(res) {
+            return res
+        }).catch(function(err) {
+            return err
+        })
+    
+        return portfolio.then((data) => data.data)
 }

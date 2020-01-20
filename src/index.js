@@ -323,26 +323,21 @@ app.use('/industry-performance', checkAuth)
 app.get('/industry-performance', async (req, res) => {
   const industryPerf = await finvizGroups.getIndustriesPerformance();
   res.send(industryPerf);
-})
+});
+
+// app.use('/titans/:portfolio', checkAuth)
+app.get('/titans/:portfolio', async (req, res) => {
+  const portfolio = await titans.getSinglePortfolioData(req.params.portfolio).then(data => data);
+  // console.log(portfolio)
+  res.send(portfolio);
+});
 
 app.use('/titans', checkAuth)
 app.post('/titans', async (req, res) => {
   const portfolios = await titans.getPortfolios(req.body);
   res.send(portfolios);
-})
+});
 
-// app.use('/titans/:investorType', checkAuth) 
-// app.get('/titans/:investorType', async (req, res) => {
-//   console.log("JUST RAN SINGLE")
-//   const portfolios = await titans.getPortfolios(req.params.investorType);
-//   res.send(portfolios);
-// })
-
-// app.use('/titans', checkAuth)
-// app.get('/titans', async (req, res) => {
-//   const portfolios = await titans.getAll();
-//   res.send(portfolios);
-// })
 
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
