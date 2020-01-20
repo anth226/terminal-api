@@ -328,7 +328,6 @@ app.get('/industry-performance', async (req, res) => {
 // app.use('/titans/:portfolio', checkAuth)
 app.get('/titans/:portfolio', async (req, res) => {
   const portfolio = await titans.getSinglePortfolioData(req.params.portfolio).then(data => data);
-  // console.log(portfolio)
   res.send(portfolio);
 });
 
