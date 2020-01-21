@@ -179,10 +179,15 @@ app.get('/company-fundamentals/:symbol', async (req, res) => {
 
 /* Securities */
 
+//app.use('/data-tags', checkAuth)
+app.get('/data-tags', async(req, res) => {
+  const result = await getDataTags.allDataTags(dataTagAPI)
+  res.send(result)
+})
+
 //app.use('/sec-screener', checkAuth)
-app.get('/sec-screener', async( req, res ) => {
-    const result = await screener.screen(securityAPI, "")
-    console.log(result)
+app.post('/sec-screener', async( req, res ) => {
+    const result = await screener.screen(securityAPI, req.body)
     res.send(result)
 })
 
