@@ -12,7 +12,7 @@ export async function getAll() {
 }
 
 // export async function getPortfolios(investorTypes, ...sectors) {
-export async function getPortfolios({investorTypes, sectors}) {
+export async function getPortfolios({investorTypes, sectors, gte, lte}) {
     let cleanInvestorType = investorTypes.charAt(0).toUpperCase() + investorTypes.substring(1);
 
     // let paramFilters = {"filters":{"investor_types":[cleanInvestorType], "sectors": []},"limit":30,"skip":0}
@@ -26,7 +26,9 @@ export async function getPortfolios({investorTypes, sectors}) {
     //         cleanSectors.push(capitalized)
     //     }
         
-    let paramFilters = {"filters":{"investor_types":[cleanInvestorType],"sectors": sectors},"limit":30,"skip":0}
+    let paramFilters = {"filters":{"asset_price_return_1y":{"$gte":gte,"$lte":lte}, "investor_types":[cleanInvestorType],"sectors": sectors},"limit":30,"skip":0}
+    // let paramFilters = {"filters":{"investor_types":[cleanInvestorType],"sectors": sectors},"limit":30,"skip":0}
+
 
     // {"filters":{"asset_price_return_1y":{"$gte":-0.19999999999999993,"$lte":0.17999999999999983},"investor_types":["Billionaire"],"sectors":["Financials"]},"limit":30,"skip":0}
 
