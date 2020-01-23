@@ -115,6 +115,7 @@ app.post('/getToken', async (req, res) => {
     res.json({status: "error", message: "Unable to verify your login information, please try logging in again."});
   })
 });
+
 app.use('/payment', checkAuth)
 app.post('/payment', async (req, res) => {
   // verify firebase id token here and don't use checkAuth middleware?
@@ -210,7 +211,7 @@ app.get('/sec-historical-price/:symbol', async( req, res ) => {
 // SEARCH
 app.use('/search/:query', checkAuth)
 app.get('/search/:query', async (req, res) => {
-    const query = req.query["search"]
+    const query = req.params.query
     const results = await getCompanyData.searchCompanies(companyAPI, query)
     res.send(results);
 });
