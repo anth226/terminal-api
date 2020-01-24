@@ -89,3 +89,27 @@ export function searchSec(intrinioApi, query) {
 
     return res;
 }
+
+export async function getNumberDataPoint(intrinioApi, symbol, tags) {
+    const res = await Promise.all(tags.map(tag => intrinioApi.getCompanyDataPointNumber(symbol, tag)).map(p => p.catch(e => e)));
+
+    return res.map((data, i) => {
+      if(data instanceof Error) {
+        return [tags[i], "Unavailable"]
+      } else {
+        return [tags[i], data]
+      }
+    });
+}
+
+export async function getTextDataPoint(intrinioApi, symbol, tags) {
+  const res = await Promise.all(tags.map(tag => intrinioApi.getCompanyDataPointText(symbol, tag)).map(p => p.catch(e => e)));
+
+  return res.map((data, i) => {
+    if(data instanceof Error) {
+      return [tags[i], "Unavailable"]
+    } else {
+      return [tags[i], data]
+    }
+  });
+}

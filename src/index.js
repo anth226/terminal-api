@@ -25,6 +25,7 @@ import * as nerdwallet from './scrape/nerdwallet';
 import * as titans from './finbox/titans';
 import * as finvizGroups from './scrape/finviz_groups';
 import * as nerdwalletSavings from './scrape/nerdwallet_savings';
+import * as stocktwits from './stocktwits/get_trending';
 import bodyParser from 'body-parser';
 import Stripe from 'stripe';
 
@@ -175,7 +176,19 @@ app.get('/company-news/:symbol', async (req, res) => {
 app.use('/company-fundamentals/:symbol', checkAuth)
 app.get('/company-fundamentals/:symbol', async (req, res) => {
     const companyFundamentals = await getCompanyData.companyFundamentals(companyAPI, req.params.symbol)
-    res.send(companyFundamentals );
+    res.send(companyFundamentals);
+});
+
+app.use('/company/:symbol/data_text', checkAuth)
+app.post('/company/:symbol/data_text', async (req, res) => {
+    const data = await getCompanyData.getTextDataPoint(companyAPI, req.params.symbol, req.body)
+    res.send(data);
+});
+
+app.use('/company/:symbol/data_number', checkAuth)
+app.post('/company/:symbol/data_number', async (req, res) => {
+    const data = await getCompanyData.getNumberDataPoint(companyAPI, req.params.symbol, req.body)
+    res.send(data);
 });
 
 /* Securities */
@@ -341,6 +354,13 @@ app.use('/titans', checkAuth)
 app.post('/titans', async (req, res) => {
   const portfolios = await titans.getPortfolios(req.body);
   res.send(portfolios);
+});
+
+// get trending stocks from stocktwits
+app.use('/trending', checkAuth)
+app.get('/trending', async (req, res) => {
+  const trendingStocks = await stocktwits.getTrending();
+  res.send(trendingStocks);
 });
 
 
