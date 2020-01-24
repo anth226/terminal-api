@@ -1,0 +1,217 @@
+{
+  "response": {
+    "status": 200
+  },
+  "symbols": [{
+    "id": 2310,
+    "symbol": "INTC",
+    "title": "Intel Corporation",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 62158
+  }, {
+    "id": 11483,
+    "symbol": "EPZM",
+    "title": "Epizyme",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 3965
+  }, {
+    "id": 7901,
+    "symbol": "AVGO",
+    "title": "Broadcom",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 14442
+  }, {
+    "id": 3910,
+    "symbol": "TWMC",
+    "title": "Trans World Entertainment Corporation",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 2183
+  }, {
+    "id": 3720,
+    "symbol": "SWKS",
+    "title": "Skyworks Solutions Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 11736
+  }, {
+    "id": 2925,
+    "symbol": "NVDA",
+    "title": "NVIDIA Corporation",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 159730
+  }, {
+    "id": 11711,
+    "symbol": "AAL",
+    "title": "American Airlines Group",
+    "aliases": ["LCC", "AAMRQ"],
+    "is_following": false,
+    "watchlist_count": 13590
+  }, {
+    "id": 13246,
+    "symbol": "IIPR",
+    "title": "Innovative Industrial Properties",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 6194
+  }, {
+    "id": 12887,
+    "symbol": "TEAM",
+    "title": "Atlassian",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 6933
+  }, {
+    "id": 11586,
+    "symbol": "NNVC",
+    "title": "NanoViricides Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 3353
+  }, {
+    "id": 6694,
+    "symbol": "PCG",
+    "title": "PG & E Corp.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 15458
+  }, {
+    "id": 2355,
+    "symbol": "ISRG",
+    "title": "Intuitive Surgical, Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 10802
+  }, {
+    "id": 11746,
+    "symbol": "SNAP",
+    "title": "Snap Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 115086
+  }, {
+    "id": 5310,
+    "symbol": "FCX",
+    "title": "Freeport-McMoRan Copper & Gold Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 17130
+  }, {
+    "id": 4423,
+    "symbol": "AXP",
+    "title": "American Express Company",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 9646
+  }, {
+    "id": 1784,
+    "symbol": "ETFC",
+    "title": "E*TRADE Financial Corporation",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 2519
+  }, {
+    "id": 15084,
+    "symbol": "SOLY",
+    "title": "Soliton, Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 4121
+  }, {
+    "id": 2385,
+    "symbol": "JBLU",
+    "title": "JetBlue Airways Corporation",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 9811
+  }, {
+    "id": 1348,
+    "symbol": "CMCSA",
+    "title": "Comcast Corporation",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 7968
+  }, {
+    "id": 11364,
+    "symbol": "ABBV",
+    "title": "AbbVie Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 17360
+  }, {
+    "id": 4232,
+    "symbol": "ACN",
+    "title": "Accenture plc",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 3200
+  }, {
+    "id": 4958,
+    "symbol": "DFS",
+    "title": "Discover Financial Services",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 2171
+  }, {
+    "id": 1703,
+    "symbol": "EHTH",
+    "title": "eHealth, Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 1438
+  }, {
+    "id": 12608,
+    "symbol": "PYPL",
+    "title": "PayPal",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 44511
+  }, {
+    "id": 5433,
+    "symbol": "FXI",
+    "title": "iShares FTSE China 25 Index Fund",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 4142
+  }, {
+    "id": 12390,
+    "symbol": "QRVO",
+    "title": "Qorvo",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 3070
+  }, {
+    "id": 28,
+    "symbol": "APT",
+    "title": "Alpha Pro Tech Ltd.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 1520
+  }, {
+    "id": 2189,
+    "symbol": "HTLF",
+    "title": "Heartland Financial USA Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 43
+  }, {
+    "id": 4331,
+    "symbol": "AMD",
+    "title": "Advanced Micro Devices, Inc.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 198357
+  }, {
+    "id": 6214,
+    "symbol": "LUV",
+    "title": "Southwest Airlines Co.",
+    "aliases": [],
+    "is_following": false,
+    "watchlist_count": 13353
+  }],
+  "fetch_time": 1579823353
+}
