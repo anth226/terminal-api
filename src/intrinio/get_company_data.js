@@ -90,20 +90,93 @@ export function searchSec(intrinioApi, query) {
     return res;
 }
 
-export async function getNumberDataPoint(intrinioApi, symbol, tags) {
-    const res = await Promise.all(tags.map(tag => intrinioApi.getCompanyDataPointNumber(symbol, tag)).map(p => p.catch(e => e)));
+export async function getDataPoint(intrinioApi, reqData) {
+  const symbols = Object.keys(reqData);
+  let reqs = [];
 
-    return res.map((data, i) => {
-      if(data instanceof Error) {
-        return [tags[i], "Unavailable"]
-      } else {
-        return [tags[i], data]
-      }
-    });
+  symbols.forEach(symbol => {
+    reqData[symbol].forEach(tag => {
+      reqs.push({
+        symbol: symbol.toUpperCase(),
+        tag: tag,
+      })
+    })
+  })
+
+  const res = await Promise.all(reqs.map(req => intrinioApi.getCompanyDataPointText(req.symbol, req.tag)).map(p => p.catch(e => e)));
+
+  let currentSymbol = 0;
+  let lastTag = reqData[symbols[0]].length -1;
+  let counter = 0;
+
+  let result = {};
+  res.forEach((data, i) => {
+
+    if(!result[symbols[currentSymbol]]) {
+      result[symbols[currentSymbol]] = {};
+    }
+
+    console.log(reqData[symbols[currentSymbol]]);
+
+    if(data instanceof Error) {
+      result[symbols[currentSymbol]][reqData[symbols[currentSymbol]][counter]] = "Unavailable";
+    } else {
+      result[symbols[currentSymbol]][reqData[symbols[currentSymbol]][counter]] = data;
+    }
+
+    counter++;
+    if(counter > lastTag && currentSymbol < symbols.length -1) {
+      currentSymbol++;
+      counter = 0;
+      lastTag = reqData[symbols[currentSymbol]].length -1;
+    }
+
+  })
+  return result;
+
 }
 
-export async function getTextDataPoint(intrinioApi, symbol, tags) {
-  const res = await Promise.all(tags.map(tag => intrinioApi.getCompanyDataPointText(symbol, tag)).map(p => p.catch(e => e)));
+export async function getNumberDataPoint(intrinioApi, symbols, tags) {
+    let reqs = [];
+
+    symbols.forEach(symbol => {
+      tags.forEach(tag => {
+        reqs.push({
+          symbol: symbol.toUpperCase(),
+          tag: tag,
+        })
+      })
+    });
+
+    const res = await Promise.all(reqs.map(req => intrinioApi.getCompanyDataPointNumber(req.symbol, req.tag)).map(p => p.catch(e => e)));
+    const div = (res.length/symbols.length);
+    console.log(res.length);
+    let sym = 0;
+    let counter = 0;
+
+    let result = {};
+
+    res.forEach((data, i) => {
+      counter++;
+      if(counter > div) {
+        sym++;
+        counter = 1;
+      }
+      if(!result[symbols[sym]]) {
+        result[symbols[sym]] = {};
+      }
+      if(data instanceof Error) {
+        result[symbols[sym]][tags[i%tags.length]] = "Unavailable";
+      } else {
+        result[symbols[sym]][tags[i%tags.length]] = data;
+      }
+    })
+
+    return result
+}
+
+export async function getTextDataPoint(intrinioApi, symbols, tags) {
+  const res = await Promise.all(symbols.map(symbol => tags.map(tag => intrinioApi.getCompanyDataPointText(symbol, tag)).map(p => p.catch(e => e))));
 
   return res.map((data, i) => {
     if(data instanceof Error) {
