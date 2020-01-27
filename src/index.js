@@ -149,6 +149,16 @@ app.get('/profile', function(req, res, next) {
       })
 });
 
+app.post('/company/datapoints', async (req, res) => {
+    const data = await getCompanyData.getDataPoint(companyAPI, req.body)
+    res.send(data);
+});
+
+app.post('/company/data_number', async (req, res) => {
+    const data = await getCompanyData.getNumberDataPoint(companyAPI, req.body.symbols, req.body.tags)
+    res.send(data);
+});
+
 // general
 app.use('/all-news', checkAuth)
 app.get('/all-news', async (req, res) => {
@@ -179,17 +189,13 @@ app.get('/company-fundamentals/:symbol', async (req, res) => {
     res.send(companyFundamentals);
 });
 
-app.use('/company/:symbol/data_text', checkAuth)
-app.post('/company/:symbol/data_text', async (req, res) => {
-    const data = await getCompanyData.getTextDataPoint(companyAPI, req.params.symbol, req.body)
+app.use('/company/data_text', checkAuth)
+app.post('/company/data_text', async (req, res) => {
+    const data = await getCompanyData.getTextDataPoint(companyAPI, req.body.symbols, req.body.tags)
     res.send(data);
 });
 
-app.use('/company/:symbol/data_number', checkAuth)
-app.post('/company/:symbol/data_number', async (req, res) => {
-    const data = await getCompanyData.getNumberDataPoint(companyAPI, req.params.symbol, req.body)
-    res.send(data);
-});
+
 
 /* Securities */
 
