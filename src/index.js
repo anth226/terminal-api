@@ -141,6 +141,14 @@ app.post('/payment', async (req, res) => {
   // make db insert call with customer id and subscription id attached to this firebase user id
 });
 // auth check
+
+//app.use('/sec-historical-price/:symbol', checkAuth)
+app.get('/sec-historical-price/:symbol/:days', async( req, res ) => {
+    const intradayPrices = await getSecurityData.getHistoricalData(securityAPI, req.params.symbol, req.params.days)
+    res.send(intradayPrices)
+})
+
+
 app.use('/profile', checkAuth)
 app.get('/profile', function(req, res, next) {
   axios.get(`https://jsonplaceholder.typicode.com/users`)
@@ -220,11 +228,6 @@ app.use('/sec-last-price/:symbol', checkAuth)
 app.get('/sec-last-price/:symbol', async( req, res ) => {
     const lastPrice = await getSecurityData.getSecurityLastPrice(req.params.symbol)
     res.send(lastPrice)
-})
-app.use('/sec-historical-price/:symbol', checkAuth)
-app.get('/sec-historical-price/:symbol', async( req, res ) => {
-    const intradayPrices = await getSecurityData.getHistoricalData(securityAPI, req.params.symbol)
-    res.send(intradayPrices)
 })
 
 // SEARCH
