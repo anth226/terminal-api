@@ -23,25 +23,37 @@ export function getIntradayPrices(intrinioApi, identifier) {
     return res;
 }
 
-export function getHistoricalData(intrinioApi, identifier) {
-
-  var opts = {
-    'frequency': "daily", // String | Return historical data in the given frequency
-    'type': null, // String | Filter by type, when applicable
-    'startDate': new Date("2018-01-01"), // Date | Get historical data on or after this date
-    'endDate': null, // Date | Get historical date on or before this date
-    'sortOrder': "desc", // String | Sort by date `asc` or `desc`
-    'pageSize': 1000, // Number | The number of results to return
-    'nextPage': null // String | Gets the next page of data from a previous API call
-  };
-
-  let res = intrinioApi.getSecurityHistoricalData(identifier, "adj_close_price", opts).then(function(data) {
-    return data;
+function historicalPages(intrinioApi, identifier, opts, hist) {
+  return intrinioApi.getSecurityHistoricalData(identifier, "adj_close_price", opts).then(function(data) {
+    data.historical_data.forEach((item, i) => {
+      hist.push(item);
+    });
+    if(data.next_page == null) {
+      return hist;
+    } else {
+      let newOpts = opts;
+      newOpts.nextPage = data.next_page;
+      return(historicalPages(intrinioApi, identifier, newOpts, hist))
+    }
   }, function(error) {
     return error;
   });
+}
 
-  return res
+export function getHistoricalData(intrinioApi, identifier, days) {
+  let startDate = new Date(Date.now());
+  startDate.setDate(startDate.getDate() - days)
+  var opts = {
+    'frequency': "daily", // String | Return historical data in the given frequency
+    'type': null, // String | Filter by type, when applicable
+    'startDate': startDate, // Date | Get historical data on or after this date
+    'endDate': null, // Date | Get historical date on or before this date
+    'sortOrder': "desc", // String | Sort by date `asc` or `desc`
+    'pageSize': 100, // Number | The number of results to return
+    'nextPage': null // String | Gets the next page of data from a previous API call
+  };
+
+  return historicalPages(intrinioApi, identifier, opts, []);
 }
 
 export function getSecurityLastPrice(symbol) {
@@ -71,4 +83,3 @@ export function getSecurityLastPrice(symbol) {
 
 //     return res;
 // }
-
