@@ -28,7 +28,7 @@ export function getSourceHeadlines(apiKey, source) {
 
 export function getHomeHeadlines(apiKey) {
     // let headlines = axios.get(`https://newsapi.org/v2/top-headlines?sources=the-american-conservative,breitbar-news,cnbc,fox-news&apiKey=${apiKey}`)
-    let headlines = axios.get(`https://newsapi.org/v2/top-headlines?sources=business-insider,the-wall-street-journal&apiKey=${apiKey}`)
+    let headlines = axios.get(`https://newsapi.org/v2/top-headlines?sources=the-wall-street-journal,cnbc&apiKey=${apiKey}`)
         .then(function(res) {
         return res
     }).catch(function(err){
