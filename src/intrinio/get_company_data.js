@@ -56,15 +56,16 @@ export function companyNews(intrinioApi, ticker) {
     return res;
 }
 
-export function searchCompanies(intrinioApi, query) {
+export async function searchCompanies(intrinioApi, query, secApi) {
     const opts = {
         'pageSize': 20, // Number | The number of results to return
     };
 
     let res =
         intrinioApi.searchCompanies(query, opts)
-    .then(function(data) {
-        return data;
+    .then(async function(data) {
+        const etfs = await searchETF(secApi, query)
+        return interleaveArray(data.companies, etfs);
     })
     .catch(function(error) {
         return error;
@@ -90,6 +91,35 @@ export function searchSec(intrinioApi, query) {
     return res;
 }
 
+
+async function searchETF(intrinioApi, query) {
+    const opts = {
+        'pageSize': 30, // Number | The number of results to return
+    };
+
+    let res =
+        intrinioApi.searchSecurities(query, opts)
+            .then(function(data) {
+                return data.securities.filter(security => security.currency == "USD" && security.code == "ETF");
+            })
+            .catch(function(error) {
+                return error;
+            })
+
+    return res;
+}
+
+function interleaveArray(array1, array2) {
+  let result = []
+  let i, l = Math.min(array1.length, array2.length);
+
+  for (i = 0; i < l; i++) {
+     result.push(array1[i], array2[i]);
+  }
+  result.push(...array1.slice(l), ...array2.slice(l));
+  return result
+}
+
 export async function getDataPoint(intrinioApi, reqData) {
   const symbols = Object.keys(reqData);
   let reqs = [];
@@ -103,7 +133,7 @@ export async function getDataPoint(intrinioApi, reqData) {
     })
   })
 
-  const res = await Promise.all(reqs.map(req => intrinioApi.getCompanyDataPointText(req.symbol, req.tag)).map(p => p.catch(e => e)));
+  const res = await Promise.all(reqs.map(req => intrinioApi.getSecurityDataPointText(req.symbol, req.tag)).map(p => p.catch(e => e)));
 
   let currentSymbol = 0;
   let lastTag = reqData[symbols[0]].length -1;

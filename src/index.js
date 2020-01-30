@@ -158,7 +158,7 @@ app.get('/profile', function(req, res, next) {
 });
 
 app.post('/company/datapoints', async (req, res) => {
-    const data = await getCompanyData.getDataPoint(companyAPI, req.body)
+    const data = await getCompanyData.getDataPoint(securityAPI, req.body)
     res.send(data);
 });
 
@@ -234,12 +234,13 @@ app.get('/sec-last-price/:symbol', async( req, res ) => {
 app.use('/search/:query', checkAuth)
 app.get('/search/:query', async (req, res) => {
     const query = req.params.query
-    const results = await getCompanyData.searchCompanies(companyAPI, query)
+    const results = await getCompanyData.searchCompanies(companyAPI, query, securityAPI)
     res.send(results);
 });
+
 app.use('/search-sec/:query', checkAuth)
 app.get('/search-sec/:query', async (req, res) => {
-    const query = req.query["search"]
+    const query = req.params.query
     const results = await getCompanyData.searchSec(securityAPI, query)
     res.send(results);
 });
