@@ -14,6 +14,7 @@ import * as lookupCompany from './intrinio/get_company_fundamentals';
 import * as screener from './intrinio/screener';
 // import * as gainersLosers from './polygon/get_gainers_losers';
 import * as gainersLosers from './scrape/get_gainers_losers';
+import * as trending from './scrape/yahoo_trending';
 import * as forexPairs from './polygon/get_forex_last_quote';
 import * as newsHelper from './newsApi/newsHelper';
 import * as finviz from './scrape/finviz';
@@ -277,6 +278,12 @@ app.use('/losers', checkAuth)
 app.get('/losers', async (req, res) => {
     const losers = await gainersLosers.getLosers()
     res.send(losers);
+});
+
+// app.use('/losers', checkAuth)
+app.get('/trending', async (req, res) => {
+    const trenders = await trending.getTrending()
+    res.send(trenders);
 });
 
 /* News */
