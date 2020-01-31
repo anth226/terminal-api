@@ -231,6 +231,12 @@ app.get('/sec-last-price/:symbol', async( req, res ) => {
     res.send(lastPrice)
 })
 
+app.use('/similar/:ticker', checkAuth);
+app.get('/similar/:ticker', async( req, res ) => {
+    const intradayPrices = await screener.similarCompanies(req.params.ticker, securityAPI)
+    res.send(intradayPrices)
+})
+
 // SEARCH
 app.use('/search/:query', checkAuth)
 app.get('/search/:query', async (req, res) => {
