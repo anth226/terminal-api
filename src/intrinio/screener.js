@@ -76,7 +76,7 @@ export async function similarCompanies(ticker, intrinioApi) {
   }
 
   const sector = res[0].replace(/['"]+/g, '');
-  const industryCategory = res[1].replace(/['"]+/g, '');
+  const industryCategory = res[1].replace(/['"]+/g, '').replace("\\u0026","&");
 
   const url = `https://api-v2.intrinio.com/securities/screen?order_column=marketcap&order_direction=desc&page_size=50&api_key=${process.env.INTRINIO_API_KEY_PROD}`;
   const body = {
