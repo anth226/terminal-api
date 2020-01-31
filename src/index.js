@@ -220,6 +220,12 @@ app.post('/sec-screener', async( req, res ) => {
     res.send(result)
 })
 
+app.use('/security/:symbol', checkAuth)
+app.get('/security/:symbol', async (req, res) => {
+    const companyFundamentals = await getSecurityData.lookupSecurity(securityAPI, req.params.symbol)
+    res.send(companyFundamentals);
+});
+
 app.use('/sec-intraday-prices/:symbol', checkAuth)
 app.get('/sec-intraday-prices/:symbol', async( req, res ) => {
     const intradayPrices = await getSecurityData.getIntradayPrices(securityAPI, req.params.symbol)
