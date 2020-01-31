@@ -64,7 +64,7 @@ export async function searchCompanies(intrinioApi, query, secApi) {
     let res =
         intrinioApi.searchCompanies(query, opts)
     .then(async function(data) {
-        const etfs = await searchETF(secApi, query)
+        const etfs = await searchETF(secApi, query);
         return interleaveArray(data.companies, etfs);
     })
     .catch(function(error) {
@@ -100,7 +100,7 @@ async function searchETF(intrinioApi, query) {
     let res =
         intrinioApi.searchSecurities(query, opts)
             .then(function(data) {
-                return data.securities.filter(security => security.currency == "USD" && security.code == "ETF");
+                return data.securities.filter(security => security.currency == "USD" && security.code == "ETF" && security.composite_ticker.endsWith(":US"));
             })
             .catch(function(error) {
                 return error;
