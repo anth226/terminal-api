@@ -146,7 +146,7 @@ export async function getDataPoint(intrinioApi, reqData) {
       result[symbols[currentSymbol]] = {};
     }
 
-    console.log(reqData[symbols[currentSymbol]]);
+    // console.log(reqData[symbols[currentSymbol]]);
 
     if(data instanceof Error) {
       result[symbols[currentSymbol]][reqData[symbols[currentSymbol]][counter]] = "Unavailable";
@@ -180,7 +180,7 @@ export async function getNumberDataPoint(intrinioApi, symbols, tags) {
 
     const res = await Promise.all(reqs.map(req => intrinioApi.getCompanyDataPointNumber(req.symbol, req.tag)).map(p => p.catch(e => e)));
     const div = (res.length/symbols.length);
-    console.log(res.length);
+    // console.log(res.length);
     let sym = 0;
     let counter = 0;
 
