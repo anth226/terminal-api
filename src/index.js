@@ -208,13 +208,13 @@ app.post('/company/data_text', async (req, res) => {
 
 /* Securities */
 
-//app.use('/data-tags', checkAuth)
+app.use('/data-tags', checkAuth)
 app.get('/data-tags', async(req, res) => {
   const result = await getDataTags.allDataTags(dataTagAPI)
   res.send(result)
 })
 
-//app.use('/sec-screener', checkAuth)
+app.use('/sec-screener', checkAuth)
 app.post('/sec-screener', async( req, res ) => {
     const result = await screener.screen(securityAPI, req.body)
     res.send(result)
@@ -292,7 +292,7 @@ app.get('/losers', async (req, res) => {
     res.send(losers);
 });
 
-// app.use('/losers', checkAuth)
+app.use('/trending', checkAuth)
 app.get('/trending', async (req, res) => {
     const trenders = await trending.getTrending()
     res.send(trenders);
@@ -373,7 +373,7 @@ app.get('/industry-performance', async (req, res) => {
   res.send(industryPerf);
 });
 
-// app.use('/titans/:portfolio', checkAuth)
+app.use('/titans/:portfolio', checkAuth)
 app.get('/titans/:portfolio', async (req, res) => {
   const portfolio = await titans.getSinglePortfolioData(req.params.portfolio).then(data => data);
   res.send(portfolio);
