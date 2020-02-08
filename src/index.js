@@ -225,17 +225,20 @@ app.post('/payment', async (req, res) => {
 
 });
 
-//app.use('/sec-historical-price/:symbol', checkAuth)
+app.use('/sec-historical-price/:symbol', checkAuth)
 app.get('/sec-historical-price/:symbol/:days', async( req, res ) => {
     const intradayPrices = await getSecurityData.getHistoricalData(securityAPI, req.params.symbol, req.params.days)
     res.send(intradayPrices)
 })
 
+app.use('/company/datapoints', checkAuth)
 app.post('/company/datapoints', async (req, res) => {
     const data = await getCompanyData.getDataPoint(securityAPI, req.body)
     res.send(data);
 });
 
+
+app.use('/company/data_number', checkAuth)
 app.post('/company/data_number', async (req, res) => {
     const data = await getCompanyData.getNumberDataPoint(companyAPI, req.body.symbols, req.body.tags)
     res.send(data);
@@ -282,13 +285,13 @@ app.post('/company/data_text', async (req, res) => {
 
 /* Securities */
 
-//app.use('/data-tags', checkAuth)
+app.use('/data-tags', checkAuth)
 app.get('/data-tags', async(req, res) => {
   const result = await getDataTags.allDataTags(dataTagAPI)
   res.send(result)
 })
 
-//app.use('/sec-screener', checkAuth)
+app.use('/sec-screener', checkAuth)
 app.post('/sec-screener', async( req, res ) => {
     const result = await screener.screen(securityAPI, req.body)
     res.send(result)
@@ -447,7 +450,7 @@ app.get('/industry-performance', async (req, res) => {
   res.send(industryPerf);
 });
 
-// app.use('/titans/:portfolio', checkAuth)
+app.use('/titans/:portfolio', checkAuth)
 app.get('/titans/:portfolio', async (req, res) => {
   const portfolio = await titans.getSinglePortfolioData(req.params.portfolio).then(data => data);
   res.send(portfolio);
