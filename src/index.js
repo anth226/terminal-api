@@ -40,13 +40,19 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://tower-93be8.firebaseio.com"
 });
+
+// firebase db
+const db = admin.firestore();
+
 // init stripe
-const stripe = Stripe('pk_test_FeiZaW7GZitv7d2wZzwNx2Kr00FOgraGW4');
+const stripe = Stripe('sk_test_arNYJpPg8KjS7jyfmeQAndhJ00KmANAQWf');
+
 // init intrinio
 intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_PROD;
 const companyAPI = new intrinioSDK.CompanyApi();
 const securityAPI = new intrinioSDK.SecurityApi();
 const indexAPI = new intrinioSDK.IndexApi();
+
 // configure secure cookies
 const expiresIn = 60 * 60 * 24 * 5 * 1000;
 const cookieParams = {
@@ -55,12 +61,14 @@ const cookieParams = {
   ephemeral: true // delete this cookie while browser close
 }
 //secure: true, // only use cookie over https
+
 // configure CORS
 var corsOptions = {
   origin: `http://${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`,
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true,
 }
+
 // set up middlewares
 const app = express();
 app.use(cors(corsOptions));
@@ -71,56 +79,107 @@ app.use(express.json());
 ~~~~~~Middlewares~~~~~~
 */
 function checkAuth(req, res, next) {
-  if (req.cookies.access_token && req.cookies.access_token.split(' ')[0] === 'Bearer') { // Authorization: Bearer g1jipjgi1ifjioj
+  if (req.cookies.access_token && req.cookies.access_token.split(' ')[0] === 'Bearer') {
       // Handle token presented as a Bearer token in the Authorization header
       const session = req.cookies.access_token.split(' ')[1];
-      admin.auth().verifySessionCookie(
-        session, true /** checkRevoked */)
-        .then((decodedClaims) => {
-          req.user = decodedClaims.name
-          next();
-        })
-        .catch(error => {
-          // Session is unavailable or invalid. Force user to login.
-          res.status(403).send('Unauthorized');
-        });
+      admin.auth().verifySessionCookie(session, true)
+      .then((decodedClaims) => {
+        req.terminal_app = {claims: decodedClaims};
+        next();
+      })
+      .catch(error => {
+        // Session is unavailable or invalid. Force user to login.
+        res.status(403).send('Unauthorized');
+      });
     } else {
+      // Bearer cookie doesnt exist
       res.status(403).send('Unauthorized');
     }
 }
 
 /*
 ~~~~~~Routes~~~~~~
-v  if(decodedToken.email_verified == false) {
-    res.json({ status: "verify_email", message: "Please verify your email address: " + decodedToken.email });
-  } else
 */
 // index
 app.get('/', async (req, res) => {
     res.send('hello');
 });
-// exchange firebase token
+
+app.use('/signout', checkAuth)
+app.get('/signout', async(req, res) => {
+  // revoke user session cookie, forces re-login
+  admin.auth().revokeRefreshTokens(req.terminal_app.claims.sub);
+  res.send('logged out');
+})
+
+// exchange firebase user token for session cookie
 app.post('/getToken', async (req, res) => {
+
+  // TODO: add a verified email check --
+  // if(decodedToken.email_verified == false) {
+  //    res.json({ status: "verify_email", message: "Please verify your email address: " + decodedToken.email });
+  // wait until we are done with test accounts
+
+  // get idtoken from req body
   const idToken = req.body.token.toString();
+  // verify id token
   admin.auth().verifyIdToken(idToken)
   .then((decodedToken) => {
-   if (new Date().getTime() / 1000 - decodedToken.auth_time < 5 * 60) {
-      admin.auth().createSessionCookie(idToken, {expiresIn}).then((sessionToken) => {
-        res.cookie('access_token', 'Bearer ' + sessionToken, cookieParams).end(JSON.stringify({status: "success"}));
-      }).catch(error => {
-        res.json({status:"error", message: error + " Unable to create session token, please try logging in again."});
-      });
-    } else {
-      res.json({status: "error", message: "Your login session has expired, please try logging in again."});
+    // check if decoded token is expired
+    if (new Date().getTime() / 1000 - decodedToken.auth_time > 5 * 60) {
+      throw { terminal_error: true, message: "Your login session has expired, please try logging in again." };
     }
-  }).catch(error => {
-    res.json({status: "error", message: "Unable to verify your login information, please try logging in again."});
+    //find user in firestore db and retrieve customer id
+    return db.collection('users').doc(decodedToken.user_id).get()
   })
+  .then(doc => {
+    // if they dont exist in db, they didnt get thru payment step
+    if(!doc.exists) {
+      // this should redirect to payment page
+      throw { terminal_error: true, message: "Unable to verify your user record." };
+    }
+    // found user in db, get data
+    let firestoreData = doc.data();
+    // retrieve customer data from stripe using customer id from firestore
+    return stripe.customers.retrieve(firestoreData.customerId);
+  })
+  .then(customer => {
+    // Check if customer has paid for their subscription
+    if(customer.delinquent) {
+      throw { terminal_error: true, message: "Payment needed" };
+    }
+    // Finally, create a session cookie with firebase for this user
+    return admin.auth().createSessionCookie(idToken, {expiresIn});
+
+  }).then(sessionToken => {
+    res.cookie('access_token', 'Bearer ' + sessionToken, cookieParams).end(JSON.stringify({status: "success"}));
+  })
+  .catch(err => {
+    // set a generic error message
+    let errMsg = "Unable to log in, please try again.";
+    // if it is one of our thrown errors, its okay to display
+    if(err.terminal_error == true) {
+      errMsg = err.message;
+    } else {
+      // if its not an error that we threw, log it to console
+      console.log(err)
+    }
+    // add error code that determines where to bounce the users
+    // stripe customer fetch failed, or less likely, firebase db errored out
+    res.status(403).json({status:"error", message: errMsg});
+  });
 });
 
-app.use('/payment', checkAuth)
 app.post('/payment', async (req, res) => {
-  // verify firebase id token here and don't use checkAuth middleware?
+
+  // Grab Firebase user ID from decoded claims in auth middleware
+  const userId = req.body.user_id;
+  if(!userId) {
+    res.status(403).send('Unauthorized');
+    return;
+  }
+
+  // Create Stripe customer from payment method created on frontend
   const customer = await stripe.customers.create({
     payment_method: req.body.payment_method,
     email: req.body_email,
@@ -128,35 +187,49 @@ app.post('/payment', async (req, res) => {
       default_payment_method: req.body.payment_method,
     },
   }).catch(error => {
-    res.json({status: "error"});
-    return
+    console.log(error)
+    return null;
   });
+
+  if(!customer) {
+    res.json({status: "error"});
+    return;
+  }
+
+  // Create Stripe subscription connected to new customer
   const subscription = await stripe.subscriptions.create({
     customer: customer.id,
-    items: [{ plan: "prod_GTx1D3iN163Dw5" }],
+    items: [{ plan: "plan_GTx2oWv2QTkcan" }],
     expand: ["latest_invoice.payment_intent"]
   }).catch(error => {
-    res.json({status: "error"});
-    return
+    console.log(error)
+    return null;
   });
-  // make db insert call with customer id and subscription id attached to this firebase user id
+
+  if(!subscription) {
+    res.json({status: "error"});
+    return;
+  }
+
+  // Correlate stripe customer and subscription IDs
+  // with Firebase User ID and save in Firestore
+  let docRef = db.collection('users').doc(userId);
+  let setUser = await docRef.set({
+    userId: userId,
+    customerId: customer.id,
+    subscriptionId: subscription.id,
+  });
+
+  console.log("payment success")
+  res.json({status:"success"});
+
 });
-// auth check
 
 //app.use('/sec-historical-price/:symbol', checkAuth)
 app.get('/sec-historical-price/:symbol/:days', async( req, res ) => {
     const intradayPrices = await getSecurityData.getHistoricalData(securityAPI, req.params.symbol, req.params.days)
     res.send(intradayPrices)
 })
-
-
-app.use('/profile', checkAuth)
-app.get('/profile', function(req, res, next) {
-  axios.get(`https://jsonplaceholder.typicode.com/users`)
-      .then(resp => {
-        res.json(resp.data);
-      })
-});
 
 app.post('/company/datapoints', async (req, res) => {
     const data = await getCompanyData.getDataPoint(securityAPI, req.body)
@@ -187,6 +260,7 @@ app.get('/company/:symbol', async (req, res) => {
     const companyFundamentals = await getCompanyData.lookupCompany(companyAPI, req.params.symbol)
     res.send(companyFundamentals);
 });
+
 app.use('/company-news/:symbol', checkAuth)
 app.get('/company-news/:symbol', async (req, res) => {
     const companyNews = await getCompanyData.companyNews(companyAPI, req.params.symbol)
