@@ -202,7 +202,9 @@ app.post('/payment', async (req, res) => {
   const subscription = await stripe.subscriptions.create({
     customer: customer.id,
     items: [{ plan: "plan_GTx2oWv2QTkcan" }],
-    expand: ["latest_invoice.payment_intent"]
+    expand: ["latest_invoice.payment_intent"],
+    trial_period_days: 7,
+
   }).catch(error => {
     console.log(error)
     return null;
