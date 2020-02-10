@@ -62,9 +62,11 @@ const cookieParams = {
 }
 //secure: true, // only use cookie over https
 
+const apiURL = process.env.IS_DEV == "true" ? `http://${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}` : `https://${process.env.PROD_API_URL}`
+
 // configure CORS
 var corsOptions = {
-  origin: `http://${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`,
+  origin: `${apiURL}`,
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true,
 }
