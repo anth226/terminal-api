@@ -28,11 +28,21 @@ import * as finvizGroups from './scrape/finviz_groups';
 import * as nerdwalletSavings from './scrape/nerdwallet_savings';
 import * as stocktwits from './stocktwits/get_trending';
 import bodyParser from 'body-parser';
+import winston from 'winston';
 import Stripe from 'stripe';
 
 /*
 ~~~~~~Configuration Stuff~~~~~~
 */
+
+// Configure Logger
+const logger = winston.createLogger({
+  transports: [
+    new winston.transports.Console({level: 'info', format: winston.format.simple()}),
+    //new winston.transports.File({ filename: 'combined.log' })
+    //new winston.transports.File({ filename: 'error.log', level: 'error' }),
+  ]
+});
 
 // init firebase
 const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
@@ -78,8 +88,51 @@ app.use(cookieParser());
 app.use(express.json());
 
 /*
+~~~~~~Utils~~~~~~
+*/
+
+
+function handleStripeError(err) {
+
+  console.log("Stripe Error Caught: ", err.type);
+  console.log("--- Full Error ---")
+  console.log(err);
+
+  let errMsg = "An unexpected error ocurred"
+  switch (err.type) {
+  case 'StripeCardError':
+    // A declined card error
+    errMsg = err.message;
+    break;
+  case 'StripeRateLimitError':
+    // Too many requests made to the API too quickly
+    errMsg = "Too many requests at the moment, please try again later."
+    break;
+  case 'StripeInvalidRequestError':
+    // Invalid parameters were supplied to Stripe's API
+    break;
+  case 'StripeAPIError':
+    // An error occurred internally with Stripe's API
+    break;
+  case 'StripeConnectionError':
+    // Some kind of error occurred during the HTTPS communication
+    break;
+  case 'StripeAuthenticationError':
+    // You probably used an incorrect API key
+    break;
+  default:
+    // Handle any other types of unexpected errors
+    break;
+  }
+
+  return errMsg;
+}
+
+/*
 ~~~~~~Middlewares~~~~~~
 */
+
+
 function checkAuth(req, res, next) {
   if (req.cookies.access_token && req.cookies.access_token.split(' ')[0] === 'Bearer') {
       // Handle token presented as a Bearer token in the Authorization header
@@ -116,117 +169,157 @@ app.get('/signout', async(req, res) => {
 
 // exchange firebase user token for session cookie
 app.post('/getToken', async (req, res) => {
+  logger.info("/getToken");
 
   // TODO: add a verified email check --
   // if(decodedToken.email_verified == false) {
   //    res.json({ status: "verify_email", message: "Please verify your email address: " + decodedToken.email });
   // wait until we are done with test accounts
-
-  // get idtoken from req body
-  const idToken = req.body.token.toString();
-  // verify id token
-  admin.auth().verifyIdToken(idToken)
-  .then((decodedToken) => {
+  try {
+    // get idtoken from req body
+    const idToken = req.body.token.toString();
+    // verify id token
+    const decodedToken = await admin.auth().verifyIdToken(idToken)
     // check if decoded token is expired
     if (new Date().getTime() / 1000 - decodedToken.auth_time > 5 * 60) {
-      throw { terminal_error: true, message: "Your login session has expired, please try logging in again." };
+      throw { terminal_error: true, error_code:"SESSION_EXPIRED", message: "Your login session has expired, please try logging in again." };
     }
-    //find user in firestore db and retrieve customer id
-    return db.collection('users').doc(decodedToken.user_id).get()
-  })
-  .then(doc => {
-    // if they dont exist in db, they didnt get thru payment step
-    if(!doc.exists) {
-      // this should redirect to payment page
-      throw { terminal_error: true, message: "Unable to verify your user record." };
+
+    console.log("--- Decoded token on /getToken ---")
+    console.log(decodedToken)
+
+    let customerId;
+    if(decodedToken.customer_id) {
+      // check if customer id is in decoded claims
+      console.log("customer is in decoded claims!!!")
+      console.log(decodedToken.customer_id)
+      customerId = decodedToken.customer_id;
+    } else {
+      // if not pull from database
+      let doc = await db.collection('users').doc(decodedToken.uid).get()
+      console.log("USER DOC")
+      console.log(doc);
+      // if they dont exist in db, they didnt get thru payment step
+      if(!doc.exists) {
+        // this should redirect to payment page
+        throw { terminal_error: true, error_code:"USER_NOT_FOUND", message: "Unable to verify your user record." };
+      }
+      // found user in db, get data
+      let firestoreData = doc.data();
+      // retrieve customer data from stripe using customer id from firestore
+      customerId = firestoreData.customerId
+      // set claim in firestore auth
+      await admin.auth().setCustomUserClaims(decodedToken.uid, {
+        customer_id: customerId,
+      })
     }
-    // found user in db, get data
-    let firestoreData = doc.data();
+    if(!customerId) {
+      // Customer ID not in decoded claims or firestore
+      // this actually might be unnecessary code, impossible to hit?
+      throw { terminal_error: true, error_code:"PAYMENT_INCOMPLETE", message: "Please complete your payment" };
+    }
+
     // retrieve customer data from stripe using customer id from firestore
-    return stripe.customers.retrieve(firestoreData.customerId);
-  })
-  .then(customer => {
+    const customer = await stripe.customers.retrieve(customerId)
     // Check if customer has paid for their subscription
     if(customer.delinquent) {
-      throw { terminal_error: true, message: "Payment needed" };
+      // Bounce to payment page for now
+      // we may need to handle this diferently because the customer actually exists
+      // update existing customers payment method and re-charge rather than sign up new customer
+      throw { terminal_error: true, error_code:"USER_PAYMENT_NEEDED", message: "Payment needed" };
     }
-    // Finally, create a session cookie with firebase for this user
-    return admin.auth().createSessionCookie(idToken, {expiresIn});
 
-  }).then(sessionToken => {
-    res.cookie('access_token', 'Bearer ' + sessionToken, cookieParams).end(JSON.stringify({status: "success"}));
-  })
-  .catch(err => {
+    // Finally, create a session cookie with firebase for this user
+    const sessionCookie = await admin.auth().createSessionCookie(idToken, {expiresIn});
+
+    // ~~ SUCCESS ~~
+    res.cookie('access_token', 'Bearer ' + sessionCookie, cookieParams).end(JSON.stringify({success: true}));
+
+  } catch(err) {
+    console.log("/GetToken Error: ", err)
     // set a generic error message
     let errMsg = "Unable to log in, please try again.";
+    let errCode = "ERROR"
     // if it is one of our thrown errors, its okay to display
     if(err.terminal_error == true) {
       errMsg = err.message;
-    } else {
-      // if its not an error that we threw, log it to console
-      console.log(err)
+      errCode = err.error_code;
     }
-    // add error code that determines where to bounce the users
-    // stripe customer fetch failed, or less likely, firebase db errored out
-    res.status(403).json({status:"error", message: errMsg});
-  });
+    res.json({error_code: errCode, message: errMsg});
+  }
+
 });
 
 app.post('/payment', async (req, res) => {
-
-  // Grab Firebase user ID from decoded claims in auth middleware
+  logger.info("/payment")
   const userId = req.body.user_id;
   if(!userId) {
     res.status(403).send('Unauthorized');
     return;
   }
 
-  // Create Stripe customer from payment method created on frontend
-  const customer = await stripe.customers.create({
-    payment_method: req.body.payment_method,
-    email: req.body_email,
-    invoice_settings: {
-      default_payment_method: req.body.payment_method,
-    },
-  }).catch(error => {
-    console.log(error)
-    return null;
-  });
+  const email = req.body.email;
+  if(!email) {
+    res.json({error_code: "USER_EMAIL_INVALID", message: "please enter your email" });
+    return
+  }
 
-  if(!customer) {
-    res.json({status: "error"});
+  let customer;
+  let subscription;
+  // STRIPE CUSTOMER + SUBSCRIPTION
+  try {
+    // Create Stripe customer from payment method created on frontend
+    customer = await stripe.customers.create({
+      payment_method: req.body.payment_method,
+      email: req.body.email,
+      invoice_settings: {
+        default_payment_method: req.body.payment_method,
+      },
+    })
+
+    console.log("THE CUSTOMER")
+    console.log(customer)
+
+    // Create Stripe subscription connected to new customer
+    subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ plan: "plan_GTx2oWv2QTkcan" }],
+      expand: ["latest_invoice.payment_intent"],
+      trial_period_days: 7,
+
+    })
+    console.log("THE SUBSCRIPTION")
+    console.log(subscription)
+  } catch(err) {
+    const errMsg = handleStripeError(err)
+    res.json({error_code: "USER_PAYMENT_ERROR", message: errMsg });
     return;
   }
 
-  // Create Stripe subscription connected to new customer
-  const subscription = await stripe.subscriptions.create({
-    customer: customer.id,
-    items: [{ plan: "plan_GTx2oWv2QTkcan" }],
-    expand: ["latest_invoice.payment_intent"],
-    trial_period_days: 7,
+  // FIREBASE + FIRESTORE
+  try {
+    // Add user data to db
+    let docRef = db.collection('users').doc(userId);
+    let setUser = await docRef.set({
+      userId: userId,
+      customerId: customer.id,
+      subscriptionId: subscription.id,
+      email:email,
+    });
 
-  }).catch(error => {
-    console.log(error)
-    return null;
-  });
+    // Set custom auth claims with Firebase
+    await admin.auth().setCustomUserClaims(userId, {
+      customer_id: customer.id,
+      subscription_id: subscription.id,
+    })
 
-  if(!subscription) {
-    res.json({status: "error"});
-    return;
+    res.json({success:true});
+  } catch(err) {
+
+    // error with firebase and firestore
+    console.log("/Payment Error: ", err);
+    res.json({error_code: "USER_PAYMENT_AUTH_ERROR", message: "Unable to validate your payment." });
   }
-
-  // Correlate stripe customer and subscription IDs
-  // with Firebase User ID and save in Firestore
-  let docRef = db.collection('users').doc(userId);
-  let setUser = await docRef.set({
-    userId: userId,
-    customerId: customer.id,
-    subscriptionId: subscription.id,
-  });
-
-  console.log("payment success")
-  res.json({status:"success"});
-
 });
 
 app.use('/sec-historical-price/:symbol', checkAuth)
