@@ -55,7 +55,8 @@ admin.initializeApp({
 const db = admin.firestore();
 
 // init stripe
-const stripe = Stripe('sk_test_arNYJpPg8KjS7jyfmeQAndhJ00KmANAQWf');
+const stripeKey = process.env.IS_DEV == "true" ? process.env.SECRET_STRIPE_TEST_KEY : process.env.SECRET_STRIPE_PROD_KEY;
+const stripe = Stripe(stripeKey);
 
 // init intrinio
 intrinioSDK.ApiClient.instance.authentications['ApiKeyAuth'].apiKey = process.env.INTRINIO_API_KEY_PROD;
