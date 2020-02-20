@@ -248,7 +248,7 @@ app.post('/checkout', async (req, res) => {
       success_url: apiURL + '/success?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: apiURL,
     });
-
+      res.json({session:session})
   } else {
     //create checkout session for existing customer
     const session = await stripe.checkout.sessions.create({
@@ -264,10 +264,10 @@ app.post('/checkout', async (req, res) => {
       success_url: apiURL + '/success?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: apiURL,
     });
+      res.json({session:session})
 
   }
 
-  res.json({session:session})
 })
 
 // index
