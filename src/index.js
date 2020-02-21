@@ -82,11 +82,20 @@ var corsOptions = {
   credentials: true,
 }
 
+var rawBodySaver = function (req, res, buf, encoding) {
+  if (buf && buf.length) {
+    req.rawBody = buf.toString(encoding || 'utf8');
+  }
+}
+
 // set up middlewares
 const app = express();
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(express.json());
+//app.use(express.json());
+app.use(bodyParser.json({ verify: rawBodySaver }));
+app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
+app.use(bodyParser.raw({ verify: rawBodySaver, type: '*/*' }));
 
 /*
 ~~~~~~Utils~~~~~~
@@ -156,6 +165,145 @@ function checkAuth(req, res, next) {
 /*
 ~~~~~~Routes~~~~~~
 */
+
+//Request URL: https://terminal.retirementinsider.com/success?session_id=cs_test_rVIlOBqZ6XvLsDFCCI8MVveNLuFCpJUqsH1vKfIFWLQSl9nPcILCUM85
+
+app.post('/hooks', async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = 'whsec_RVRfLqQONVrVIlc2r4cB0ShWvJNVAPxQ'
+
+  let evt;
+
+  try {
+    evt = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+  } catch (err) {
+    logger.error("Stripe Checkout Webhook Error (constructEvent): ", err);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (evt.type === 'checkout.session.completed') {
+    logger.info("-- checkout session completed --")
+
+    if(evt.data.object.mode == "subscription") {
+      console.log("hit subscription type checkout session")
+
+      const subscriptionId = evt.data.object.subscription
+      const customerId = evt.data.object.customer
+      const userId = evt.data.object.client_reference_id
+      const email = evt.data.object.customer_email
+
+      // FIREBASE + FIRESTORE
+      try {
+        // Add user data to db
+        let docRef = db.collection('users').doc(userId);
+        let setUser = await docRef.set({
+          userId: userId,
+          customerId: customerId,
+          subscriptionId: subscriptionId,
+          email: email,
+        });
+
+        // Set custom auth claims with Firebase
+        await admin.auth().setCustomUserClaims(userId, {
+          customer_id: customerId,
+          subscription_id: subscriptionId,
+        })
+
+      } catch(err) {
+
+        // error with firebase and firestore
+        logger.error("Stripe Checkout Webhook Error: ", err);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+
+    } else if(evt.data.object.mode == "setup") {
+      console.log("hit setup type checkout session")
+      try {
+        const setupIntentId = evt.data.object.setup_intent;
+
+        // Retrieve the SetupIntent
+        const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+
+        const paymentMethodId = setupIntent.payment_method;
+        const customerId = setupIntent.metadata.customer_id;
+        const subscriptionId = setupIntent.metadata.subscription_id;
+
+        // Attach the PaymentMethod to the customer
+        const paymentMethod = await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+
+        //Set a default payment method for future invoices
+        const customer = await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } })
+
+        //Set default_payment_method on the Subscription
+        const subscription = await stripe.subscriptions.update(subscriptionId, { default_payment_method: paymentMethodId })
+
+      } catch(err) {
+        logger.error("Stripe Checkout SetupIntent Webhook Error: ", err);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+
+    }
+
+
+  }
+
+  res.json({success: true});
+
+})
+
+app.post('/checkout', async (req, res) => {
+  const userId = req.body.user_id;
+  if(!userId) {
+    res.status(403).send('Unauthorized');
+    return;
+  }
+
+  const email = req.body.email;
+  if(!email) {
+    res.json({error_code: "USER_EMAIL_INVALID", message: "please enter your email" });
+    return
+  }
+
+  if(!req.body.customer_id) {
+
+    // create checkout session for new customer
+    const session = await stripe.checkout.sessions.create({
+      customer_email: email,
+      client_reference_id: userId,
+      payment_method_types: ['card'],
+      subscription_data: {
+        items: [{
+          plan: 'plan_GTx2oWv2QTkcan',
+        }],
+        trial_from_plan: true,
+      },
+      success_url: apiURL + '/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: apiURL,
+    });
+      res.json({session:session})
+  } else {
+    console.log("update existing subscription!!!!!")
+    //create checkout session for existing customer
+    const session = await stripe.checkout.sessions.create({
+      customer_email: email,
+      client_reference_id: userId,
+      payment_method_types: ['card'],
+      mode: 'setup',
+      setup_intent_data: {
+        metadata: {
+          customer_id: req.body.customer_id,
+          subscription_id: req.body.subscription_id,
+        },
+      },
+      success_url: apiURL + '/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: apiURL,
+    });
+      res.json({session:session})
+
+  }
+
+})
+
 // index
 app.get('/', async (req, res) => {
     res.send('hello');
@@ -222,12 +370,25 @@ app.post('/getToken', async (req, res) => {
 
     // retrieve customer data from stripe using customer id from firestore
     const customer = await stripe.customers.retrieve(customerId)
+    console.log("CUSTOMER OBJ")
+    console.log(customer)
+    console.log("SUBSCRIPTIONS")
+    if(customer.subscriptions.total_count < 1) {
+      throw { terminal_error: true, error_code:"SUBSCRIPTION_CANCELED", message: "Your subscription has been canceled, please contact support to update your subscription." };
+    }
     // Check if customer has paid for their subscription
-    if(customer.delinquent) {
+    if(customer.subscriptions.data[0].canceled_at) {
+      console.log("HIT CANCELED")
       // Bounce to payment page for now
       // we may need to handle this diferently because the customer actually exists
       // update existing customers payment method and re-charge rather than sign up new customer
-      throw { terminal_error: true, error_code:"USER_PAYMENT_NEEDED", message: "Payment needed" };
+      //customer.subscriptions.data[0].id
+      // if(customer.subscriptions.total_count > 0) {
+      //   throw { terminal_error: true, error_code:"USER_PAYMENT_NEEDED", message: "Payment needed", customer_id: customerId, subscription_id: customer.subscriptions.data[0].id };
+      // } else {
+      //   throw { terminal_error: true, error_code:"NO_SUBSCRIPTION", message: "We found your customer record but not your subscription, please contact support." };
+      // }
+      throw { terminal_error: true, error_code:"SUBSCRIPTION_CANCELED", message: "Your subscription has been canceled, please contact support to update your subscription." };
     }
 
     // Finally, create a session cookie with firebase for this user
