@@ -4,34 +4,16 @@ import { finished } from 'stream';
 
 const siteUrl = "https://finance.yahoo.com/trending-tickers";
 
-const fetchTrending = async () => {
-    const result = await axios.get(siteUrl);
-    // console.log(result);
-    return cheerio.load(result.data);
-};
+const trendingJson = "https://terminal-scrape-data.s3.amazonaws.com/trending/trending.json"
 
 export async function getTrending() {
-    const $ = await fetchTrending();
-    let trending = [];
-
-    $('table tr').each(function (index, element) {
-        // console.log($(element).find('td').text())
-        // trending.push($(element).text())
-        let ticker = $(element).find('td.data-col0').text();
-        // let name = $(element).find('td.data-col0').text();
-        let lastPrice = $(element).find('td.data-col2').text();
-        let change = $(element).find('td.data-col5').text();
-
-        let item = {
-            ticker,
-            lastPrice,
-            change
-        }
-        trending.push(item);
-    })
-
-    // console.log(trending.slice(1,));
-    return trending.slice(1,);
+    try {
+        const response = await axios.get(trendingJson);
+        return response.data
+      } catch (error) {
+        console.error(error);
+      }
+ ;
 };
     // $('div[class=".yfinlist-table"]').each(function (index, element){
     //     trending.push($(element).find('table').find("tr").find('[class~="data-row"]'));
