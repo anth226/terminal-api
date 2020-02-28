@@ -1,33 +1,20 @@
 import axios from 'axios';
 import cheerio from 'cheerio';
+const AWS = require('aws-sdk');
 
 const siteUrl = "https://finviz.com/";
 const insiderPage = "https://finviz.com/insidertrading.ashx"
 
-const fetchDataAllInsider = async () => {
-    const result = await axios.get(insiderPage);
-    return cheerio.load(result.data);
-};
+const s3AllInsider = "https://terminal-scrape-data.s3.amazonaws.com/all-insider-trading/allInsider.json"
 
-export async function getAllInsider()  {
-    let data = []
-
-    const $ = await fetchDataAllInsider();
-
-    $('.body-table tr td').each(function(idx, element) {
-        data.push($(element).text().trim())
-    });
-
-    data = data.slice(10,)
-
-    let insiderArrays = [], chunkSize = 10;
-
-    while (data.length > 0) {
-        insiderArrays.push(data.splice(0, chunkSize));
-    }
-
-
-    return insiderArrays;
+export async function getAllInsider() {
+    try {
+        const response = await axios.get(s3AllInsider);
+        return response.data
+      } catch (error) {
+        console.error(error);
+      }
+ ;
 }
 
 const companyPage = "https://finviz.com/quote.ashx?t="
@@ -42,7 +29,7 @@ export async function getCompanyRatings(ticker) {
 
     const $ = await fetchDataCompany(ticker);
 
-    $('table.fullview-ratings-outer td.fullview-ratings-inner tr').each(function(idx, element) {
+    $('table.fullview-ratings-outer td.fullview-ratings-inner tr').each(function (idx, element) {
         data.push($(element).text())
     });
 
@@ -56,9 +43,9 @@ export async function getCompanyRatings(ticker) {
     let clean = [];
     for (let row of splitData) {
         let date = row[0].slice(0, 9)
-        let position = row[0].slice(9, )
-        row.splice(0,0, date)
-        row.splice(1,0, position)
+        let position = row[0].slice(9)
+        row.splice(0, 0, date)
+        row.splice(1, 0, position)
         row.splice(2, 1)
         clean.push(row)
     }
@@ -75,20 +62,20 @@ export async function getCompanyMetrics(ticker) {
 
     let res = {}
 
-    $('table.snapshot-table2 tr.table-dark-row').each(function(idx, element) {
+    $('table.snapshot-table2 tr.table-dark-row').each(function (idx, element) {
         let keys = []
         let vals = []
 
-        $(element).find('td').each(function(i, e) {
-          if(i%2==0) {
-            keys.push($(e).text());
-          } else {
-            vals.push($(e).text());
-          }
+        $(element).find('td').each(function (i, e) {
+            if (i % 2 == 0) {
+                keys.push($(e).text());
+            } else {
+                vals.push($(e).text());
+            }
         });
 
-        for(let i = 0; i<keys.length; i++) {
-          res[keys[i]] = vals[i]
+        for (let i = 0; i < keys.length; i++) {
+            res[keys[i]] = vals[i]
         }
     });
 
