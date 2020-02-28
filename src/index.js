@@ -17,6 +17,7 @@ import * as gainersLosers from './scrape/get_gainers_losers';
 import * as trending from './scrape/yahoo_trending';
 import * as forexPairs from './polygon/get_forex_last_quote';
 import * as newsHelper from './newsApi/newsHelper';
+import * as stocksNews from './newsApi/stocksApi';
 import * as finviz from './scrape/finviz';
 import * as futures from './scrape/finviz_futures';
 import * as cnn from './scrape/cnn';
@@ -634,6 +635,12 @@ app.get('/trending', async (req, res) => {
 });
 
 /* News */
+// Stocks news api
+app.use('/news/market-headlines', checkAuth)
+app.get('/news/market-headlines', async (req, res) => {
+  const headlines = await stocksNews.generalMarketNews(process.env.STOCKS_NEWS_API_KEY)
+  res.send(headlines);
+});
 
 app.use('/news-sources', checkAuth)
 app.get('/news-sources', async (req, res) => {
