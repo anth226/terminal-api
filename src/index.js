@@ -657,8 +657,8 @@ app.get('/news/home-headlines', async (req, res) => {
 
 app.use('/all-insider', checkAuth)
 app.get('/all-insider', async (req, res) => {
-    const allInsider = await finviz.getAllInsider().then(data => data)
-    res.send(allInsider);
+  const allInsider = await finviz.getAllInsider().then(data => data)
+  res.send(allInsider);
 });
 
 app.use('/company-ratings/:ticker', checkAuth)
