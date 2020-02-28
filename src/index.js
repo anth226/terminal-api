@@ -26,7 +26,6 @@ import * as nerdwallet from './scrape/nerdwallet';
 import * as titans from './finbox/titans';
 import * as finvizGroups from './scrape/finviz_groups';
 import * as nerdwalletSavings from './scrape/nerdwallet_savings';
-import * as stocktwits from './stocktwits/get_trending';
 import bodyParser from 'body-parser';
 import winston from 'winston';
 import Stripe from 'stripe';
@@ -720,14 +719,6 @@ app.post('/titans', async (req, res) => {
   const portfolios = await titans.getPortfolios(req.body);
   res.send(portfolios);
 });
-
-// get trending stocks from stocktwits
-app.use('/trending', checkAuth)
-app.get('/trending', async (req, res) => {
-  const trendingStocks = await stocktwits.getTrending();
-  res.send(trendingStocks);
-});
-
 
 app.listen(process.env.PORT, () =>
     console.log(`listening on ${process.env.PORT}`)
