@@ -56,6 +56,9 @@ const db = admin.firestore();
 
 // init stripe
 const stripeKey = process.env.IS_DEV == "true" ? process.env.SECRET_STRIPE_TEST_KEY : process.env.SECRET_STRIPE_PROD_KEY;
+const endpointSecret = process.env.IS_DEV == "true" ? process.env.DEV_ENDPOINT_SECRET : process.env.PROD_ENDPOINT_SECRET;
+const planId = process.env.IS_DEV == "true" ? process.env.DEV_PLAN_ID : process.env.PROD_PLAN_ID;
+
 const stripe = Stripe(stripeKey);
 
 // init intrinio
@@ -170,7 +173,6 @@ function checkAuth(req, res, next) {
 
 app.post('/hooks', async (req, res) => {
   const sig = req.headers['stripe-signature'];
-  const endpointSecret = 'whsec_RVRfLqQONVrVIlc2r4cB0ShWvJNVAPxQ'
 
   let evt;
 
@@ -273,7 +275,7 @@ app.post('/checkout', async (req, res) => {
       payment_method_types: ['card'],
       subscription_data: {
         items: [{
-          plan: 'plan_GTx2oWv2QTkcan',
+          plan: planId,
         }],
         trial_from_plan: true,
       },
@@ -445,7 +447,7 @@ app.post('/payment', async (req, res) => {
     // Create Stripe subscription connected to new customer
     subscription = await stripe.subscriptions.create({
       customer: customer.id,
-      items: [{ plan: "plan_GTx2oWv2QTkcan" }],
+      items: [{ plan: planId }],
       expand: ["latest_invoice.payment_intent"],
       trial_period_days: 7,
 
