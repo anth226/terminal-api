@@ -65,6 +65,14 @@ export async function searchCompanies(intrinioApi, query, secApi) {
         intrinioApi.searchCompanies(query, opts)
     .then(async function(data) {
         const etfs = await searchETF(secApi, query);
+        etfs.forEach(function(etf, idx) {
+          let etfTicker = etf.ticker;
+          data.companies.forEach(function(com, i) {
+            if(etfTicker == com.ticker) {
+              data.companies.splice(i, 1)
+            }
+          })
+        })
         return interleaveArray(data.companies, etfs);
     })
     .catch(function(error) {
