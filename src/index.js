@@ -1,18 +1,18 @@
-import 'dotenv/config';
-import express from 'express';
-import firebase from 'firebase';
-import admin from 'firebase-admin';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import axios from 'axios';
-import intrinioSDK from 'intrinio-sdk';
-import * as getCompanyData from './intrinio/get_company_data';
-import * as getNews from './intrinio/get_news';
-import * as getIndexData from './intrinio/get_index_data';
-import * as getSecurityData from './intrinio/get_security_data';
-import * as lookupCompany from './intrinio/get_company_fundamentals';
-import * as screener from './intrinio/screener';
-import * as analystRatings from './intrinio/get_analyst_ratings';
+import "dotenv/config";
+import express from "express";
+import firebase from "firebase";
+import admin from "firebase-admin";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import axios from "axios";
+import intrinioSDK from "intrinio-sdk";
+import * as getCompanyData from "./intrinio/get_company_data";
+import * as getNews from "./intrinio/get_news";
+import * as getIndexData from "./intrinio/get_index_data";
+import * as getSecurityData from "./intrinio/get_security_data";
+import * as lookupCompany from "./intrinio/get_company_fundamentals";
+import * as screener from "./intrinio/screener";
+import * as analystRatings from "./intrinio/get_analyst_ratings";
 // import * as gainersLosers from './polygon/get_gainers_losers';
 import * as gainersLosers from "./scrape/get_gainers_losers";
 import * as trending from "./scrape/yahoo_trending";
@@ -28,6 +28,7 @@ import * as nerdwallet from "./scrape/nerdwallet";
 import * as titans from "./finbox/titans";
 import * as finvizGroups from "./scrape/finviz_groups";
 import * as nerdwalletSavings from "./scrape/nerdwallet_savings";
+import * as portfolios from "./controllers/portfolios";
 import bodyParser from "body-parser";
 import winston from "winston";
 import Stripe from "stripe";
@@ -538,16 +539,20 @@ app.post("/payment", async (req, res) => {
 });
 
 //app.use('/analyst-ratings/:symbol/snapshot', checkAuth)
-app.get('/analyst-ratings/:symbol/snapshot', async( req, res ) => {
-    const snapshot = await analystRatings.analystSnapshot(req.params.symbol);
-    res.send(snapshot)
-})
+app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
+  const snapshot = await analystRatings.analystSnapshot(req.params.symbol);
+  res.send(snapshot);
+});
 
-app.use('/sec-historical-price/:symbol', checkAuth)
-app.get('/sec-historical-price/:symbol/:days', async( req, res ) => {
-    const intradayPrices = await getSecurityData.getHistoricalData(securityAPI, req.params.symbol, req.params.days)
-    res.send(intradayPrices)
-})
+app.use("/sec-historical-price/:symbol", checkAuth);
+app.get("/sec-historical-price/:symbol/:days", async (req, res) => {
+  const intradayPrices = await getSecurityData.getHistoricalData(
+    securityAPI,
+    req.params.symbol,
+    req.params.days
+  );
+  res.send(intradayPrices);
+});
 
 app.use("/company/datapoints", checkAuth);
 app.post("/company/datapoints", async (req, res) => {
@@ -596,6 +601,7 @@ app.get("/company-news/:symbol", async (req, res) => {
   );
   res.send(companyNews);
 });
+
 app.use("/company-fundamentals/:symbol", checkAuth);
 app.get("/company-fundamentals/:symbol", async (req, res) => {
   const companyFundamentals = await getCompanyData.companyFundamentals(
@@ -689,6 +695,7 @@ app.get("/get-index-price/:symbol", async (req, res) => {
   const level = await getIndexData.getIndexPrice(indexAPI, req.params.symbol);
   res.json({ price: level });
 });
+
 app.use("/index-historical/:symbol", checkAuth);
 app.get("/index-historical/:symbol", async (req, res) => {
   const results = await getIndexData.indexHistorical(
@@ -777,7 +784,7 @@ app.get("/company-metrics/:ticker", async (req, res) => {
     .then(data => data);
   res.send(companyMetrics);
 });
-// server
+
 app.use("/forex", checkAuth);
 app.get("/forex", async (req, res) => {
   const pairs = await finvizForex.getForex();
@@ -826,6 +833,14 @@ app.use("/titans", checkAuth);
 app.post("/titans", async (req, res) => {
   const portfolios = await titans.getPortfolios(req.body);
   res.send(portfolios);
+});
+
+app.use("/portfolios/:cik", checkAuth);
+app.get("/portfolios/:cik", async (req, res) => {
+  const portfolio = await portfolios
+    .getPortfolio(req.params.cik)
+    .then(data => data);
+  res.send(portfolio);
 });
 
 app.listen(process.env.PORT, () =>
