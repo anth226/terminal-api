@@ -1,17 +1,18 @@
-import "dotenv/config";
-import express from "express";
-import firebase from "firebase";
-import admin from "firebase-admin";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import axios from "axios";
-import intrinioSDK from "intrinio-sdk";
-import * as getCompanyData from "./intrinio/get_company_data";
-import * as getNews from "./intrinio/get_news";
-import * as getIndexData from "./intrinio/get_index_data";
-import * as getSecurityData from "./intrinio/get_security_data";
-import * as lookupCompany from "./intrinio/get_company_fundamentals";
-import * as screener from "./intrinio/screener";
+import 'dotenv/config';
+import express from 'express';
+import firebase from 'firebase';
+import admin from 'firebase-admin';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import axios from 'axios';
+import intrinioSDK from 'intrinio-sdk';
+import * as getCompanyData from './intrinio/get_company_data';
+import * as getNews from './intrinio/get_news';
+import * as getIndexData from './intrinio/get_index_data';
+import * as getSecurityData from './intrinio/get_security_data';
+import * as lookupCompany from './intrinio/get_company_fundamentals';
+import * as screener from './intrinio/screener';
+import * as analystRatings from './intrinio/get_analyst_ratings';
 // import * as gainersLosers from './polygon/get_gainers_losers';
 import * as gainersLosers from "./scrape/get_gainers_losers";
 import * as trending from "./scrape/yahoo_trending";
@@ -536,15 +537,17 @@ app.post("/payment", async (req, res) => {
   }
 });
 
-app.use("/sec-historical-price/:symbol", checkAuth);
-app.get("/sec-historical-price/:symbol/:days", async (req, res) => {
-  const intradayPrices = await getSecurityData.getHistoricalData(
-    securityAPI,
-    req.params.symbol,
-    req.params.days
-  );
-  res.send(intradayPrices);
-});
+//app.use('/analyst-ratings/:symbol/snapshot', checkAuth)
+app.get('/analyst-ratings/:symbol/snapshot', async( req, res ) => {
+    const snapshot = await analystRatings.analystSnapshot(req.params.symbol);
+    res.send(snapshot)
+})
+
+app.use('/sec-historical-price/:symbol', checkAuth)
+app.get('/sec-historical-price/:symbol/:days', async( req, res ) => {
+    const intradayPrices = await getSecurityData.getHistoricalData(securityAPI, req.params.symbol, req.params.days)
+    res.send(intradayPrices)
+})
 
 app.use("/company/datapoints", checkAuth);
 app.post("/company/datapoints", async (req, res) => {
