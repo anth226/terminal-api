@@ -63,7 +63,7 @@ export function getSecurityLastPrice(symbol) {
     }).catch(function(err){
         return err
     })
-
+//
     return lastPrice.then((data) => data.data)
 }
 

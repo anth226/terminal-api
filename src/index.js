@@ -12,6 +12,7 @@ import * as getIndexData from './intrinio/get_index_data';
 import * as getSecurityData from './intrinio/get_security_data';
 import * as lookupCompany from './intrinio/get_company_fundamentals';
 import * as screener from './intrinio/screener';
+import * as analystRatings from './intrinio/get_analyst_ratings';
 // import * as gainersLosers from './polygon/get_gainers_losers';
 import * as gainersLosers from './scrape/get_gainers_losers';
 import * as trending from './scrape/yahoo_trending';
@@ -485,6 +486,12 @@ app.post('/payment', async (req, res) => {
     res.json({error_code: "USER_PAYMENT_AUTH_ERROR", message: "Unable to validate your payment." });
   }
 });
+
+//app.use('/analyst-ratings/:symbol/snapshot', checkAuth)
+app.get('/analyst-ratings/:symbol/snapshot', async( req, res ) => {
+    const snapshot = await analystRatings.analystSnapshot(req.params.symbol);
+    res.send(snapshot)
+})
 
 app.use('/sec-historical-price/:symbol', checkAuth)
 app.get('/sec-historical-price/:symbol/:days', async( req, res ) => {
