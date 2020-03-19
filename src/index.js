@@ -1,20 +1,3 @@
-<<<<<<< Updated upstream
-import "dotenv/config";
-import express from "express";
-import firebase from "firebase";
-import admin from "firebase-admin";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import axios from "axios";
-import intrinioSDK from "intrinio-sdk";
-import * as getCompanyData from "./intrinio/get_company_data";
-import * as getNews from "./intrinio/get_news";
-import * as getIndexData from "./intrinio/get_index_data";
-import * as getSecurityData from "./intrinio/get_security_data";
-import * as lookupCompany from "./intrinio/get_company_fundamentals";
-import * as screener from "./intrinio/screener";
-import * as analystRatings from "./intrinio/get_analyst_ratings";
-=======
 import 'dotenv/config';
 import express from 'express';
 import firebase from 'firebase';
@@ -31,7 +14,6 @@ import * as lookupCompany from './intrinio/get_company_fundamentals';
 import * as screener from './intrinio/screener';
 import * as analystRatings from './intrinio/get_analyst_ratings';
 import * as holdings from './intrinio/get_holdings_data';
->>>>>>> Stashed changes
 // import * as gainersLosers from './polygon/get_gainers_losers';
 import * as gainersLosers from "./scrape/get_gainers_losers";
 import * as trending from "./scrape/yahoo_trending";
