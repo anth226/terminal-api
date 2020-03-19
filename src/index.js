@@ -35,7 +35,12 @@ import Stripe from "stripe";
 
 var bugsnag = require("@bugsnag/js");
 var bugsnagExpress = require("@bugsnag/plugin-express");
-var bugsnagClient = bugsnag(process.env.BUGSNAG_KEY);
+
+var bugsnagClient = bugsnag({
+  apiKey: process.env.BUGSNAG_KEY,
+  otherOption: process.env.RELEASE_STAGE
+});
+
 bugsnagClient.use(bugsnagExpress);
 
 var middleware = bugsnagClient.getPlugin("express");
