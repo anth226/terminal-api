@@ -33,6 +33,12 @@ import bodyParser from "body-parser";
 import winston from "winston";
 import Stripe from "stripe";
 
+var bugsnag = require("@bugsnag/js");
+var bugsnagExpress = require("@bugsnag/plugin-express");
+var bugsnagClient = bugsnag(process.env.BUGSNAG_KEY);
+bugsnagClient.use(bugsnagExpress);
+
+var middleware = bugsnagClient.getPlugin("express");
 /*
 ~~~~~~Configuration Stuff~~~~~~
 */
@@ -118,6 +124,8 @@ app.use(bodyParser.json({ verify: rawBodySaver }));
 app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
 app.use(bodyParser.raw({ verify: rawBodySaver, type: "*/*" }));
 
+app.use(middleware.requestHandler);
+app.use(middleware.errorHandler);
 /*
 ~~~~~~Utils~~~~~~
 */
