@@ -539,12 +539,13 @@ app.post("/payment", async (req, res) => {
   }
 });
 
+app.use('/holdings/:symbol', checkAuth)
 app.get('/holdings/:symbol', async( req, res ) => {
     const holdingsList = await holdings.getETFHoldings(req.params.symbol);
     res.send(holdingsList)
 })
 
-//app.use('/analyst-ratings/:symbol/snapshot', checkAuth)
+app.use('/analyst-ratings/:symbol/snapshot', checkAuth)
 app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
   const snapshot = await analystRatings.analystSnapshot(req.params.symbol);
   res.send(snapshot);
