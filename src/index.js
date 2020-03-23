@@ -30,6 +30,7 @@ import * as titans from "./finbox/titans";
 import * as finvizGroups from "./scrape/finviz_groups";
 import * as nerdwalletSavings from "./scrape/nerdwallet_savings";
 import * as portfolios from "./controllers/portfolios";
+import * as news from "./controllers/news";
 import bodyParser from "body-parser";
 import winston from "winston";
 import Stripe from "stripe";
@@ -746,15 +747,21 @@ app.get("/trending", async (req, res) => {
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
 app.get("/news/market-headlines", async (req, res) => {
-  const headlines = await stocksNews.generalMarketNews(
-    process.env.STOCKS_NEWS_API_KEY
-  );
+  // const headlines = await stocksNews.generalMarketNews(
+  //   process.env.STOCKS_NEWS_API_KEY
+  // );
+  // res.send(headlines);
+
+  const headlines = await news.getHeadlines();
   res.send(headlines);
 });
 
 app.use("/news-sources", checkAuth);
 app.get("/news-sources", async (req, res) => {
-  const sources = await newsHelper.getSources(process.env.NEWS_API_KEY);
+  // const sources = await newsHelper.getSources(process.env.NEWS_API_KEY);
+  // res.send(sources);
+
+  const sources = await news.getSources();
   res.send(sources);
 });
 
