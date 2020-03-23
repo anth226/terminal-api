@@ -1,19 +1,19 @@
-import 'dotenv/config';
-import express from 'express';
-import firebase from 'firebase';
-import admin from 'firebase-admin';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import axios from 'axios';
-import intrinioSDK from 'intrinio-sdk';
-import * as getCompanyData from './intrinio/get_company_data';
-import * as getNews from './intrinio/get_news';
-import * as getIndexData from './intrinio/get_index_data';
-import * as getSecurityData from './intrinio/get_security_data';
-import * as lookupCompany from './intrinio/get_company_fundamentals';
-import * as screener from './intrinio/screener';
-import * as analystRatings from './intrinio/get_analyst_ratings';
-import * as holdings from './intrinio/get_holdings_data';
+import "dotenv/config";
+import express from "express";
+import firebase from "firebase";
+import admin from "firebase-admin";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import axios from "axios";
+import intrinioSDK from "intrinio-sdk";
+import * as getCompanyData from "./intrinio/get_company_data";
+import * as getNews from "./intrinio/get_news";
+import * as getIndexData from "./intrinio/get_index_data";
+import * as getSecurityData from "./intrinio/get_security_data";
+import * as lookupCompany from "./intrinio/get_company_fundamentals";
+import * as screener from "./intrinio/screener";
+import * as analystRatings from "./intrinio/get_analyst_ratings";
+import * as holdings from "./intrinio/get_holdings_data";
 // import * as gainersLosers from './polygon/get_gainers_losers';
 import * as gainersLosers from "./scrape/get_gainers_losers";
 import * as trending from "./scrape/yahoo_trending";
@@ -72,24 +72,15 @@ admin.initializeApp({
 const db = admin.firestore();
 
 // init stripe
-const stripeKey =
-  process.env.IS_DEV == "true"
-    ? process.env.SECRET_STRIPE_TEST_KEY
-    : process.env.SECRET_STRIPE_PROD_KEY;
-const endpointSecret =
-  process.env.IS_DEV == "true"
-    ? process.env.DEV_ENDPOINT_SECRET
-    : process.env.PROD_ENDPOINT_SECRET;
-const planId =
-  process.env.IS_DEV == "true"
-    ? process.env.DEV_PLAN_ID
-    : process.env.PROD_PLAN_ID;
+const planId = process.env.STRIPE_PLAN_ID;
+const stripeKey = process.env.STRIPE_API_KEY;
+const endpointSecret = process.env.STRIPE_ENDPOINT_SECRET;
 
 const stripe = Stripe(stripeKey);
 
 // init intrinio
 intrinioSDK.ApiClient.instance.authentications["ApiKeyAuth"].apiKey =
-  process.env.INTRINIO_API_KEY_PROD;
+  process.env.INTRINIO_API_KEY;
 const companyAPI = new intrinioSDK.CompanyApi();
 const securityAPI = new intrinioSDK.SecurityApi();
 const indexAPI = new intrinioSDK.IndexApi();
@@ -552,13 +543,13 @@ app.post("/payment", async (req, res) => {
   }
 });
 
-app.use('/holdings/:symbol', checkAuth)
-app.get('/holdings/:symbol', async( req, res ) => {
-    const holdingsList = await holdings.getETFHoldings(req.params.symbol);
-    res.send(holdingsList)
-})
+app.use("/holdings/:symbol", checkAuth);
+app.get("/holdings/:symbol", async (req, res) => {
+  const holdingsList = await holdings.getETFHoldings(req.params.symbol);
+  res.send(holdingsList);
+});
 
-app.use('/analyst-ratings/:symbol/snapshot', checkAuth)
+app.use("/analyst-ratings/:symbol/snapshot", checkAuth);
 app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
   const snapshot = await analystRatings.analystSnapshot(req.params.symbol);
   res.send(snapshot);
