@@ -4,8 +4,8 @@ require("dotenv").config();
 const chalk = require("chalk");
 
 const s3 = new AWS.S3({
-  accessKeyId: process.env.ACCESS_KEY_ID,
-  secretAccessKey: process.env.SECRET_ACCESS_KEY
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 });
 
 import { getInstitutionalHoldings } from "../intrinio/get_institutional_holdings";
