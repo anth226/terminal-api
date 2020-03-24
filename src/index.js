@@ -31,6 +31,7 @@ import * as finvizGroups from "./scrape/finviz_groups";
 import * as nerdwalletSavings from "./scrape/nerdwallet_savings";
 import * as portfolios from "./controllers/portfolios";
 import * as news from "./controllers/news";
+import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
 import winston from "winston";
 import Stripe from "stripe";
@@ -236,6 +237,9 @@ app.post("/hooks", async (req, res) => {
           customer_id: customerId,
           subscription_id: subscriptionId
         });
+
+        sendEmail.sendSignupEmail(email);
+        
       } catch (err) {
         // error with firebase and firestore
         logger.error("Stripe Checkout Webhook Error: ", err);
