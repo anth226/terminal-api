@@ -857,6 +857,12 @@ app.get("/titans", async (req, res) => {
   res.send(result);
 });
 
+app.use("/billionaires", checkAuth);
+app.get("/billionaires", async (req, res) => {
+  const result = await titans.getBillionaires(req.body);
+  res.send(result);
+});
+
 app.use("/portfolios", checkAuth);
 app.post("/portfolios", async (req, res) => {
   const result = await titans.getPortfolios(req.body);
