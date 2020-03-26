@@ -69,3 +69,5 @@ export async function getSinglePortfolioData(portfolioName) {
 
   return portfolio.then(data => data.data);
 }
+
+export async function getTitans({ investorTypes, sectors, gte, lte }) {}
