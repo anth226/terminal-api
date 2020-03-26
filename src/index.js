@@ -30,6 +30,7 @@ import * as finvizGroups from "./scrape/finviz_groups";
 import * as nerdwalletSavings from "./scrape/nerdwallet_savings";
 import * as portfolios from "./controllers/portfolios";
 import * as news from "./controllers/news";
+import * as performance from "./controllers/performance";
 import * as titans from "./controllers/titans";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
@@ -854,6 +855,12 @@ app.use("/titans", checkAuth);
 app.get("/titans", async (req, res) => {
   // const result = await titans.getPortfolios(req.body);
   const result = await titans.getTitans(req.body);
+  res.send(result);
+});
+
+app.use("/portfolios/performance", checkAuth);
+app.get("/portfolios/performance", async (req, res) => {
+  const result = await performance.getPortfolios(req.body);
   res.send(result);
 });
 
