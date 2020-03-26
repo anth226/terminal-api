@@ -26,11 +26,12 @@ import * as cnn from "./scrape/cnn";
 import * as finvizForex from "./scrape/finviz_forex";
 import * as cnnSectors from "./scrape/cnn_sectors";
 import * as nerdwallet from "./scrape/nerdwallet";
-import * as titans from "./finbox/titans";
 import * as finvizGroups from "./scrape/finviz_groups";
 import * as nerdwalletSavings from "./scrape/nerdwallet_savings";
 import * as portfolios from "./controllers/portfolios";
 import * as news from "./controllers/news";
+import * as performance from "./controllers/performance";
+import * as titans from "./controllers/titans";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
 import winston from "winston";
@@ -239,7 +240,6 @@ app.post("/hooks", async (req, res) => {
         });
 
         sendEmail.sendSignupEmail(email);
-        
       } catch (err) {
         // error with firebase and firestore
         logger.error("Stripe Checkout Webhook Error: ", err);
@@ -852,9 +852,28 @@ app.get("/titans/:portfolio", async (req, res) => {
 });
 
 app.use("/titans", checkAuth);
-app.post("/titans", async (req, res) => {
-  const portfolios = await titans.getPortfolios(req.body);
-  res.send(portfolios);
+app.get("/titans", async (req, res) => {
+  // const result = await titans.getPortfolios(req.body);
+  const result = await titans.getTitans(req.body);
+  res.send(result);
+});
+
+app.use("/portfolios/performance", checkAuth);
+app.get("/portfolios/performance", async (req, res) => {
+  const result = await performance.getPortfolios(req.body);
+  res.send(result);
+});
+
+app.use("/billionaires", checkAuth);
+app.get("/billionaires", async (req, res) => {
+  const result = await titans.getBillionaires(req.body);
+  res.send(result);
+});
+
+app.use("/portfolios", checkAuth);
+app.post("/portfolios", async (req, res) => {
+  const result = await titans.getPortfolios(req.body);
+  res.send(result);
 });
 
 app.use("/portfolios/:cik", checkAuth);
