@@ -843,6 +843,24 @@ app.get("/industry-performance", async (req, res) => {
   res.send(industryPerf);
 });
 
+app.use("/billionaires/:id/unfollow", checkAuth);
+app.get("/billionaires/:id/unfollow", async (req, res) => {
+  const result = await titans.unfollowTitan(req.terminal_app.claims.uid, req.params.id)
+  res.send(result);
+});
+
+app.use("/billionaires/following", checkAuth);
+app.get("/billionaires/following", async (req, res) => {
+  const result = await titans.getFollowedTitans(req.terminal_app.claims.uid);
+  res.send(result);
+});
+
+app.use("/billionaires/:id/follow", checkAuth);
+app.get("/billionaires/:id/follow", async (req, res) => {
+  const result = await titans.followTitan(req.terminal_app.claims.uid, req.params.id)
+  res.send(result);
+});
+
 app.use("/titans/:portfolio", checkAuth);
 app.get("/titans/:portfolio", async (req, res) => {
   const portfolio = await titans
