@@ -43,18 +43,21 @@ export async function getBillionaires({
     `);
 }
 
-export const getFollowedTitans = async (userID) => db(`
+export const getFollowedTitans = async userID =>
+  db(`
     SELECT *
     FROM billionaire_watchlists
     WHERE user_id = '${userID}'
   `);
 
-export const followTitan = async (userID, titanID) => db(`
+export const followTitan = async (userID, titanID) =>
+  db(`
     INSERT INTO billionaire_watchlists(user_id, titan_id)
     VALUES('${userID}', ${titanID})
   `);
 
-export const unfollowTitan = async (userID, titanID) => db(`
+export const unfollowTitan = async (userID, titanID) =>
+  db(`
     DELETE FROM billionaire_watchlists
     WHERE user_id = '${userID}'
     AND titan_id = ${titanID}
