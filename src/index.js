@@ -29,6 +29,7 @@ import * as nerdwallet from "./scrape/nerdwallet";
 import * as finvizGroups from "./scrape/finviz_groups";
 import * as nerdwalletSavings from "./scrape/nerdwallet_savings";
 import * as portfolios from "./controllers/portfolios";
+import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 import * as titans from "./controllers/titans";
@@ -845,7 +846,10 @@ app.get("/industry-performance", async (req, res) => {
 
 app.use("/billionaires/:id/unfollow", checkAuth);
 app.get("/billionaires/:id/unfollow", async (req, res) => {
-  const result = await titans.unfollowTitan(req.terminal_app.claims.uid, req.params.id)
+  const result = await titans.unfollowTitan(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
   res.send(result);
 });
 
@@ -857,7 +861,10 @@ app.get("/billionaires/following", async (req, res) => {
 
 app.use("/billionaires/:id/follow", checkAuth);
 app.get("/billionaires/:id/follow", async (req, res) => {
-  const result = await titans.followTitan(req.terminal_app.claims.uid, req.params.id)
+  const result = await titans.followTitan(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
   res.send(result);
 });
 
@@ -900,6 +907,12 @@ app.get("/portfolios/:cik", async (req, res) => {
     .getPortfolio(req.params.cik)
     .then(data => data);
   res.send(portfolio);
+});
+
+// Helpers
+app.get("/hooks/zip_billionaire_performances", async (req, res) => {
+  const result = await hooks.zipPerformances_Billionaires(req.body);
+  res.send(result);
 });
 
 app.listen(process.env.PORT, () =>

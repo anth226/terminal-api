@@ -21,6 +21,8 @@
     "@babel/core": "^7.7.7",
     "@babel/node": "^7.7.7",
     "@babel/preset-env": "^7.7.7",
+    "csv-parser": "^2.3.2",
+    "csv-writer": "^1.6.0",
     "nodemon": "^2.0.2"
   },
   "dependencies": {
