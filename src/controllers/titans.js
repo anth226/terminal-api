@@ -2,8 +2,6 @@ import db from "../db";
 
 import * as finbox from "../finbox/titans";
 
-import axios from "axios";
-
 export async function getAll() {
   return await finbox.getAll();
 }
