@@ -60,3 +60,28 @@ export const unfollowTitan = async (userID, titanID) =>
     WHERE user_id = '${userID}'
     AND titan_id = ${titanID}
   `);
+
+export const getHoldings = async id => {
+  let result = await db(`
+    SELECT *
+    FROM billionaires
+    WHERE id = '${id}'
+  `);
+
+  if (result.length > 0) {
+    let cik = result[0].cik;
+
+    result = await db(`
+      SELECT *
+      FROM institutions
+      WHERE cik = '${cik}'
+    `);
+
+    return {
+      ...result[0],
+      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`
+    };
+  }
+
+  return {};
+};
