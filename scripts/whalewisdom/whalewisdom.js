@@ -68,51 +68,36 @@ module.exports = {
       }
     }
   },
-  fetchHoldings: async () => {
-    let result = await db(`
-      SELECT *
-      FROM institutions
-      ORDER BY name ASC
-      LIMIT 1
-    `);
+  fetchHoldings: async cik => {
+    let response = await getInstitutionalHoldings(cik);
 
-    console.log(result);
+    let next_page = null;
+    if (response) {
+      next_page = response["next_page"];
 
-    if (result.length > 0) {
-      let cik = result[0].cik;
+      console.log(next_page);
 
-      cik = "0001167483";
+      let index = 0;
+      await uploadToS3(cik, index, response);
 
-      let response = await getInstitutionalHoldings(cik);
+      while (next_page) {
+        index += 1;
 
-      let next_page = null;
-      if (response) {
+        response = await getInstitutionalHoldings(cik, next_page);
         next_page = response["next_page"];
-
+        console.log(response["holdings"][0]);
         console.log(next_page);
 
-        let index = 0;
         await uploadToS3(cik, index, response);
-
-        while (next_page) {
-          index += 1;
-
-          response = await getInstitutionalHoldings(cik, next_page);
-          next_page = response["next_page"];
-          console.log(response["holdings"][0]);
-          console.log(next_page);
-
-          await uploadToS3(cik, index, response);
-        }
-
-        let query = {
-          text:
-            "UPDATE institutions SET holdings_page_count=($1), holdings_updated_at=($2) WHERE cik=($3) RETURNING *",
-          values: [index + 1, new Date(), cik]
-        };
-
-        await db(query);
       }
+
+      let query = {
+        text:
+          "UPDATE institutions SET holdings_page_count=($1), holdings_updated_at=($2) WHERE cik=($3) RETURNING *",
+        values: [index + 1, new Date(), cik]
+      };
+
+      await db(query);
     }
   }
 };
