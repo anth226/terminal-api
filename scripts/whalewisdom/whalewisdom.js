@@ -31,7 +31,8 @@ const uploadToS3 = async (cik, index, data) => {
     Bucket: process.env.BUCKET_INTRINIO_ZAKS,
     Key: `holdings/${cik}/${index}.json`,
     Body: JSON.stringify(data),
-    ContentType: "application/json"
+    ContentType: "application/json",
+    ACL: "public-read"
   };
 
   const response = await s3.upload(params).promise();
@@ -80,7 +81,7 @@ module.exports = {
     if (result.length > 0) {
       let cik = result[0].cik;
 
-      cik = "0001067983";
+      cik = "0001167483";
 
       let response = await getInstitutionalHoldings(cik);
 
