@@ -330,7 +330,7 @@ app.post("/checkout", async (req, res) => {
           subscription_id: req.body.subscription_id
         }
       },
-      success_url: apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
+      success_url: apiURL + "/account?s=1",
       cancel_url: apiURL
     });
     res.json({ session: session });
