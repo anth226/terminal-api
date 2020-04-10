@@ -418,9 +418,10 @@ app.post("/getToken", async (req, res) => {
 
     // retrieve customer data from stripe using customer id from firestore
     const customer = await stripe.customers.retrieve(customerId);
-    console.log("CUSTOMER OBJ");
+    console.log("\nCUSTOMER OBJ\n");
     console.log(customer);
-    console.log("SUBSCRIPTIONS");
+    console.log("\nSUBSCRIPTION\n");
+    console.log(customer.subscriptions);
     if (customer.subscriptions.total_count < 1) {
       throw {
         terminal_error: true,
@@ -546,6 +547,22 @@ app.post("/payment", async (req, res) => {
       message: "Unable to validate your payment."
     });
   }
+});
+
+app.use("/profile", checkAuth);
+app.get("/profile", async (req, res) => {
+  const customer = await stripe.customers.retrieve(req.terminal_app.claims.customer_id, {
+    expand: ["invoice_settings.default_payment_method"]
+  });
+  res.json({
+    email: customer.email,
+    delinquent: customer.delinquent,
+    days_until_due: customer.subscriptions.data[0].days_until_due,
+    card_brand: customer.invoice_settings.default_payment_method.card.brand,
+    card_last4: customer.invoice_settings.default_payment_method.card.last4,
+    customer_id: req.terminal_app.claims.customer_id,
+    subscription_id: customer.subscriptions.data[0].id,
+  })
 });
 
 app.use("/holdings/:symbol", checkAuth);
