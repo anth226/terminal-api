@@ -553,14 +553,20 @@ app.post("/payment", async (req, res) => {
 app.use("/profile", checkAuth);
 app.get("/profile", async (req, res) => {
   const customer = await stripe.customers.retrieve(req.terminal_app.claims.customer_id, {
-    expand: ["subscriptions.data.default_payment_method"]
+    expand: ["subscriptions.data.default_payment_method", "invoice_settings.default_payment_method"]
   });
+
+  paymentMethod = customer.subscriptions.data[0].default_payment_method
+  if(paymentMethod == null) {
+    paymentMethod = customer.invoice_settings.default_payment_method;
+  }
+
   res.json({
     email: customer.email,
     delinquent: customer.delinquent,
     days_until_due: customer.subscriptions.data[0].days_until_due,
-    card_brand: customer.subscriptions.data[0].default_payment_method.card.brand,
-    card_last4: customer.subscriptions.data[0].default_payment_method.card.last4,
+    card_brand: paymentMethod.card.brand,
+    card_last4: paymentMethod.card.last4,
     customer_id: req.terminal_app.claims.customer_id,
     subscription_id: customer.subscriptions.data[0].id,
   })
