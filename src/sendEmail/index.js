@@ -12,11 +12,15 @@ AWS.config.update({
 const ses = new AWS.SES({ apiVersion: '2010-12-01' });
 
 export const sendSignupEmail = async (recipient) => {
-  sendEmail(signupEmailBody, [recipient]);
+  sendEmail("Welcome to Terminal!", signupEmailBody, [recipient]);
+}
+
+export const sendPaymentFailedEmail = async (recipient) => {
+  sendEmail("Retirement Insider Payment Failure: Update your payment details today!", paymentFailedEmailBody, [recipient]);
 }
 
 // const sendEmail = (to, subject, message, from) => {
-const sendEmail = (body, recipients) => {
+const sendEmail = (subject, body, recipients) => {
     const params = {
         Destination: {
             ToAddresses: recipients
@@ -37,7 +41,7 @@ const sendEmail = (body, recipients) => {
             },
             Subject: {
                 Charset: 'UTF-8',
-                Data: "Welcome to Terminal!"
+                Data: subject
             }
         },
         ReturnPath: '"Retirementinsider.com" <support@retirementinsider.com>',
@@ -52,6 +56,18 @@ const sendEmail = (body, recipients) => {
         }
     });
 };
+
+const paymentFailedEmailBody = `
+  Hi there,
+
+  Unfortunately, your most recent invoice payment for Retirement Insider Terminal was declined.
+  This could be due to a change in your card number, your card expiring,
+  cancellation of your credit card, or the card issuer not recognizing the
+  payment and therefore taking action to prevent it.
+
+  Please update your payment information as soon as possible by logging in here:
+  https://terminal.retirementinsider.com/signin
+`
 
 const signupEmailBody = `
 <!DOCTYPE html>

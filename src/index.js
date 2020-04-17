@@ -278,6 +278,11 @@ app.post("/hooks", async (req, res) => {
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
     }
+  } else if(evt.type === "invoice.payment_failed") {
+    // email customer to let them know their payment failed
+    // and their subscription will be canceled if they dont update payment info
+    const customer = await stripe.customers.retrieve(evt.data.object.customer);
+    sendPaymentFailedEmail(customer.email);
   }
 
   res.json({ success: true });
