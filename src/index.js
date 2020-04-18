@@ -557,9 +557,6 @@ app.get("/profile", async (req, res) => {
   if(paymentMethod == null) {
     paymentMethod = customer.invoice_settings.default_payment_method;
   }
-  console.log(
-    customer.subscriptions.data[0]
-  )
   res.json({
     email: customer.email,
     delinquent: customer.delinquent,
