@@ -5,18 +5,20 @@ import redis from "redis";
 
 let db;
 
-export let KEY_NEWS_HEADLINES = "KEY_NEWS_HEADLINES";
+export let KEY_NEWS_HEADLINES_SOURCED = "KEY_NEWS_HEADLINES_SOURCED";
+export let KEY_NEWS_HEADLINES_HOME = "KEY_NEWS_HEADLINES_HOME";
 export let KEY_NEWS_SOURCES = "KEY_NEWS_SOURCES";
+export let KEY_NEWS_MARKET = "KEY_NEWS_MARKET";
 
 function connectDatabase() {
   let credentials = {
     host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT
+    port: process.env.REDIS_PORT,
   };
 
   if (!db) {
     const client = redis.createClient(credentials);
-    client.on("error", function(error) {
+    client.on("error", function (error) {
       //   reportError(error);
     });
 
