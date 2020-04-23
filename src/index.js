@@ -872,7 +872,7 @@ app.get("/industry-performance", async (req, res) => {
 });
 
 // Billionaires
-app.use("/billionaires", checkAuth);
+// app.use("/billionaires", checkAuth);
 app.get("/billionaires", async (req, res) => {
   const result = await titans.getBillionaires(req.body);
   res.send(result);
