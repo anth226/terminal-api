@@ -35,7 +35,7 @@ import * as performance from "./controllers/performance";
 import * as titans from "./controllers/titans";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
-import winston from "winston";
+import winston, {log} from "winston";
 import Stripe from "stripe";
 
 var bugsnag = require("@bugsnag/js");
@@ -229,9 +229,9 @@ app.post("/hooks", async (req, res) => {
         let docRef = db.collection("users").doc(userId);
         let setUser = await docRef.set({
           userId: userId,
+          email: email,
           customerId: customerId,
           subscriptionId: subscriptionId,
-          email: email
         });
 
         // Set custom auth claims with Firebase
@@ -525,8 +525,9 @@ app.post("/payment", async (req, res) => {
   // FIREBASE + FIRESTORE
   try {
     // Add user data to db
+
     let docRef = db.collection("users").doc(userId);
-    let setUser = await docRef.set({
+    let setUser = await docRef.update({
       userId: userId,
       customerId: customer.id,
       subscriptionId: subscription.id,
@@ -564,6 +565,47 @@ app.get("/profile", async (req, res) => {
     customer_id: req.terminal_app.claims.customer_id,
     subscription_id: customer.subscriptions.data[0].id,
   })
+});
+
+// upadte profile
+app.post("/profile", async (req, res) => {
+   console.log("req.body", req.body);
+    res.json({  
+      success:true
+    })
+});
+
+// save user details when signup
+app.post("/signup", async (req, res) => {
+  const { userId, email, firstName, lastName } = req.body;
+  try {
+
+    const docRef = db.collection("users").doc(userId);
+    await docRef.set({
+      userId,
+      email, 
+      firstName,
+      lastName 
+    })
+    .then((doc) => {
+      if (!doc.exists) {
+        res.json({
+          success: true,
+          user: doc.data()
+        });
+      } else{
+        res.json({
+          success: false,
+          message: "user exists!"
+        });
+      }
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      user: null
+    });
+  }
 });
 
 app.use("/holdings/:symbol", checkAuth);
