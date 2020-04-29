@@ -33,6 +33,7 @@ import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 import * as titans from "./controllers/titans";
+import * as companies from "./controllers/companies";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
 import winston from "winston";
@@ -549,12 +550,18 @@ app.post("/payment", async (req, res) => {
 
 app.use("/profile", checkAuth);
 app.get("/profile", async (req, res) => {
-  const customer = await stripe.customers.retrieve(req.terminal_app.claims.customer_id, {
-    expand: ["subscriptions.data.default_payment_method", "invoice_settings.default_payment_method"]
-  });
+  const customer = await stripe.customers.retrieve(
+    req.terminal_app.claims.customer_id,
+    {
+      expand: [
+        "subscriptions.data.default_payment_method",
+        "invoice_settings.default_payment_method",
+      ],
+    }
+  );
 
   let paymentMethod = customer.subscriptions.data[0].default_payment_method;
-  if(paymentMethod == null) {
+  if (paymentMethod == null) {
     paymentMethod = customer.invoice_settings.default_payment_method;
   }
   res.json({
@@ -625,6 +632,12 @@ app.get("/company/:symbol", async (req, res) => {
     req.params.symbol
   );
   res.send(companyFundamentals);
+});
+
+app.use("/company/:symbol/owners", checkAuth);
+app.get("/company/:symbol/owners", async (req, res) => {
+  const result = await companies.getOwners(req.params.symbol);
+  res.send(result);
 });
 
 app.use("/company-news/:symbol", checkAuth);
