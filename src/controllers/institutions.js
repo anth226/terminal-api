@@ -15,7 +15,7 @@ export async function getInstitutions({
   `);
 }
 
-export const getInstitutionByCIK = async cik =>
+export const getInstitutionByCIK = async (cik) =>
   db(`
     SELECT *
     FROM institutions
