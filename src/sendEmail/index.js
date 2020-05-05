@@ -1,3 +1,5 @@
+import {paymentFailedEmailBody} as paymentFailedBody from "./paymentFailedEmail";
+
 const AWS = require('aws-sdk');
 require("dotenv").config();
 
@@ -12,11 +14,15 @@ AWS.config.update({
 const ses = new AWS.SES({ apiVersion: '2010-12-01' });
 
 export const sendSignupEmail = async (recipient) => {
-  sendEmail(signupEmailBody, [recipient]);
+  sendEmail("Welcome to Terminal!", signupEmailBody, [recipient]);
+}
+
+export const sendPaymentFailedEmail = async (recipient) => {
+  sendEmail("Retirement Insider Payment Failure: Update your payment details today!", paymentFailedBody, [recipient]);
 }
 
 // const sendEmail = (to, subject, message, from) => {
-const sendEmail = (body, recipients) => {
+const sendEmail = (subject, body, recipients) => {
     const params = {
         Destination: {
             ToAddresses: recipients
@@ -37,7 +43,7 @@ const sendEmail = (body, recipients) => {
             },
             Subject: {
                 Charset: 'UTF-8',
-                Data: "Welcome to Terminal!"
+                Data: subject
             }
         },
         ReturnPath: '"Retirementinsider.com" <support@retirementinsider.com>',
