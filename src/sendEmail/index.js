@@ -1,4 +1,4 @@
-import {paymentFailedEmailBody} as paymentFailedBody from "./paymentFailedEmail";
+import {paymentFailedEmailBody} from "./paymentFailedEmail";
 
 const AWS = require('aws-sdk');
 require("dotenv").config();
@@ -18,7 +18,7 @@ export const sendSignupEmail = async (recipient) => {
 }
 
 export const sendPaymentFailedEmail = async (recipient) => {
-  sendEmail("Retirement Insider Payment Failure: Update your payment details today!", paymentFailedBody, [recipient]);
+  sendEmail("Retirement Insider Payment Failure: Update your payment details today!", paymentFailedEmailBody, [recipient]);
 }
 
 // const sendEmail = (to, subject, message, from) => {
