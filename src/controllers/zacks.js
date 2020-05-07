@@ -1,0 +1,50 @@
+import axios from "axios";
+
+export function get_eps_estimates(identifier) {
+  let url = `https://api-v2.intrinio.com/zacks/eps_estimates?identifier=${identifier}&api_key=${process.env.INTRINIO_API_KEY}`;
+
+  let data = axios
+    .get(url)
+    .then(function (res) {
+      return res.data;
+    })
+    .catch(function (err) {
+      console.log(err);
+      return {};
+    });
+
+  return data;
+}
+
+export function get_eps_growth_rates(identifier) {
+  let url = `https://api-v2.intrinio.com/zacks/eps_growth_rates?identifier=${identifier}&api_key=${process.env.INTRINIO_API_KEY}`;
+
+  let data = axios
+    .get(url)
+    .then(function (res) {
+      return res.data;
+    })
+    .catch(function (err) {
+      console.log(err);
+      return {};
+    });
+
+  return data;
+}
+
+export function get_long_term_growth_rates(identifier) {
+  let url = `https://api-v2.intrinio.com/zacks/long_term_growth_rates?identifier=${identifier}&api_key=${process.env.INTRINIO_API_KEY}`;
+
+  console.log(url);
+  let data = axios
+    .get(url)
+    .then(function (res) {
+      return res.data;
+    })
+    .catch(function (err) {
+      console.log(err);
+      return {};
+    });
+
+  return data;
+}

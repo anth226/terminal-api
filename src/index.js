@@ -34,6 +34,7 @@ import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 import * as titans from "./controllers/titans";
 import * as companies from "./controllers/companies";
+import * as zacks from "./controllers/zacks";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
 import winston from "winston";
@@ -279,7 +280,7 @@ app.post("/hooks", async (req, res) => {
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
     }
-  } else if(evt.type === "invoice.payment_failed") {
+  } else if (evt.type === "invoice.payment_failed") {
     // email customer to let them know their payment failed
     // and their subscription will be canceled if they dont update payment info
     const customer = await stripe.customers.retrieve(evt.data.object.customer);
@@ -967,6 +968,27 @@ app.get("/portfolios/:cik", async (req, res) => {
 // Helpers
 app.get("/hooks/zip_billionaire_performances", async (req, res) => {
   const result = await hooks.zipPerformances_Billionaires(req.body);
+  res.send(result);
+});
+
+// Zacks
+app.use("/zacks/eps_estimates", checkAuth);
+app.get("/zacks/eps_estimates", async (req, res) => {
+  const result = await zacks.get_eps_estimates(req.query.identifier);
+  res.send(result);
+});
+
+// Zacks
+app.use("/zacks/eps_growth_rates", checkAuth);
+app.get("/zacks/eps_growth_rates", async (req, res) => {
+  const result = await zacks.get_eps_growth_rates(req.query.company);
+  res.send(result);
+});
+
+// Zacks
+app.use("/zacks/long_term_growth_rates", checkAuth);
+app.get("/zacks/long_term_growth_rates", async (req, res) => {
+  const result = await zacks.get_long_term_growth_rates(req.query.identifier);
   res.send(result);
 });
 
