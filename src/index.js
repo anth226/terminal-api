@@ -37,7 +37,7 @@ import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
-import winston from "winston";
+import winston, {log} from "winston";
 import Stripe from "stripe";
 
 var bugsnag = require("@bugsnag/js");
@@ -529,8 +529,9 @@ app.post("/payment", async (req, res) => {
   // FIREBASE + FIRESTORE
   try {
     // Add user data to db
+
     let docRef = db.collection("users").doc(userId);
-    let setUser = await docRef.set({
+    let setUser = await docRef.update({
       userId: userId,
       customerId: customer.id,
       subscriptionId: subscription.id,
@@ -582,6 +583,47 @@ app.get("/profile", async (req, res) => {
     trial_end: customer.subscriptions.data[0].trial_end,
     next_payment: customer.subscriptions.data[0].current_period_end,
   });
+});
+
+// upadte profile
+app.post("/profile", async (req, res) => {
+   console.log("req.body", req.body);
+    res.json({  
+      success:true
+    })
+});
+
+// save user details when signup
+app.post("/signup", async (req, res) => {
+  const { userId, email, firstName, lastName } = req.body;
+  try {
+
+    const docRef = db.collection("users").doc(userId);
+    await docRef.set({
+      userId,
+      email, 
+      firstName,
+      lastName 
+    })
+    .then((doc) => {
+      if (!doc.exists) {
+        res.json({
+          success: true,
+          user: doc.data()
+        });
+      } else{
+        res.json({
+          success: false,
+          message: "user exists!"
+        });
+      }
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      user: null
+    });
+  }
 });
 
 app.use("/holdings/:symbol", checkAuth);
