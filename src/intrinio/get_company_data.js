@@ -60,25 +60,17 @@ export async function searchCompanies(intrinioApi, query, secApi) {
     pageSize: 20 // Number | The number of results to return
   };
 
-  let res = intrinioApi
-    .searchCompanies(query, opts)
-    .then(async function(data) {
-      const etfs = await searchETF(secApi, query);
-      etfs.forEach(function(etf, idx) {
-        let etfTicker = etf.ticker;
-        data.companies.forEach(function(com, i) {
-          if (etfTicker == com.ticker) {
-            data.companies.splice(i, 1);
-          }
-        });
-      });
-      return interleaveArray(data.companies, etfs);
-    })
-    .catch(function(error) {
-      return error;
+  let [etfs, companyResults] = await Promise.all([searchETF(secApi, query), intrinioApi.searchCompanies(query, opts)]);
+  etfs.forEach(function(etf, idx) {
+    let etfTicker = etf.ticker;
+    companyResults.companies.forEach(function(com, i) {
+      if (etfTicker == com.ticker) {
+        companyResults.companies.splice(i, 1);
+      }
     });
+  });
 
-  return res;
+  return interleaveArray(companyResults.companies, etfs);
 }
 
 export function searchSec(intrinioApi, query) {
