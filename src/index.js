@@ -588,7 +588,7 @@ app.get("/profile", async (req, res) => {
 // upadte profile
 app.post("/profile", async (req, res) => {
    console.log("req.body", req.body);
-    res.json({  
+    res.json({
       success:true
     })
 });
@@ -601,9 +601,9 @@ app.post("/signup", async (req, res) => {
     const docRef = db.collection("users").doc(userId);
     await docRef.set({
       userId,
-      email, 
+      email,
       firstName,
-      lastName 
+      lastName
     })
     .then((doc) => {
       if (!doc.exists) {
@@ -1010,6 +1010,13 @@ app.get("/portfolios/:cik", async (req, res) => {
 // Helpers
 app.get("/hooks/zip_billionaire_performances", async (req, res) => {
   const result = await hooks.zipPerformances_Billionaires(req.body);
+  res.send(result);
+});
+
+// Zacks EPS Surprises
+app.use("/zacks/eps_surprises", checkAuth);
+app.get("/zacks/eps_surprises", async (req, res) => {
+  const result = await zacks.get_eps_surprises(req.query.identifier);
   res.send(result);
 });
 
