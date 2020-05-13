@@ -78,6 +78,7 @@ admin.initializeApp({
 const db = admin.firestore();
 
 // init stripe
+const couponId = process.env.STRIPE_COUPON_ID;
 const planId = process.env.STRIPE_PLAN_ID;
 const stripeKey = process.env.STRIPE_API_KEY;
 const endpointSecret = process.env.STRIPE_ENDPOINT_SECRET;
@@ -319,6 +320,7 @@ app.post("/checkout", async (req, res) => {
           },
         ],
         trial_from_plan: true,
+        coupon: couponId,
       },
       success_url: apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: apiURL,
@@ -516,7 +518,7 @@ app.post("/payment", async (req, res) => {
       customer: customer.id,
       items: [{ plan: planId }],
       expand: ["latest_invoice.payment_intent"],
-      trial_period_days: 7,
+      coupon: couponId,
     });
     console.log("THE SUBSCRIPTION");
     console.log(subscription);
