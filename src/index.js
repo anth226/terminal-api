@@ -320,6 +320,7 @@ app.post("/checkout", async (req, res) => {
           },
         ],
         trial_from_plan: true,
+        coupon: couponId,
       },
       success_url: apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: apiURL,
