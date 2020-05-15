@@ -41,27 +41,37 @@ export async function getBillionaires({
     `);
 }
 
-export const getFollowedTitans = async userID =>
-  db(`
+export const getFollowedTitans = async (userID) => {
+  let result = await db(`
     SELECT *
     FROM billionaire_watchlists
     WHERE user_id = '${userID}'
   `);
 
-export const followTitan = async (userID, titanID) =>
-  db(`
-    INSERT INTO billionaire_watchlists(user_id, titan_id)
-    VALUES('${userID}', ${titanID})
-  `);
+  return result;
+};
 
-export const unfollowTitan = async (userID, titanID) =>
-  db(`
-    DELETE FROM billionaire_watchlists
-    WHERE user_id = '${userID}'
-    AND titan_id = ${titanID}
-  `);
+export const followTitan = async (userID, titanID) => {
+  let query = {
+    text:
+      "INSERT INTO billionaire_watchlists (user_id, titan_id) VALUES ($1, $2)",
+    values: [userID, titanID],
+  };
 
-export const getHoldings = async id => {
+  return await db(query);
+};
+
+export const unfollowTitan = async (userID, titanID) => {
+  let query = {
+    text:
+      "DELETE FROM billionaire_watchlists WHERE user_id=($1) AND titan_id=($2)",
+    values: [userID, titanID],
+  };
+
+  return await db(query);
+};
+
+export const getHoldings = async (id) => {
   let result = await db(`
     SELECT *
     FROM billionaires
@@ -79,7 +89,7 @@ export const getHoldings = async id => {
 
     return {
       ...result[0],
-      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`
+      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`,
     };
   }
 
