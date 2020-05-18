@@ -10,6 +10,8 @@ export let KEY_NEWS_HEADLINES_HOME = "KEY_NEWS_HEADLINES_HOME";
 export let KEY_NEWS_SOURCES = "KEY_NEWS_SOURCES";
 export let KEY_NEWS_MARKET = "KEY_NEWS_MARKET";
 
+export let KEY_CHART_DATA = "KEY_CHART_DATA";
+
 function connectDatabase() {
   let credentials = {
     host: process.env.REDIS_HOST,
