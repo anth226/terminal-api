@@ -640,12 +640,22 @@ app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
   res.send(snapshot);
 });
 
+app.use("/chart-data/:symbol", checkAuth);
+app.get("/chart-data/:symbol", async (req, res) => {
+  const data = await getSecurityData.getChartData(
+    securityAPI,
+    req.params.symbol,
+  );
+  res.send(data);
+});
+
 app.use("/sec-historical-price/:symbol", checkAuth);
 app.get("/sec-historical-price/:symbol/:days", async (req, res) => {
   const intradayPrices = await getSecurityData.getHistoricalData(
     securityAPI,
     req.params.symbol,
-    req.params.days
+    req.params.days,
+    "daily"
   );
   res.send(intradayPrices);
 });
