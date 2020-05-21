@@ -71,11 +71,11 @@ export const unfollowTitan = async (userID, titanID) => {
   return await db(query);
 };
 
-export const getHoldings = async (id) => {
+export const getHoldings = async (uri) => {
   let result = await db(`
     SELECT *
     FROM billionaires
-    WHERE id = '${id}'
+    WHERE uri = '${uri}'
   `);
 
   if (result.length > 0) {

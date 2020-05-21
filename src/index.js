@@ -37,7 +37,7 @@ import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
-import winston, {log} from "winston";
+import winston, { log } from "winston";
 import Stripe from "stripe";
 
 var bugsnag = require("@bugsnag/js");
@@ -589,41 +589,41 @@ app.get("/profile", async (req, res) => {
 
 // upadte profile
 app.post("/profile", async (req, res) => {
-   console.log("req.body", req.body);
-    res.json({
-      success:true
-    })
+  console.log("req.body", req.body);
+  res.json({
+    success: true,
+  });
 });
 
 // save user details when signup
 app.post("/signup", async (req, res) => {
   const { userId, email, firstName, lastName } = req.body;
   try {
-
     const docRef = db.collection("users").doc(userId);
-    await docRef.set({
-      userId,
-      email,
-      firstName,
-      lastName
-    })
-    .then((doc) => {
-      if (!doc.exists) {
-        res.json({
-          success: true,
-          user: doc.data()
-        });
-      } else{
-        res.json({
-          success: false,
-          message: "user exists!"
-        });
-      }
-    });
+    await docRef
+      .set({
+        userId,
+        email,
+        firstName,
+        lastName,
+      })
+      .then((doc) => {
+        if (!doc.exists) {
+          res.json({
+            success: true,
+            user: doc.data(),
+          });
+        } else {
+          res.json({
+            success: false,
+            message: "user exists!",
+          });
+        }
+      });
   } catch (error) {
     res.json({
       success: false,
-      user: null
+      user: null,
     });
   }
 });
@@ -644,7 +644,7 @@ app.use("/chart-data/:symbol", checkAuth);
 app.get("/chart-data/:symbol", async (req, res) => {
   const data = await getSecurityData.getChartData(
     securityAPI,
-    req.params.symbol,
+    req.params.symbol
   );
   res.send(data);
 });
@@ -954,9 +954,9 @@ app.get("/billionaires", async (req, res) => {
   res.send(result);
 });
 
-app.use("/billionaires/:id/holdings", checkAuth);
-app.get("/billionaires/:id/holdings", async (req, res) => {
-  const result = await titans.getHoldings(req.params.id);
+app.use("/billionaires/:uri/holdings", checkAuth);
+app.get("/billionaires/:uri/holdings", async (req, res) => {
+  const result = await titans.getHoldings(req.params.uri);
   res.send(result);
 });
 
