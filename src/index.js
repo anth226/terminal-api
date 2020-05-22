@@ -352,11 +352,27 @@ app.get("/", async (req, res) => {
   res.send("hello");
 });
 
-app.use("/signout", checkAuth);
-app.get("/signout", async (req, res) => {
-  // revoke user session cookie, forces re-login
-  admin.auth().revokeRefreshTokens(req.terminal_app.claims.sub);
-  res.send("logged out");
+// app.use("/signout", checkAuth);
+// app.get("/signout", async (req, res) => {
+//   // revoke user session cookie, forces re-login
+//   admin.auth().revokeRefreshTokens(req.terminal_app.claims.sub);
+//   res.send("logged out");
+// });
+
+
+app.post("/signout", async (req, res) => {
+  const sessionCookie = req.cookies.access_token || '';
+  res.clearCookie('access_token');
+  admin.auth().verifySessionCookie(sessionCookie)
+  .then((decodedClaims) => {
+    return admin.auth().revokeRefreshTokens(decodedClaims.sub);
+  })
+  .then(() => {  
+    res.send("logged out");
+  })
+  .catch((error) => {
+    res.send("logged out");
+   });
 });
 
 // exchange firebase user token for session cookie
