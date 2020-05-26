@@ -292,6 +292,9 @@ app.post("/hooks", async (req, res) => {
 });
 
 app.post("/checkout", async (req, res) => {
+let plan = req.body.plan; 
+ plan = plan === 2 ?process.env.STRIPE_FREE_PLAN_ID : couponId;
+
   const userId = req.body.user_id;
   if (!userId) {
     res.status(403).send("Unauthorized");
@@ -320,7 +323,7 @@ app.post("/checkout", async (req, res) => {
           },
         ],
         trial_from_plan: true,
-        coupon: couponId,
+        coupon: plan,
       },
       success_url: apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: apiURL,
