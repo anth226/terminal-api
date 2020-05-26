@@ -292,6 +292,9 @@ app.post("/hooks", async (req, res) => {
 });
 
 app.post("/checkout", async (req, res) => {
+let plan = req.body.plan; 
+ plan = plan === 2 ?process.env.STRIPE_COUPON_ID_FREE : couponId;
+
   const userId = req.body.user_id;
   if (!userId) {
     res.status(403).send("Unauthorized");
@@ -320,7 +323,7 @@ app.post("/checkout", async (req, res) => {
           },
         ],
         trial_from_plan: true,
-        coupon: couponId,
+        coupon: plan,
       },
       success_url: apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: apiURL,
@@ -352,11 +355,27 @@ app.get("/", async (req, res) => {
   res.send("hello");
 });
 
-app.use("/signout", checkAuth);
-app.get("/signout", async (req, res) => {
-  // revoke user session cookie, forces re-login
-  admin.auth().revokeRefreshTokens(req.terminal_app.claims.sub);
-  res.send("logged out");
+// app.use("/signout", checkAuth);
+// app.get("/signout", async (req, res) => {
+//   // revoke user session cookie, forces re-login
+//   admin.auth().revokeRefreshTokens(req.terminal_app.claims.sub);
+//   res.send("logged out");
+// });
+
+
+app.post("/signout", async (req, res) => {
+  const sessionCookie = req.cookies.access_token || '';
+  res.clearCookie('access_token');
+  admin.auth().verifySessionCookie(sessionCookie)
+  .then((decodedClaims) => {
+    return admin.auth().revokeRefreshTokens(decodedClaims.sub);
+  })
+  .then(() => {  
+    res.send("logged out");
+  })
+  .catch((error) => {
+    res.send("logged out");
+   });
 });
 
 // exchange firebase user token for session cookie
