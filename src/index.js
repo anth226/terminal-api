@@ -293,7 +293,7 @@ app.post("/hooks", async (req, res) => {
 
 app.post("/checkout", async (req, res) => {
 let plan = req.body.plan; 
- plan = plan === 2 ?process.env.STRIPE_FREE_PLAN_ID : couponId;
+ plan = plan === 2 ?process.env.STRIPE_COUPON_ID_FREE : couponId;
 
   const userId = req.body.user_id;
   if (!userId) {
