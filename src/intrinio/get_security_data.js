@@ -1,7 +1,5 @@
 import axios from "axios";
-import redis, {
-  KEY_CHART_DATA,
-} from "../redis";
+import redis, { KEY_CHART_DATA } from "../redis";
 
 export function getIntradayPrices(intrinioApi, identifier) {
   const opts = {
@@ -11,15 +9,15 @@ export function getIntradayPrices(intrinioApi, identifier) {
     endDate: new Date("2019-12-28"), // Date | Return intraday prices stopping at the specified date
     endTime: Date.now(), // String | Return intraday prices stopping at the specified time on the `end_date` (timezone is UTC)
     pageSize: 100, // Number | The number of results to return
-    nextPage: null // String | Gets the next page of data from a previous API call
+    nextPage: null, // String | Gets the next page of data from a previous API call
   };
 
   let res = intrinioApi
     .getSecurityIntradayPrices(identifier, opts)
-    .then(function(data) {
+    .then(function (data) {
       return data;
     })
-    .catch(function(error) {
+    .catch(function (error) {
       return error;
     });
 
@@ -30,7 +28,7 @@ function historicalPages(intrinioApi, identifier, opts, hist) {
   return intrinioApi
     .getSecurityHistoricalData(identifier, "adj_close_price", opts)
     .then(
-      function(data) {
+      function (data) {
         data.historical_data.forEach((item, i) => {
           hist.push(item);
         });
@@ -42,7 +40,7 @@ function historicalPages(intrinioApi, identifier, opts, hist) {
           return historicalPages(intrinioApi, identifier, newOpts, hist);
         }
       },
-      function(error) {
+      function (error) {
         return error;
       }
     );
@@ -58,7 +56,7 @@ export function getHistoricalData(intrinioApi, identifier, days, freq) {
     endDate: null, // Date | Get historical date on or before this date
     sortOrder: "desc", // String | Sort by date `asc` or `desc`
     pageSize: 100, // Number | The number of results to return
-    nextPage: null // String | Gets the next page of data from a previous API call
+    nextPage: null, // String | Gets the next page of data from a previous API call
   };
 
   return historicalPages(intrinioApi, identifier, opts, []);
@@ -68,8 +66,11 @@ export async function getChartData(intrinioApi, identifier) {
   let cache = await redis.get(`${KEY_CHART_DATA}-${identifier}`);
 
   if (!cache) {
-    const [daily, weekly] = await Promise.all([getHistoricalData(intrinioApi, identifier, 365, "daily"), getHistoricalData(intrinioApi, identifier, 1825, "weekly")]);
-    let data = {daily: daily, weekly: weekly};
+    const [daily, weekly] = await Promise.all([
+      getHistoricalData(intrinioApi, identifier, 365, "daily"),
+      getHistoricalData(intrinioApi, identifier, 1825, "weekly"),
+    ]);
+    let data = { daily: daily, weekly: weekly };
 
     redis.set(
       `${KEY_CHART_DATA}-${identifier}`,
@@ -81,31 +82,30 @@ export async function getChartData(intrinioApi, identifier) {
   } else {
     return JSON.parse(cache);
   }
-
 }
 
 export function getSecurityLastPrice(symbol) {
   let lastPrice = axios
     .get(
-      `https://api-v2.intrinio.com/securities/${symbol}/prices/realtime?source=iex&api_key=${process.env.INTRINIO_API_KEY}`
+      `${process.env.INTRINIO_BASE_PATH}m/securities/${symbol}/prices/realtime?source=iex&api_key=${process.env.INTRINIO_API_KEY}`
     )
-    .then(function(res) {
+    .then(function (res) {
       return res;
     })
-    .catch(function(err) {
+    .catch(function (err) {
       return err;
     });
   //
-  return lastPrice.then(data => data.data);
+  return lastPrice.then((data) => data.data);
 }
 
 export function lookupSecurity(intrinioApi, ticker) {
   let res = intrinioApi
     .getSecurityById(ticker)
-    .then(function(data) {
+    .then(function (data) {
       return data;
     })
-    .catch(function(error) {
+    .catch(function (error) {
       return error;
     });
 
