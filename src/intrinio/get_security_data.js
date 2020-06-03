@@ -87,7 +87,7 @@ export async function getChartData(intrinioApi, identifier) {
 export function getSecurityLastPrice(symbol) {
   let lastPrice = axios
     .get(
-      `${process.env.INTRINIO_BASE_PATH}m/securities/${symbol}/prices/realtime?source=iex&api_key=${process.env.INTRINIO_API_KEY}`
+      `${process.env.INTRINIO_BASE_PATH}/securities/${symbol}/prices/realtime?source=iex&api_key=${process.env.INTRINIO_API_KEY}`
     )
     .then(function (res) {
       return res;
