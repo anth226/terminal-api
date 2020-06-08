@@ -35,6 +35,7 @@ import * as performance from "./controllers/performance";
 import * as titans from "./controllers/titans";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
+import * as cannon from "./controllers/cannon";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
@@ -295,8 +296,8 @@ app.post("/hooks", async (req, res) => {
 });
 
 app.post("/checkout", async (req, res) => {
-let plan = req.body.plan; 
- plan = plan === 2 ?process.env.STRIPE_COUPON_ID_FREE : couponId;
+  let plan = req.body.plan;
+  plan = plan === 2 ? process.env.STRIPE_COUPON_ID_FREE : couponId;
 
   const userId = req.body.user_id;
   if (!userId) {
@@ -365,20 +366,21 @@ app.get("/", async (req, res) => {
 //   res.send("logged out");
 // });
 
-
 app.post("/signout", async (req, res) => {
-  const sessionCookie = req.cookies.access_token || '';
-  res.clearCookie('access_token');
-  admin.auth().verifySessionCookie(sessionCookie)
-  .then((decodedClaims) => {
-    return admin.auth().revokeRefreshTokens(decodedClaims.sub);
-  })
-  .then(() => {  
-    res.send("logged out");
-  })
-  .catch((error) => {
-    res.send("logged out");
-   });
+  const sessionCookie = req.cookies.access_token || "";
+  res.clearCookie("access_token");
+  admin
+    .auth()
+    .verifySessionCookie(sessionCookie)
+    .then((decodedClaims) => {
+      return admin.auth().revokeRefreshTokens(decodedClaims.sub);
+    })
+    .then(() => {
+      res.send("logged out");
+    })
+    .catch((error) => {
+      res.send("logged out");
+    });
 });
 
 // exchange firebase user token for session cookie
@@ -1072,6 +1074,13 @@ app.get("/zacks/eps_growth_rates", async (req, res) => {
 app.use("/zacks/long_term_growth_rates", checkAuth);
 app.get("/zacks/long_term_growth_rates", async (req, res) => {
   const result = await zacks.get_long_term_growth_rates(req.query.identifier);
+  res.send(result);
+});
+
+// Cannon
+app.use("/cannon/mutual_funds/daily_summary", checkAuth);
+app.get("/cannon/mutual_funds/daily_summary", async (req, res) => {
+  const result = await cannon.get_daily_summary();
   res.send(result);
 });
 
