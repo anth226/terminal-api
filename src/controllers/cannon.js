@@ -23,7 +23,7 @@ export async function get_daily_summary() {
         KEY_CANNON_MUTUAL_FUNDS_DAILY_SUMMARY,
         JSON.stringify(data),
         "EX",
-        60 * 10
+        60 * 10 * 12
       );
     }
 
