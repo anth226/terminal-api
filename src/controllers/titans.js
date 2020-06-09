@@ -87,10 +87,25 @@ export const getHoldings = async (uri) => {
       WHERE cik = '${cik}'
     `);
 
-    return {
+    let response = {
       ...result[0],
       url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`,
     };
+
+    result = await db(`
+      SELECT *
+      FROM holdings
+      WHERE cik = '${cik}'
+      ORDER BY batch_id DESC
+      LIMIT 1
+    `);
+
+    response = {
+      ...response,
+      batched_holding: result.length > 0 ? result[0] : null,
+    };
+
+    return response;
   }
 
   return {};
