@@ -359,13 +359,6 @@ app.get("/", async (req, res) => {
   res.send("hello");
 });
 
-// app.use("/signout", checkAuth);
-// app.get("/signout", async (req, res) => {
-//   // revoke user session cookie, forces re-login
-//   admin.auth().revokeRefreshTokens(req.terminal_app.claims.sub);
-//   res.send("logged out");
-// });
-
 app.post("/signout", async (req, res) => {
   const sessionCookie = req.cookies.access_token || "";
   res.clearCookie("access_token");
@@ -384,8 +377,8 @@ app.post("/signout", async (req, res) => {
 });
 
 // exchange firebase user token for session cookie
-app.post("/getToken", async (req, res) => {
-  logger.info("/getToken");
+app.post("/authenticate", async (req, res) => {
+  logger.info("/authenticate");
 
   // TODO: add a verified email check --
   // if(decodedToken.email_verified == false) {
@@ -405,13 +398,13 @@ app.post("/getToken", async (req, res) => {
       };
     }
 
-    console.log("--- Decoded token on /getToken ---");
+    console.log("--- Decoded token on /authenticate ---");
     console.log(decodedToken);
 
     let customerId;
     if (decodedToken.customer_id) {
       // check if customer id is in decoded claims
-      console.log("customer is in decoded claims!!!");
+      console.log("customer is in decoded claims!!!");  
       console.log(decodedToken.customer_id);
       customerId = decodedToken.customer_id;
     } else {
