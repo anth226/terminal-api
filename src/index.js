@@ -32,6 +32,8 @@ import * as portfolios from "./controllers/portfolios";
 import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
+
+import * as search from "./controllers/search";
 import * as titans from "./controllers/titans";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
@@ -804,18 +806,14 @@ app.get("/similar/:ticker", async (req, res) => {
 app.use("/search/:query", checkAuth);
 app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
-  const results = await getCompanyData.searchCompanies(
-    companyAPI,
-    query,
-    securityAPI
-  );
+  const results = await search.searchCompanies(companyAPI, query, securityAPI);
   res.send(results);
 });
 
 app.use("/search-sec/:query", checkAuth);
 app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
-  const results = await getCompanyData.searchSec(securityAPI, query);
+  const results = await search.searchSec(securityAPI, query);
   res.send(results);
 });
 

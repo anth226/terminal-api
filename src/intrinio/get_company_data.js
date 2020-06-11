@@ -1,10 +1,10 @@
 export function lookupCompany(intrinioApi, ticker) {
   let res = intrinioApi
     .getCompany(ticker)
-    .then(function(data) {
+    .then(function (data) {
       return data;
     })
-    .catch(function(error) {
+    .catch(function (error) {
       return error;
     });
 
@@ -22,15 +22,15 @@ export function companyFundamentals(intrinioApi, ticker) {
     startDate: null, // Date | Only on or after the given date
     endDate: null, // Date | Only on or before the given date
     pageSize: 100, // Number | The number of results to return
-    nextPage: null // String | Gets the next page of data from a previous API call
+    nextPage: null, // String | Gets the next page of data from a previous API call
   };
 
   let res = intrinioApi
     .getCompanyFundamentals(ticker, opts)
-    .then(function(data) {
+    .then(function (data) {
       return data;
     })
-    .catch(function(error) {
+    .catch(function (error) {
       return error;
     });
 
@@ -40,107 +40,38 @@ export function companyFundamentals(intrinioApi, ticker) {
 export function companyNews(intrinioApi, ticker) {
   const opts = {
     pageSize: 20, // Number | The number of results to return
-    nextPage: null // String | Gets the next page of data from a previous API call
+    nextPage: null, // String | Gets the next page of data from a previous API call
   };
 
   let res = intrinioApi
     .getCompanyNews(ticker, opts)
-    .then(function(data) {
+    .then(function (data) {
       return data;
     })
-    .catch(function(error) {
+    .catch(function (error) {
       return error;
     });
 
   return res;
-}
-
-export async function searchCompanies(intrinioApi, query, secApi) {
-  const opts = {
-    pageSize: 20 // Number | The number of results to return
-  };
-
-  let [etfs, companyResults] = await Promise.all([searchETF(secApi, query), intrinioApi.searchCompanies(query, opts)]);
-  etfs.forEach(function(etf, idx) {
-    let etfTicker = etf.ticker;
-    companyResults.companies.forEach(function(com, i) {
-      if (etfTicker == com.ticker) {
-        companyResults.companies.splice(i, 1);
-      }
-    });
-  });
-
-  return interleaveArray(companyResults.companies, etfs);
-}
-
-export function searchSec(intrinioApi, query) {
-  const opts = {
-    pageSize: 20 // Number | The number of results to return
-  };
-
-  let res = intrinioApi
-    .searchSecurities(query, opts)
-    .then(function(data) {
-      return data;
-    })
-    .catch(function(error) {
-      return error;
-    });
-
-  return res;
-}
-
-async function searchETF(intrinioApi, query) {
-  const opts = {
-    pageSize: 30 // Number | The number of results to return
-  };
-
-  let res = intrinioApi
-    .searchSecurities(query, opts)
-    .then(function(data) {
-      return data.securities.filter(
-        security =>
-          security.currency == "USD" &&
-          security.code == "ETF" &&
-          security.composite_ticker.endsWith(":US")
-      );
-    })
-    .catch(function(error) {
-      return error;
-    });
-
-  return res;
-}
-
-function interleaveArray(array1, array2) {
-  let result = [];
-  let i,
-    l = Math.min(array1.length, array2.length);
-
-  for (i = 0; i < l; i++) {
-    result.push(array1[i], array2[i]);
-  }
-  result.push(...array1.slice(l), ...array2.slice(l));
-  return result;
 }
 
 export async function getDataPoint(intrinioApi, reqData) {
   const symbols = Object.keys(reqData);
   let reqs = [];
 
-  symbols.forEach(symbol => {
-    reqData[symbol].forEach(tag => {
+  symbols.forEach((symbol) => {
+    reqData[symbol].forEach((tag) => {
       reqs.push({
         symbol: symbol.toUpperCase(),
-        tag: tag
+        tag: tag,
       });
     });
   });
 
   const res = await Promise.all(
     reqs
-      .map(req => intrinioApi.getSecurityDataPointText(req.symbol, req.tag))
-      .map(p => p.catch(e => e))
+      .map((req) => intrinioApi.getSecurityDataPointText(req.symbol, req.tag))
+      .map((p) => p.catch((e) => e))
   );
 
   let currentSymbol = 0;
@@ -177,19 +108,19 @@ export async function getDataPoint(intrinioApi, reqData) {
 export async function getNumberDataPoint(intrinioApi, symbols, tags) {
   let reqs = [];
 
-  symbols.forEach(symbol => {
-    tags.forEach(tag => {
+  symbols.forEach((symbol) => {
+    tags.forEach((tag) => {
       reqs.push({
         symbol: symbol.toUpperCase(),
-        tag: tag
+        tag: tag,
       });
     });
   });
 
   const res = await Promise.all(
     reqs
-      .map(req => intrinioApi.getCompanyDataPointNumber(req.symbol, req.tag))
-      .map(p => p.catch(e => e))
+      .map((req) => intrinioApi.getCompanyDataPointNumber(req.symbol, req.tag))
+      .map((p) => p.catch((e) => e))
   );
   const div = res.length / symbols.length;
   // console.log(res.length);
@@ -219,10 +150,10 @@ export async function getNumberDataPoint(intrinioApi, symbols, tags) {
 
 export async function getTextDataPoint(intrinioApi, symbols, tags) {
   const res = await Promise.all(
-    symbols.map(symbol =>
+    symbols.map((symbol) =>
       tags
-        .map(tag => intrinioApi.getCompanyDataPointText(symbol, tag))
-        .map(p => p.catch(e => e))
+        .map((tag) => intrinioApi.getCompanyDataPointText(symbol, tag))
+        .map((p) => p.catch((e) => e))
     )
   );
 
