@@ -3,24 +3,24 @@ export async function searchCompanies(intrinioApi, query, secApi) {
     pageSize: 20, // Number | The number of results to return
   };
 
-  let [etfs, companyResults] = await Promise.all([
-    searchETF(secApi, query),
+  let [ companyResults] = await Promise.all([
+    // searchETF(secApi, query),
     searchSec(intrinioApi, query),
     // intrinioApi.searchCompanies(query, opts),
   ]);
 
-  etfs.forEach(function (etf, idx) {
-    let etfTicker = etf.ticker;
-    companyResults.companies.forEach(function (com, i) {
-      if (etfTicker == com.ticker) {
-        companyResults.companies.splice(i, 1);
-      }
-    });
-  });
+  // etfs.forEach(function (etf, idx) {
+  //   let etfTicker = etf.ticker;
+  //   companyResults.companies.forEach(function (com, i) {
+  //     if (etfTicker == com.ticker) {
+  //       companyResults.companies.splice(i, 1);
+  //     }
+  //   });
+  // });
 
   console.log(companyResults);
 
-  return interleaveArray(companyResults.companies, etfs);
+  return interleaveArray(companyResults.companies, []);
 }
 
 export function searchSec(intrinioApi, query) {
