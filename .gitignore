@@ -5,6 +5,7 @@ npm-debug.log
 .DS_Store
 src/stocktwits/trending.json
 combined.log
+.vscode
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
