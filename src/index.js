@@ -38,10 +38,13 @@ import * as titans from "./controllers/titans";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
 import * as cannon from "./controllers/cannon";
+import * as klaviyo from "./controllers/klaviyo";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
+
+import config from "./config"; 
 
 var bugsnag = require("@bugsnag/js");
 var bugsnagExpress = require("@bugsnag/plugin-express");
@@ -71,7 +74,8 @@ const logger = winston.createLogger({
 });
 
 // init firebase
-const serviceAccount = require("../tower-93be8-firebase-adminsdk-o954n-87d13d583d.json");
+const serviceAccount = config.firebase;
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://tower-93be8.firebaseio.com",
@@ -250,6 +254,8 @@ app.post("/hooks", async (req, res) => {
         });
 
         sendEmail.sendSignupEmail(email);
+        klaviyo.subscribeToList(email);
+        
       } catch (err) {
         // error with firebase and firestore
         logger.error("Stripe Checkout Webhook Error: ", err);
@@ -296,6 +302,7 @@ app.post("/hooks", async (req, res) => {
 
   res.json({ success: true });
 });
+
 
 app.post("/checkout", async (req, res) => {
   let plan = req.body.plan;
