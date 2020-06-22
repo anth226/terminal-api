@@ -20,6 +20,7 @@ export async function getTitans({ sort = [], page = 0, size = 100, ...query }) {
   return await db(`
     SELECT *
     FROM billionaires
+    WHERE status = 'complete'
     ORDER BY id DESC
     LIMIT ${size}
     OFFSET ${page * size}
@@ -35,6 +36,7 @@ export async function getBillionaires({
   return await db(`
       SELECT *
       FROM billionaires
+      WHERE status = 'complete'
       ORDER BY id DESC
       LIMIT ${size}
       OFFSET ${page * size}
@@ -76,6 +78,7 @@ export const getHoldings = async (uri) => {
     SELECT *
     FROM billionaires
     WHERE uri = '${uri}'
+    AND status = 'complete'
   `);
 
   if (result.length > 0) {
