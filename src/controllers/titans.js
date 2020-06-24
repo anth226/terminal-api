@@ -1,6 +1,7 @@
 import db from "../db";
 
 import * as finbox from "../finbox/titans";
+import * as performance from "./performance";
 
 export async function getAll() {
   return await finbox.getAll();
@@ -112,4 +113,60 @@ export const getHoldings = async (uri) => {
   }
 
   return {};
+};
+
+export const getSummary = async (uri) => {
+  let result = await db(`
+    SELECT *
+    FROM billionaires
+    WHERE uri = '${uri}'
+  `);
+
+  if (result.length > 0) {
+    let cik = result[0].cik;
+    let item = await performance.getInstitution(cik);
+
+    let response = {
+      summary: result[0],
+      performance: item,
+    };
+
+    return response;
+  }
+
+  return {
+    summary: null,
+  };
+};
+
+export const getPage = async ({
+  sort = [],
+  page = 0,
+  size = 100,
+  ...query
+}) => {
+  return await db(`
+    SELECT *
+    FROM billionaires
+    ORDER BY status ASC
+    LIMIT ${size}
+    OFFSET ${page * size}
+  `);
+};
+
+export const getFilledPage = async ({
+  sort = [],
+  page = 0,
+  size = 100,
+  ...query
+}) => {
+  return await db(`
+    SELECT *
+    FROM institutions AS i
+    JOIN billionaires AS b
+    ON i.cik = b.cik
+    ORDER BY status ASC
+    LIMIT ${size}
+    OFFSET ${page * size}
+  `);
 };
