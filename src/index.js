@@ -806,6 +806,12 @@ app.get("/search-sec/:query", async (req, res) => {
   res.send(results);
 });
 
+// app.use("/billionarers/search/typeahead", checkAuth);
+app.get("/billionarers/search/typeahead", async (req, res) => {
+  const results = await search.prefetchTitans();
+  res.send(results);
+});
+
 /* Index Endpoints */
 
 app.use("/get-index-price/:symbol", checkAuth);
