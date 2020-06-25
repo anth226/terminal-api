@@ -154,13 +154,15 @@ export const getFilledPage = async ({
   size = 100,
   ...query
 }) => {
-  return await db(`
+  let result = await db(`
     SELECT *
-    FROM institutions AS i
-    JOIN billionaires AS b
-    ON i.cik = b.cik
+    FROM billionaires AS b
+    LEFT JOIN institutions AS i
+    ON b.cik = i.cik
     ORDER BY status ASC
     LIMIT ${size}
     OFFSET ${page * size}
   `);
+
+  return result;
 };
