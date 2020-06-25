@@ -39,6 +39,7 @@ import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
 import * as cannon from "./controllers/cannon";
 import * as klaviyo from "./controllers/klaviyo";
+import * as watchlist from "./controllers/watchlist";
 import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
@@ -970,9 +971,12 @@ app.get("/billionaires/:uri/holdings", async (req, res) => {
   res.send(result);
 });
 
-// app.use("/billionaires/:uri/summary", checkAuth);
+app.use("/billionaires/:uri/summary", checkAuth);
 app.get("/billionaires/:uri/summary", async (req, res) => {
-  const result = await titans.getSummary(req.params.uri);
+  const result = await titans.getSummary(
+    req.params.uri,
+    req.terminal_app.claims.uid
+  );
   res.send(result);
 });
 
@@ -993,7 +997,7 @@ app.get("/billionaires/:id/unfollow", async (req, res) => {
 
 app.use("/billionaires/following", checkAuth);
 app.get("/billionaires/following", async (req, res) => {
-  const result = await titans.getFollowedTitans(req.terminal_app.claims.uid);
+  const result = await watchlist.getFollowedTitans(req.terminal_app.claims.uid);
   res.send(result);
 });
 

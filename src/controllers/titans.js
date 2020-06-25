@@ -2,6 +2,7 @@ import db from "../db";
 
 import * as finbox from "../finbox/titans";
 import * as performance from "./performance";
+import * as watchlist from "./watchlist";
 
 export async function getAll() {
   return await finbox.getAll();
@@ -43,16 +44,6 @@ export async function getBillionaires({
       OFFSET ${page * size}
     `);
 }
-
-export const getFollowedTitans = async (userID) => {
-  let result = await db(`
-    SELECT *
-    FROM billionaire_watchlists
-    WHERE user_id = '${userID}'
-  `);
-
-  return result;
-};
 
 export const followTitan = async (userID, titanID) => {
   let query = {
@@ -115,7 +106,7 @@ export const getHoldings = async (uri) => {
   return {};
 };
 
-export const getSummary = async (uri) => {
+export const getSummary = async (uri, userId) => {
   let result = await db(`
     SELECT *
     FROM billionaires
@@ -124,11 +115,14 @@ export const getSummary = async (uri) => {
 
   if (result.length > 0) {
     let cik = result[0].cik;
+    let id = result[0].id;
+
     let item = await performance.getInstitution(cik);
 
     let response = {
       summary: result[0],
       performance: item,
+      watching: await watchlist.watching(id, userId),
     };
 
     return response;
