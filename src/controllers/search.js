@@ -1,9 +1,11 @@
+import db from "../db";
+
 export async function searchCompanies(intrinioApi, query, secApi) {
   const opts = {
     pageSize: 20, // Number | The number of results to return
   };
 
-  let [ companyResults] = await Promise.all([
+  let [companyResults] = await Promise.all([
     // searchETF(secApi, query),
     searchSec(intrinioApi, query),
     // intrinioApi.searchCompanies(query, opts),
@@ -74,4 +76,16 @@ function interleaveArray(array1, array2) {
   }
   result.push(...array1.slice(l), ...array2.slice(l));
   return result;
+}
+
+export async function prefetchTitans() {
+  let result = await db(`
+    SELECT name, uri
+    FROM billionaires
+  `);
+
+  if (result.length > 0) {
+    return result;
+  }
+  return [];
 }

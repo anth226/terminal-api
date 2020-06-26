@@ -2,6 +2,9 @@ import db from "../db";
 
 import * as finbox from "../finbox/titans";
 import * as performance from "./performance";
+import * as watchlist from "./watchlist";
+
+import redis, { KEY_TITAN_SUMMARY } from "../redis";
 
 export async function getAll() {
   return await finbox.getAll();
@@ -43,16 +46,6 @@ export async function getBillionaires({
       OFFSET ${page * size}
     `);
 }
-
-export const getFollowedTitans = async (userID) => {
-  let result = await db(`
-    SELECT *
-    FROM billionaire_watchlists
-    WHERE user_id = '${userID}'
-  `);
-
-  return result;
-};
 
 export const followTitan = async (userID, titanID) => {
   let query = {
@@ -115,28 +108,45 @@ export const getHoldings = async (uri) => {
   return {};
 };
 
-export const getSummary = async (uri) => {
-  let result = await db(`
+export const getSummary = async (uri, userId) => {
+  let cache = await redis.get(`${KEY_TITAN_SUMMARY}-${uri}`);
+
+  if (!cache) {
+    let result = await db(`
     SELECT *
     FROM billionaires
     WHERE uri = '${uri}'
   `);
 
-  if (result.length > 0) {
-    let cik = result[0].cik;
-    let item = await performance.getInstitution(cik);
-
-    let response = {
-      summary: result[0],
-      performance: item,
+    let data = {
+      profile: null,
+      summary: null,
     };
 
-    return response;
-  }
+    if (result.length > 0) {
+      let cik = result[0].cik;
+      let id = result[0].id;
 
-  return {
-    summary: null,
-  };
+      let item = await performance.getInstitution(cik);
+
+      data = {
+        profile: result[0],
+        summary: item,
+        watching: await watchlist.watching(id, userId),
+      };
+    }
+
+    redis.set(
+      `${KEY_TITAN_SUMMARY}-${uri}`,
+      JSON.stringify(data),
+      "EX",
+      60 * 60 // HOUR
+    );
+
+    return data;
+  } else {
+    return JSON.parse(cache);
+  }
 };
 
 export const getPage = async ({
@@ -160,13 +170,25 @@ export const getFilledPage = async ({
   size = 100,
   ...query
 }) => {
-  return await db(`
-    SELECT *
-    FROM institutions AS i
-    JOIN billionaires AS b
-    ON i.cik = b.cik
+  // let result = await db(`
+  //   SELECT *
+  //   FROM billionaires AS b
+  //   LEFT JOIN institutions AS i
+  //   ON b.cik = i.cik
+  //   ORDER BY status ASC
+  //   LIMIT ${size}
+  //   OFFSET ${page * size}
+  // `);
+
+  let result = await db(`
+    SELECT institutions.*, billionaires.*
+    FROM billionaires
+    LEFT JOIN institutions
+    ON billionaires.cik = institutions.cik
     ORDER BY status ASC
     LIMIT ${size}
     OFFSET ${page * size}
   `);
+
+  return result;
 };
