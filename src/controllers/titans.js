@@ -4,6 +4,8 @@ import * as finbox from "../finbox/titans";
 import * as performance from "./performance";
 import * as watchlist from "./watchlist";
 
+import redis, { KEY_TITAN_SUMMARY } from "../redis";
+
 export async function getAll() {
   return await finbox.getAll();
 }
@@ -107,30 +109,43 @@ export const getHoldings = async (uri) => {
 };
 
 export const getSummary = async (uri, userId) => {
-  let result = await db(`
+  let cache = await redis.get(`${KEY_TITAN_SUMMARY}-${uri}`);
+
+  if (!cache) {
+    let result = await db(`
     SELECT *
     FROM billionaires
     WHERE uri = '${uri}'
   `);
 
-  if (result.length > 0) {
-    let cik = result[0].cik;
-    let id = result[0].id;
-
-    let item = await performance.getInstitution(cik);
-
-    let response = {
-      summary: result[0],
-      performance: item,
-      watching: await watchlist.watching(id, userId),
+    let data = {
+      summary: null,
     };
 
-    return response;
-  }
+    if (result.length > 0) {
+      let cik = result[0].cik;
+      let id = result[0].id;
 
-  return {
-    summary: null,
-  };
+      let item = await performance.getInstitution(cik);
+
+      data = {
+        summary: result[0],
+        performance: item,
+        watching: await watchlist.watching(id, userId),
+      };
+    }
+
+    redis.set(
+      `${KEY_TITAN_SUMMARY}-${uri}`,
+      JSON.stringify(data),
+      "EX",
+      60 * 60 // HOUR
+    );
+
+    return data;
+  } else {
+    return JSON.parse(cache);
+  }
 };
 
 export const getPage = async ({
@@ -154,11 +169,21 @@ export const getFilledPage = async ({
   size = 100,
   ...query
 }) => {
+  // let result = await db(`
+  //   SELECT *
+  //   FROM billionaires AS b
+  //   LEFT JOIN institutions AS i
+  //   ON b.cik = i.cik
+  //   ORDER BY status ASC
+  //   LIMIT ${size}
+  //   OFFSET ${page * size}
+  // `);
+
   let result = await db(`
-    SELECT *
-    FROM billionaires AS b
-    LEFT JOIN institutions AS i
-    ON b.cik = i.cik
+    SELECT institutions.*, billionaires.*
+    FROM billionaires
+    LEFT JOIN institutions
+    ON billionaires.cik = institutions.cik
     ORDER BY status ASC
     LIMIT ${size}
     OFFSET ${page * size}

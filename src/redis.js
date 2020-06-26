@@ -14,6 +14,8 @@ export let KEY_CANNON_MUTUAL_FUNDS_DAILY_SUMMARY =
 
 export let KEY_CHART_DATA = "KEY_CHART_DATA";
 
+export let KEY_TITAN_SUMMARY = "KEY_TITAN_SUMMARY";
+
 function connectDatabase() {
   let credentials = {
     host: process.env.REDIS_HOST,
