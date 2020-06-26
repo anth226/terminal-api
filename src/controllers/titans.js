@@ -119,6 +119,7 @@ export const getSummary = async (uri, userId) => {
   `);
 
     let data = {
+      profile: null,
       summary: null,
     };
 
@@ -129,8 +130,8 @@ export const getSummary = async (uri, userId) => {
       let item = await performance.getInstitution(cik);
 
       data = {
-        summary: result[0],
-        performance: item,
+        profile: result[0],
+        summary: item,
         watching: await watchlist.watching(id, userId),
       };
     }
