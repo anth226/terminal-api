@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export function analystSnapshot(ticker) {
-  let lastPrice = axios
+  let result = axios
     .get(
       `${
         process.env.INTRINIO_BASE_PATH
@@ -13,9 +13,8 @@ export function analystSnapshot(ticker) {
       return res.data;
     })
     .catch(function (err) {
-      console.log(err);
-      return {};
+      return null;
     });
 
-  return lastPrice;
+  return result;
 }
