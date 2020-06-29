@@ -9,8 +9,7 @@ export function get_eps_surprises(identifier) {
       return res.data;
     })
     .catch(function (err) {
-      console.log(err);
-      return {};
+      return null;
     });
 
   return data;
@@ -25,8 +24,7 @@ export function get_eps_estimates(identifier) {
       return res.data;
     })
     .catch(function (err) {
-      console.log(err);
-      return {};
+      return null;
     });
 
   return data;
@@ -41,8 +39,7 @@ export function get_eps_growth_rates(identifier) {
       return res.data;
     })
     .catch(function (err) {
-      console.log(err);
-      return {};
+      return null;
     });
 
   return data;
@@ -58,8 +55,7 @@ export function get_long_term_growth_rates(identifier) {
       return res.data;
     })
     .catch(function (err) {
-      console.log(err);
-      return {};
+      return null;
     });
 
   return data;
