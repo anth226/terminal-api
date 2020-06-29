@@ -140,7 +140,6 @@ app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
 app.use(bodyParser.raw({ verify: rawBodySaver, type: "*/*" }));
 
 app.use(middleware.requestHandler);
-app.use(middleware.errorHandler);
 /*
 ~~~~~~Utils~~~~~~
 */
@@ -1091,6 +1090,8 @@ app.get("/cannon/mutual_funds/daily_summary", async (req, res) => {
   const result = await cannon.get_daily_summary();
   res.send(result);
 });
+
+app.use(middleware.errorHandler);
 
 app.listen(process.env.PORT, () =>
   console.log(`listening on ${process.env.PORT}`)
