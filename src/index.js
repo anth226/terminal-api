@@ -1084,6 +1084,12 @@ app.get("/zacks/long_term_growth_rates", async (req, res) => {
   res.send(result);
 });
 
+app.use("/zacks/editorial", checkAuth);
+app.get("/zacks/editorial", async (req, res) => {
+  const result = await zacks.get_stories();
+  res.send(result);
+});
+
 // Cannon
 app.use("/cannon/mutual_funds/daily_summary", checkAuth);
 app.get("/cannon/mutual_funds/daily_summary", async (req, res) => {
