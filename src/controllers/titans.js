@@ -51,7 +51,7 @@ export const followTitan = async (userID, titanID) => {
   let query = {
     text:
       "INSERT INTO billionaire_watchlists (user_id, titan_id) VALUES ($1, $2)",
-    values: [userID, titanID],
+    values: [userID, titanID]
   };
 
   return await db(query);
@@ -61,7 +61,7 @@ export const unfollowTitan = async (userID, titanID) => {
   let query = {
     text:
       "DELETE FROM billionaire_watchlists WHERE user_id=($1) AND titan_id=($2)",
-    values: [userID, titanID],
+    values: [userID, titanID]
   };
 
   return await db(query);
@@ -86,7 +86,7 @@ export const getHoldings = async (uri) => {
 
     let response = {
       ...result[0],
-      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`,
+      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`
     };
 
     result = await db(`
@@ -99,7 +99,7 @@ export const getHoldings = async (uri) => {
 
     response = {
       ...response,
-      batched_holding: result.length > 0 ? result[0] : null,
+      batched_holding: result.length > 0 ? result[0] : null
     };
 
     return response;
@@ -109,44 +109,35 @@ export const getHoldings = async (uri) => {
 };
 
 export const getSummary = async (uri, userId) => {
-  let cache = await redis.get(`${KEY_TITAN_SUMMARY}-${uri}`);
+  let data = {
+    profile: null,
+    summary: null
+  };
 
-  if (!cache) {
-    let result = await db(`
+  let result = await db(`
     SELECT *
     FROM billionaires
     WHERE uri = '${uri}'
   `);
 
-    let data = {
-      profile: null,
-      summary: null,
+  if (result.length > 0) {
+    let cik = result[0].cik;
+    let id = result[0].id;
+
+    let item = await performance.getInstitution(cik);
+
+    data = {
+      profile: result[0],
+      summary: item
     };
 
-    if (result.length > 0) {
-      let cik = result[0].cik;
-      let id = result[0].id;
-
-      let item = await performance.getInstitution(cik);
-
-      data = {
-        profile: result[0],
-        summary: item,
-        watching: await watchlist.watching(id, userId),
-      };
-    }
-
-    redis.set(
-      `${KEY_TITAN_SUMMARY}-${uri}`,
-      JSON.stringify(data),
-      "EX",
-      60 * 60 // HOUR
-    );
-
-    return data;
-  } else {
-    return JSON.parse(cache);
+    data = {
+      ...data,
+      watching: await watchlist.watching(id, userId)
+    };
   }
+
+  return data;
 };
 
 export const getPage = async ({
@@ -160,16 +151,23 @@ export const getPage = async ({
     FROM billionaires
     ORDER BY status ASC
     LIMIT ${size}
-    OFFSET ${page * size}
+    OFFSET ${page * size}       
   `);
 };
 
-export const getFilledPage = async ({
-  sort = [],
-  page = 0,
-  size = 100,
-  ...query
-}) => {
+export const getFilledPage = async ({ sort = [], page = 0, size = 100 }) => {
+  let result = await db(`
+  SELECT b.*, i.json
+  FROM (
+     SELECT *
+     FROM   billionaires
+     ORDER  BY id ASC
+     LIMIT  ${size}
+     OFFSET ${size * page}
+  ) b
+  LEFT JOIN institutions i ON b.cik = i.cik
+`);
+
   // let result = await db(`
   //   SELECT *
   //   FROM billionaires AS b
@@ -179,16 +177,6 @@ export const getFilledPage = async ({
   //   LIMIT ${size}
   //   OFFSET ${page * size}
   // `);
-
-  let result = await db(`
-    SELECT institutions.*, billionaires.*
-    FROM billionaires
-    LEFT JOIN institutions
-    ON billionaires.cik = institutions.cik
-    ORDER BY status ASC
-    LIMIT ${size}
-    OFFSET ${page * size}
-  `);
 
   return result;
 };
