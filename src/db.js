@@ -1,6 +1,13 @@
 const { Client } = require("pg");
+const types = require("pg").types;
 
 let db;
+
+const TIMESTAMP_OID = 1114;
+types.setTypeParser(TIMESTAMP_OID, function (value) {
+  // Example value string: "2018-10-04 12:30:21.199"
+  return value && new Date(value + "+00");
+});
 
 function connectDatabase() {
   if (!db) {
