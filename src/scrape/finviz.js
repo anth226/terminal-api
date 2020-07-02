@@ -20,8 +20,13 @@ export async function getAllInsider() {
 const companyPage = "https://finviz.com/quote.ashx?t=";
 
 const fetchDataCompany = async (ticker) => {
-  const result = await axios.get(companyPage + ticker);
-  return cheerio.load(result.data);
+  try {
+    const result = await axios.get(companyPage + ticker);
+
+    return cheerio.load(result.data);
+  } catch (error) {
+    return null;
+  }
 };
 
 export async function getCompanyRatings(ticker) {
@@ -63,32 +68,35 @@ export async function getCompanyMetrics(ticker) {
   ticker = ticker.replace(".", "-");
 
   let data = [];
+  try {
+    const $ = await fetchDataCompany(ticker);
 
-  const $ = await fetchDataCompany(ticker);
+    let res = {};
 
-  let res = {};
+    $("table.snapshot-table2 tr.table-dark-row").each(function (idx, element) {
+      let keys = [];
+      let vals = [];
 
-  $("table.snapshot-table2 tr.table-dark-row").each(function (idx, element) {
-    let keys = [];
-    let vals = [];
+      $(element)
+        .find("td")
+        .each(function (i, e) {
+          if (i % 2 == 0) {
+            keys.push($(e).text());
+          } else {
+            vals.push($(e).text());
+          }
+        });
 
-    $(element)
-      .find("td")
-      .each(function (i, e) {
-        if (i % 2 == 0) {
-          keys.push($(e).text());
-        } else {
-          vals.push($(e).text());
-        }
-      });
+      for (let i = 0; i < keys.length; i++) {
+        res[keys[i]] = vals[i];
+      }
+    });
 
-    for (let i = 0; i < keys.length; i++) {
-      res[keys[i]] = vals[i];
-    }
-  });
+    delete res["Price"];
+    delete res["Employees"];
 
-  delete res["Price"];
-  delete res["Employees"];
-
-  return res;
+    return res;
+  } catch (error) {
+    return null;
+  }
 }
