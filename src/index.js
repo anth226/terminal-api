@@ -586,6 +586,13 @@ app.post("/payment", async (req, res) => {
 
 app.use("/profile", checkAuth);
 app.get("/profile", async (req, res) => {
+  const doc = await db
+    .collection("users")
+    .doc(req.terminal_app.claims.uid)
+    .get();
+
+  const user = doc.data();
+
   const customer = await stripe.customers.retrieve(
     req.terminal_app.claims.customer_id,
     {
@@ -610,16 +617,31 @@ app.get("/profile", async (req, res) => {
     customer_since: customer.subscriptions.data[0].created,
     amount: customer.subscriptions.data[0].plan.amount / 100.0,
     trial_end: customer.subscriptions.data[0].trial_end,
-    next_payment: customer.subscriptions.data[0].current_period_end
+    next_payment: customer.subscriptions.data[0].current_period_end,
+    firstName: user.firstName,
+    lastName: user.lastName
   });
 });
 
 // upadte profile
 app.post("/profile", async (req, res) => {
-  console.log("req.body", req.body);
-  res.json({
-    success: true
-  });
+  const { firstName, lastName } = req.body;
+
+  try {
+    const docRef = db.collection("users").doc(req.terminal_app.claims.uid);
+
+    await docRef.update({
+      firstName,
+      lastName
+    });
+
+    res.send({ success: true });
+  } catch (error) {
+    res.json({
+      success: false,
+      error
+    });
+  }
 });
 
 // save user details when signup
