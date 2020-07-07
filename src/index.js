@@ -418,6 +418,16 @@ app.post("/authenticate", async (req, res) => {
       console.log("customer is in decoded claims!!!");
       console.log(decodedToken.customer_id);
       customerId = decodedToken.customer_id;
+
+      let doc = await db.collection("users").doc(decodedToken.uid).get();
+      let user = doc.data();
+
+      if (user.isAdmin) {
+        await admin.auth().setCustomUserClaims(decodedToken.uid, {
+          isAdmin: true,
+          customer_id: customerId
+        });
+      }
     } else {
       // if not pull from database
       let doc = await db.collection("users").doc(decodedToken.uid).get();
