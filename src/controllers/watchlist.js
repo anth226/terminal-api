@@ -9,15 +9,12 @@ export const getFollowedTitans = async (userId) => {
     WHERE user_id = '${userId}'
   `);
 
-  console.log(result);
-
   if (result.length > 0) {
     let ciks = result.map(function (a) {
       return a.cik;
     });
 
     ciks = ciks.filter((n) => n);
-    console.log(ciks);
 
     let query = {
       text: "SELECT * FROM institutions WHERE cik = ANY($1::text[])",
@@ -25,8 +22,6 @@ export const getFollowedTitans = async (userId) => {
     };
 
     let buffer = await db(query);
-
-    console.log(buffer);
 
     result = result.map((x) =>
       Object.assign(x, {
