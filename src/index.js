@@ -1129,7 +1129,8 @@ app.get("/edgar/lookup", async (req, res) => {
 });
 
 app.get("/edgar/results", async (req, res) => {
-  const result = await edgar.getSearchResults(req.body);
+  // const result = await edgar.getSearchResults(req.body);
+  const result = await edgar.getSearchResults({ size: 5000 });
   res.send(result);
 });
 
