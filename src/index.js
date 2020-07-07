@@ -1121,8 +1121,15 @@ app.get("/cannon/mutual_funds/daily_summary", async (req, res) => {
 });
 
 // Edgar
-app.post("/edgar/lookup", async (req, res) => {
-  const result = await edgar.lookupByName(req.params.name);
+app.get("/edgar/lookup", async (req, res) => {
+  let { name } = req.query;
+
+  const result = await edgar.lookupByName(name);
+  res.send(result);
+});
+
+app.get("/edgar/results", async (req, res) => {
+  const result = await edgar.getSearchResults(req.body);
   res.send(result);
 });
 
