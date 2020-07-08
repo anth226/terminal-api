@@ -11,8 +11,8 @@ export async function lookupByName(name) {
   try {
     const response = await axios.post(url, data, {
       headers: {
-        "Content-Type": "application/json",
-      },
+        "Content-Type": "application/json"
+      }
     });
     return { data: response.data };
   } catch (error) {
@@ -27,12 +27,14 @@ export async function getCachedSearchResults({
   ...query
 }) {
   return await db(`
-    SELECT *
-    FROM edgar_search_results
-    ORDER BY titan_id ASC
-    LIMIT ${size}
-    OFFSET ${page * size}
-  `);
+  SELECT *
+  FROM edgar_search_results AS a
+  JOIN billionaires AS b
+  ON a.titan_id = b.id
+  ORDER BY id ASC
+  LIMIT ${size}
+  OFFSET ${page * size}
+`);
 }
 
 export async function getCachedSearchResult(identifier) {
