@@ -11,8 +11,8 @@ export async function lookupByName(name) {
   try {
     const response = await axios.post(url, data, {
       headers: {
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+      },
     });
     return { data: response.data };
   } catch (error) {
@@ -47,7 +47,7 @@ export async function getCachedSearchResult(identifier) {
   `);
 }
 
-const search = async ({ ciks = ["0001043298"] }) => {
+export const search = async ({ ciks = ["0001043298"] }) => {
   let params = {
     dateRange: "all",
     startdt: "2000-01-01",
