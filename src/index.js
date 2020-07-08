@@ -1177,7 +1177,7 @@ app.get("/edgar/results", async (req, res) => {
 });
 
 app.get("/edgar/search", async (req, res) => {
-  const result = await edgar.search(req.body);
+  const result = await edgar.search(req.query);
   res.send(result);
 });
 
