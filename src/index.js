@@ -1070,6 +1070,12 @@ app.get("/billionaires/:id/follow", async (req, res) => {
   res.send(result);
 });
 
+app.use("/billionaire", checkAuth);
+app.put("/billionaire", async (req, res) => {
+  const result = await titans.updateBillionaire(req.body);
+  res.send(result);
+});
+
 app.use("/titans/:portfolio", checkAuth);
 app.get("/titans/:portfolio", async (req, res) => {
   const portfolio = await titans
