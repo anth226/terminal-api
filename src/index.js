@@ -1161,14 +1161,12 @@ app.get("/edgar/lookup", async (req, res) => {
 });
 
 app.get("/edgar/results", async (req, res) => {
-  // const result = await edgar.getSearchResults(req.body);
-  const result = await edgar.getSearchResults({ size: 5000 });
+  const result = await edgar.getCachedSearchResults({ size: 5000 });
   res.send(result);
 });
 
-app.get("/edgar/parse", async (req, res) => {
-  // const result = await edgar.getSearchResults(req.body);
-  const result = await edgar.parse();
+app.get("/edgar/search", async (req, res) => {
+  const result = await edgar.search(req.body);
   res.send(result);
 });
 
