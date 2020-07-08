@@ -1160,6 +1160,11 @@ app.get("/edgar/lookup", async (req, res) => {
   res.send(result);
 });
 
+app.get("/edgar/result", async (req, res) => {
+  const result = await edgar.getCachedSearchResult(req.query.identifier);
+  res.send(result);
+});
+
 app.get("/edgar/results", async (req, res) => {
   const result = await edgar.getCachedSearchResults({ size: 5000 });
   res.send(result);

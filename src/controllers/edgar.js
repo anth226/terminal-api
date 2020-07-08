@@ -35,6 +35,16 @@ export async function getCachedSearchResults({
   `);
 }
 
+export async function getCachedSearchResult(identifier) {
+  return await db(`
+    SELECT *
+    FROM edgar_search_results AS a
+    JOIN billionaires AS b
+    ON a.titan_id = b.id
+    WHERE titan_id=${identifier}
+  `);
+}
+
 const search = async ({ ciks = ["0001043298"] }) => {
   let params = {
     dateRange: "all",
