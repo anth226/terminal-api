@@ -181,15 +181,11 @@ export const getFilledPage = async ({ sort = [], page = 0, size = 100 }) => {
   return result;
 };
 
-export const updateBillionaire = async (values) => {
-  console.log("values", values);
+export const updateBillionaire = async (id, cik) => {
+  let query = {
+    text: "UPDATE billionaires SET cik=($1) WHERE id=($2)",
+    values: [cik, id]
+  };
 
-  return "";
-  // let query = {
-  //   text:
-  //     "UPDATE billionaires SET cik_1=($1) WHERE id=($2)",
-  //   values: [, id]
-  // };
-
-  // return await db(query);
+  return await db(query);
 };
