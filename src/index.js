@@ -1181,6 +1181,11 @@ app.get("/edgar/search", async (req, res) => {
   res.send(result);
 });
 
+app.get("/test", async (req, res) => {
+  const result = await edgar.test();
+  res.send(result);
+});
+
 app.use(middleware.errorHandler);
 
 app.listen(process.env.PORT, () =>
