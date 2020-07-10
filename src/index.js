@@ -33,6 +33,7 @@ import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 
+import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as titans from "./controllers/titans";
 import * as companies from "./controllers/companies";
@@ -417,6 +418,16 @@ app.post("/authenticate", async (req, res) => {
       console.log("customer is in decoded claims!!!");
       console.log(decodedToken.customer_id);
       customerId = decodedToken.customer_id;
+
+      let doc = await db.collection("users").doc(decodedToken.uid).get();
+      let user = doc.data();
+
+      if (user.isAdmin) {
+        await admin.auth().setCustomUserClaims(decodedToken.uid, {
+          isAdmin: true,
+          customer_id: customerId
+        });
+      }
     } else {
       // if not pull from database
       let doc = await db.collection("users").doc(decodedToken.uid).get();
@@ -584,8 +595,37 @@ app.post("/payment", async (req, res) => {
   }
 });
 
+app.use("/user", checkAuth);
+app.get("/user", async (req, res) => {
+  try {
+    const doc = await db
+      .collection("users")
+      .doc(req.terminal_app.claims.uid)
+      .get();
+
+    const user = doc.data();
+
+    res.json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      error
+    });
+  }
+});
+
 app.use("/profile", checkAuth);
 app.get("/profile", async (req, res) => {
+  const doc = await db
+    .collection("users")
+    .doc(req.terminal_app.claims.uid)
+    .get();
+
+  const user = doc.data();
+
   const customer = await stripe.customers.retrieve(
     req.terminal_app.claims.customer_id,
     {
@@ -610,16 +650,31 @@ app.get("/profile", async (req, res) => {
     customer_since: customer.subscriptions.data[0].created,
     amount: customer.subscriptions.data[0].plan.amount / 100.0,
     trial_end: customer.subscriptions.data[0].trial_end,
-    next_payment: customer.subscriptions.data[0].current_period_end
+    next_payment: customer.subscriptions.data[0].current_period_end,
+    firstName: user.firstName,
+    lastName: user.lastName
   });
 });
 
 // upadte profile
 app.post("/profile", async (req, res) => {
-  console.log("req.body", req.body);
-  res.json({
-    success: true
-  });
+  const { firstName, lastName } = req.body;
+
+  try {
+    const docRef = db.collection("users").doc(req.terminal_app.claims.uid);
+
+    await docRef.update({
+      firstName,
+      lastName
+    });
+
+    res.send({ success: true });
+  } catch (error) {
+    res.json({
+      success: false,
+      error
+    });
+  }
 });
 
 // save user details when signup
@@ -1015,6 +1070,12 @@ app.get("/billionaires/:id/follow", async (req, res) => {
   res.send(result);
 });
 
+app.use("/billionaire/:id", checkAuth);
+app.put("/billionaire/:id", async (req, res) => {
+  const result = await titans.updateBillionaire(req.params.id, req.body.cik);
+  res.send(result);
+});
+
 app.use("/titans/:portfolio", checkAuth);
 app.get("/titans/:portfolio", async (req, res) => {
   const portfolio = await titans
@@ -1094,6 +1155,34 @@ app.get("/zacks/editorial", async (req, res) => {
 app.use("/cannon/mutual_funds/daily_summary", checkAuth);
 app.get("/cannon/mutual_funds/daily_summary", async (req, res) => {
   const result = await cannon.get_daily_summary();
+  res.send(result);
+});
+
+// Edgar
+app.get("/edgar/lookup", async (req, res) => {
+  let { name } = req.query;
+
+  const result = await edgar.lookupByName(name);
+  res.send(result);
+});
+
+app.get("/edgar/result", async (req, res) => {
+  const result = await edgar.getCachedSearchResult(req.query.identifier);
+  res.send(result);
+});
+
+app.get("/edgar/results", async (req, res) => {
+  const result = await edgar.getCachedSearchResults({ size: 5000 });
+  res.send(result);
+});
+
+app.get("/edgar/search", async (req, res) => {
+  const result = await edgar.search(req.query);
+  res.send(result);
+});
+
+app.get("/test", async (req, res) => {
+  const result = await edgar.test();
   res.send(result);
 });
 

@@ -51,7 +51,7 @@ export const followTitan = async (userID, titanID) => {
   let query = {
     text:
       "INSERT INTO billionaire_watchlists (user_id, titan_id, watched_at) VALUES ($1, $2, now())",
-    values: [userID, titanID],
+    values: [userID, titanID]
   };
 
   return await db(query);
@@ -61,7 +61,7 @@ export const unfollowTitan = async (userID, titanID) => {
   let query = {
     text:
       "DELETE FROM billionaire_watchlists WHERE user_id=($1) AND titan_id=($2)",
-    values: [userID, titanID],
+    values: [userID, titanID]
   };
 
   return await db(query);
@@ -86,7 +86,7 @@ export const getHoldings = async (uri) => {
 
     let response = {
       ...result[0],
-      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`,
+      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`
     };
 
     result = await db(`
@@ -99,7 +99,7 @@ export const getHoldings = async (uri) => {
 
     response = {
       ...response,
-      batched_holding: result.length > 0 ? result[0] : null,
+      batched_holding: result.length > 0 ? result[0] : null
     };
 
     return response;
@@ -111,7 +111,7 @@ export const getHoldings = async (uri) => {
 export const getSummary = async (uri, userId) => {
   let data = {
     profile: null,
-    summary: null,
+    summary: null
   };
 
   let result = await db(`
@@ -128,12 +128,12 @@ export const getSummary = async (uri, userId) => {
 
     data = {
       profile: result[0],
-      summary: item,
+      summary: item
     };
 
     data = {
       ...data,
-      watching: await watchlist.watching(id, userId),
+      watching: await watchlist.watching(id, userId)
     };
   }
 
@@ -179,4 +179,13 @@ export const getFilledPage = async ({ sort = [], page = 0, size = 100 }) => {
   // `);
 
   return result;
+};
+
+export const updateBillionaire = async (id, cik) => {
+  let query = {
+    text: "UPDATE billionaires SET cik=($1) WHERE id=($2)",
+    values: [cik, id]
+  };
+
+  return await db(query);
 };

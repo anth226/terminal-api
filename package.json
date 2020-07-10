@@ -1,23 +1,22 @@
 {
-  "name": "tower-backend",
+  "name": "tower-api",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "nodemon --exec babel-node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "whalewisdom": "babel-node scripts/whalewisdom/index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tyler-tower/tower-api.git"
+    "url": "git+https://github.com/retirementinsider/terminal-api.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/tyler-tower/tower-backend/issues"
+    "url": "https://github.com/retirementinsider/terminal-api/issues"
   },
-  "homepage": "https://github.com/tyler-tower/tower-backend#readme",
+  "homepage": "https://github.com/retirementinsider/terminal-api#readme",
   "devDependencies": {
     "@babel/core": "^7.7.7",
     "@babel/node": "^7.7.7",
