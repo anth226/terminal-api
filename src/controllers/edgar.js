@@ -71,3 +71,16 @@ export const search = async ({ ciks = ["0001043298"] }) => {
     return { data: null };
   }
 };
+
+export const test = async () => {
+  return await db(`
+    SELECT b.*, b_c.ciks, b_c.institution_names
+    FROM public.billionaires AS b
+    LEFT JOIN (
+      SELECT titan_id, ARRAY_AGG(cik ORDER BY rank ASC) AS ciks, ARRAY_AGG(name ORDER BY rank ASC) AS institution_names
+      FROM public.billionaire_ciks
+      GROUP BY titan_id
+    ) AS b_c ON b.id = b_c.titan_id
+    WHERE uri = 'warren-buffett'
+  `);
+};
