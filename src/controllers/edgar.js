@@ -26,15 +26,32 @@ export async function getCachedSearchResults({
   size = 100,
   ...query
 }) {
+  // return await db(`
+  //   SELECT *
+  //   FROM edgar_search_results AS a
+  //   JOIN billionaires AS b
+  //   ON a.titan_id = b.id
+  //   ORDER BY id ASC
+  //   LIMIT ${size}
+  //   OFFSET ${page * size}
+  // `);
+
   return await db(`
-  SELECT *
-  FROM edgar_search_results AS a
-  JOIN billionaires AS b
-  ON a.titan_id = b.id
-  ORDER BY id ASC
-  LIMIT ${size}
-  OFFSET ${page * size}
-`);
+    SELECT *
+    FROM edgar_search_results AS e_s_r
+    JOIN (
+      SELECT b.*, b_c.ciks, b_c.institution_names
+      FROM public.billionaires AS b
+      LEFT JOIN (
+        SELECT titan_id, ARRAY_AGG(cik ORDER BY rank ASC) AS ciks, ARRAY_AGG(name ORDER BY rank ASC) AS institution_names
+        FROM public.billionaire_ciks
+        GROUP BY titan_id
+    ) AS b_c ON b.id = b_c.titan_id) AS b
+    ON e_s_r.titan_id = b.id
+    ORDER BY id ASC
+    LIMIT ${size}
+    OFFSET ${page * size}
+  `);
 }
 
 export async function getCachedSearchResult(identifier) {
@@ -73,11 +90,21 @@ export const search = async ({ ciks = ["0001043298"] }) => {
 };
 
 export const test = async () => {
+  // return await db(`
+  //   SELECT b.*, b_c.ciks, b_c.institution_names
+  //   FROM public.billionaires AS b
+  //   LEFT JOIN (
+  //     SELECT titan_id, ARRAY_AGG(cik ORDER BY rank ASC) AS ciks, ARRAY_AGG(name ORDER BY rank ASC) AS institution_names
+  //     FROM public.billionaire_ciks
+  //     GROUP BY titan_id
+  //   ) AS b_c ON b.id = b_c.titan_id
+  //   WHERE uri = 'warren-buffett'
+  // `);
   return await db(`
     SELECT b.*, b_c.ciks, b_c.institution_names
     FROM public.billionaires AS b
     LEFT JOIN (
-      SELECT titan_id, ARRAY_AGG(cik ORDER BY rank ASC) AS ciks, ARRAY_AGG(name ORDER BY rank ASC) AS institution_names
+      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary) ORDER BY rank ASC) AS ciks
       FROM public.billionaire_ciks
       GROUP BY titan_id
     ) AS b_c ON b.id = b_c.titan_id
