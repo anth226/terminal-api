@@ -51,7 +51,7 @@ export const followTitan = async (userID, titanID) => {
   let query = {
     text:
       "INSERT INTO billionaire_watchlists (user_id, titan_id, watched_at) VALUES ($1, $2, now())",
-    values: [userID, titanID]
+    values: [userID, titanID],
   };
 
   return await db(query);
@@ -61,7 +61,7 @@ export const unfollowTitan = async (userID, titanID) => {
   let query = {
     text:
       "DELETE FROM billionaire_watchlists WHERE user_id=($1) AND titan_id=($2)",
-    values: [userID, titanID]
+    values: [userID, titanID],
   };
 
   return await db(query);
@@ -86,7 +86,7 @@ export const getHoldings = async (uri) => {
 
     let response = {
       ...result[0],
-      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`
+      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`,
     };
 
     result = await db(`
@@ -99,7 +99,7 @@ export const getHoldings = async (uri) => {
 
     response = {
       ...response,
-      batched_holding: result.length > 0 ? result[0] : null
+      batched_holding: result.length > 0 ? result[0] : null,
     };
 
     return response;
@@ -111,12 +111,28 @@ export const getHoldings = async (uri) => {
 export const getSummary = async (uri, userId) => {
   let data = {
     profile: null,
-    summary: null
+    summary: null,
   };
 
+  // let result = await db(`
+  //   SELECT b.*, b_c.ciks, b_c.institution_names
+  //   FROM public.billionaires AS b
+  //   LEFT JOIN (
+  //     SELECT titan_id, ARRAY_AGG(cik ORDER BY rank ASC) AS ciks, ARRAY_AGG(name ORDER BY rank ASC) AS institution_names
+  //     FROM public.billionaire_ciks
+  //     GROUP BY titan_id
+  //   ) AS b_c ON b.id = b_c.titan_id
+  //   WHERE uri = '${uri}'
+  // `);
+
   let result = await db(`
-    SELECT *
-    FROM billionaires
+    SELECT b.*, b_c.ciks
+    FROM public.billionaires AS b
+    LEFT JOIN (
+      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary) ORDER BY rank ASC) AS ciks
+      FROM public.billionaire_ciks
+      GROUP BY titan_id
+    ) AS b_c ON b.id = b_c.titan_id
     WHERE uri = '${uri}'
   `);
 
@@ -128,12 +144,12 @@ export const getSummary = async (uri, userId) => {
 
     data = {
       profile: result[0],
-      summary: item
+      summary: item,
     };
 
     data = {
       ...data,
-      watching: await watchlist.watching(id, userId)
+      watching: await watchlist.watching(id, userId),
     };
   }
 
@@ -184,7 +200,36 @@ export const getFilledPage = async ({ sort = [], page = 0, size = 100 }) => {
 export const updateBillionaire = async (id, cik) => {
   let query = {
     text: "UPDATE billionaires SET cik=($1) WHERE id=($2)",
-    values: [cik, id]
+    values: [cik, id],
+  };
+
+  return await db(query);
+};
+
+export const setCik = async (identifier, rank, cik) => {
+  let query = {
+    text:
+      "UPDATE billionaire_ciks SET cik=($1), updated_at=now() WHERE titan_id=($2) AND rank=($3)",
+    values: [cik, identifier, rank],
+  };
+
+  return await db(query);
+};
+
+export const promoteCik = async (identifier, rank) => {
+  console.log(identifier, rank);
+  let query = {
+    text:
+      "UPDATE billionaire_ciks SET is_primary=false, updated_at=now() WHERE titan_id=($1)",
+    values: [identifier],
+  };
+
+  await db(query);
+
+  query = {
+    text:
+      "UPDATE billionaire_ciks SET is_primary=true, updated_at=now() WHERE titan_id=($1) and rank=($2)",
+    values: [identifier, rank],
   };
 
   return await db(query);
