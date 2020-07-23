@@ -1,4 +1,5 @@
 import axios from "axios";
+import redis, { KEY_ZACKS_EDITORIAL } from "../redis";
 
 let Parser = require("rss-parser");
 let parser = new Parser();
@@ -65,16 +66,41 @@ export function get_long_term_growth_rates(identifier) {
 }
 
 export async function get_stories() {
-  let feed = await parser.parseURL(
-    "http://feed.zacks.com/commentary/AllStories/rss/retirementinsidercom/retirementinsidercom"
-  );
-  console.log(feed.title);
+  let cache = await redis.get(`${KEY_ZACKS_EDITORIAL}`);
 
-  feed.items.forEach((item) => {
-    console.log(item);
-    console.log(item.title + ":" + item.link);
-    console.log();
-  });
+  if (!cache) {
 
-  return feed;
+    let feed = await parser.parseURL(
+      "http://feed.zacks.com/commentary/AllStories/rss/retirementinsidercom/retirementinsidercom"
+    );
+
+    let cats = {};
+
+    feed.items.forEach((item) => {
+
+      let mentionedStocks = [];
+      if(item.categories.length > 1) {
+        mentionedStocks = item.categories.slice(1).map(ticker => ticker['_']);
+      }
+
+      item['stocks'] = mentionedStocks;
+
+      if(!(item.categories[0] in cats)) {
+        cats[item.categories[0]] = [item];
+      } else {
+        cats[item.categories[0]].push(item);
+      }
+    });
+
+    redis.set(
+      `${KEY_ZACKS_EDITORIAL}`,
+      JSON.stringify(cats),
+      "EX",
+      60 * 30 // 30 Minutes
+    );
+    return cats;
+  } else {
+    return JSON.parse(cache);
+  }
+
 }
