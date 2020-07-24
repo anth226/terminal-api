@@ -16,6 +16,7 @@ export let KEY_CHART_DATA = "KEY_CHART_DATA";
 
 export let KEY_TITAN_SUMMARY = "KEY_TITAN_SUMMARY";
 export let KEY_INSTITUTION = "KEY_INSTITUTION";
+export let KEY_ZACKS_EDITORIAL = "KEY_ZACKS_EDITORIAL";
 
 function connectDatabase() {
   let credentials = {
