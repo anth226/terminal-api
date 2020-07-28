@@ -68,15 +68,32 @@ export const unfollowTitan = async (userID, titanID) => {
 };
 
 export const getHoldings = async (uri) => {
+  let cik;
   let result = await db(`
-    SELECT *
-    FROM billionaires
+    SELECT b.*, b_c.ciks
+    FROM public.billionaires AS b
+    LEFT JOIN (
+      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary) ORDER BY rank ASC) AS ciks
+      FROM public.billionaire_ciks
+      GROUP BY titan_id
+    ) AS b_c ON b.id = b_c.titan_id
     WHERE uri = '${uri}'
-    AND status = 'complete'
   `);
 
   if (result.length > 0) {
-    let cik = result[0].cik;
+    let ciks = result[0].ciks;
+    if (ciks && ciks.length > 0) {
+      for (let j = 0; j < ciks.length; j += 1){
+        if (ciks[j].cik != "0000000000" && ciks[j].is_primary == true){
+          cik = ciks[j].cik;
+        }
+      }
+    }
+    /*
+    else{
+      cik = result[0].cik;
+    }
+    */
 
     result = await db(`
       SELECT *
@@ -113,6 +130,7 @@ export const getSummary = async (uri, userId) => {
     profile: null,
     summary: null,
   };
+  let item;
 
   // let result = await db(`
   //   SELECT b.*, b_c.ciks, b_c.institution_names
@@ -137,11 +155,22 @@ export const getSummary = async (uri, userId) => {
   `);
 
   if (result.length > 0) {
-    let cik = result[0].cik;
+    let ciks = result[0].ciks;
     let id = result[0].id;
-
-    let item = await performance.getInstitution(cik);
-
+    if (ciks && ciks.length > 0) {
+      for (let j = 0; j < ciks.length; j += 1){
+        let cik = ciks[j]
+        if (cik.cik != "0000000000" && cik.is_primary == true){
+          item = await performance.getInstitution(cik.cik);
+        }
+      }
+    }
+    /*
+    else{
+      let cik = result[0].cik;
+      item = await performance.getInstitution(cik);
+    }
+    */
     data = {
       profile: result[0],
       summary: item,
