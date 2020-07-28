@@ -68,7 +68,7 @@ export const unfollowTitan = async (userID, titanID) => {
 };
 
 export const getHoldings = async (uri) => {
-  var cik;
+  let cik;
   let result = await db(`
     SELECT b.*, b_c.ciks
     FROM public.billionaires AS b
@@ -130,7 +130,7 @@ export const getSummary = async (uri, userId) => {
     profile: null,
     summary: null,
   };
-  var item;
+  let item;
 
   // let result = await db(`
   //   SELECT b.*, b_c.ciks, b_c.institution_names
