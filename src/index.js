@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import firebase from "firebase";
 import admin from "firebase-admin";
-// import cors from "cors";
+import cors from "cors";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import intrinioSDK from "intrinio-sdk";
@@ -151,35 +151,36 @@ var rawBodySaver = function (req, res, buf, encoding) {
   }
 };
 
-// var allowedDomains = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
-// app.use(cors({
-//   origin: function (origin, callback) {
-//     // bypass the requests with no origin (like curl requests, mobile apps, etc )
-//     if (!origin) return callback(null, true);
-
-//     if (allowedDomains.indexOf(origin) === -1) {
-//       var msg = `This site ${origin} does not have an access. Only specific domains are allowed to access it.`;
-//       return callback(new Error(msg), false);
-//     }
-//     return callback(null, true);
+// var cors = function (req, res, next) {
+//   var whitelist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
+//   var origin = req.headers.origin;
+//   if (whitelist.indexOf(origin) > -1) {
+//     res.setHeader("Access-Control-Allow-Origin", origin);
 //   }
-// }));
-
-var cors = function (req, res, next) {
-  var whitelist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
-  var origin = req.headers.origin;
-  if (whitelist.indexOf(origin) > -1) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-  res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
-  next();
-};
+//   res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+//   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+//   next();
+// };
 
 // set up middlewares
 const app = express();
 // app.use(cors(corsOptionsDelegate));
-app.use(cors);
+
+var allowedDomains = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // bypass the requests with no origin (like curl requests, mobile apps, etc )
+      if (!origin) return callback(null, true);
+
+      if (allowedDomains.indexOf(origin) === -1) {
+        var msg = `This site ${origin} does not have an access. Only specific domains are allowed to access it.`;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+  })
+);
 
 app.use(cookieParser());
 //app.use(express.json());
