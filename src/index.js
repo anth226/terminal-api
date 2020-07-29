@@ -116,7 +116,7 @@ const cookieParams = {
 const apiURL =
   process.env.IS_DEV == "true"
     ? `${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`
-    : `${process.env.ENDPOINT_FRONTEND}`;
+    : `${process.env.FRONTEND_ENDPOINT}`;
 
 const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 
