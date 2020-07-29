@@ -115,15 +115,10 @@ const cookieParams = {
 
 const apiURL =
   process.env.IS_DEV == "true"
-    ? `http://${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`
-    : `${process.env.ENDPOINT_FRONTEND}`;
+    ? `${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`
+    : `${process.env.FRONTEND_ENDPOINT}`;
 
-// configure CORS
-var corsOptions = {
-  origin: `${apiURL}`,
-  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-  credentials: true,
-};
+const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 
 var rawBodySaver = function (req, res, buf, encoding) {
   if (buf && buf.length) {
@@ -133,7 +128,15 @@ var rawBodySaver = function (req, res, buf, encoding) {
 
 // set up middlewares
 const app = express();
+
+// configure CORS
+var corsOptions = {
+  origin: [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`],
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+  credentials: true,
+};
 app.use(cors(corsOptions));
+
 app.use(cookieParser());
 //app.use(express.json());
 app.use(bodyParser.json({ verify: rawBodySaver }));
@@ -340,8 +343,9 @@ app.post("/checkout", async (req, res) => {
         trial_from_plan: true,
         coupon: plan,
       },
-      success_url: apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
-      cancel_url: apiURL,
+      success_url:
+        apiProtocol + apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
+      cancel_url: apiProtocol + apiURL,
     });
     res.json({ session: session });
   } else {
@@ -358,8 +362,8 @@ app.post("/checkout", async (req, res) => {
           subscription_id: req.body.subscription_id,
         },
       },
-      success_url: apiURL + "/account?s=1",
-      cancel_url: apiURL,
+      success_url: apiProtocol + apiURL + "/account?s=1",
+      cancel_url: apiProtocol + apiURL,
     });
     res.json({ session: session });
   }
