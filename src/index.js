@@ -128,7 +128,7 @@ const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 // };
 
 var allowlist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
-var corsOptions = function (req, callback) {
+var corsOptionsDelegate = function (req, callback) {
   var corsOptions;
   if (allowlist.indexOf(req.header("Origin")) !== -1) {
     corsOptions = { origin: true }; // reflect (enable) the requested origin in the CORS response
@@ -146,7 +146,7 @@ var rawBodySaver = function (req, res, buf, encoding) {
 
 // set up middlewares
 const app = express();
-app.use(cors(corsOptions));
+app.use(cors(corsOptionsDelegate));
 app.use(cookieParser());
 //app.use(express.json());
 app.use(bodyParser.json({ verify: rawBodySaver }));
