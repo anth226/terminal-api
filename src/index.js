@@ -151,6 +151,20 @@ var rawBodySaver = function (req, res, buf, encoding) {
   }
 };
 
+// var allowedDomains = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
+// app.use(cors({
+//   origin: function (origin, callback) {
+//     // bypass the requests with no origin (like curl requests, mobile apps, etc )
+//     if (!origin) return callback(null, true);
+
+//     if (allowedDomains.indexOf(origin) === -1) {
+//       var msg = `This site ${origin} does not have an access. Only specific domains are allowed to access it.`;
+//       return callback(new Error(msg), false);
+//     }
+//     return callback(null, true);
+//   }
+// }));
+
 var cors = function (req, res, next) {
   var whitelist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
   var origin = req.headers.origin;
@@ -161,11 +175,12 @@ var cors = function (req, res, next) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
   next();
 };
-app.use(cors);
 
 // set up middlewares
 const app = express();
 // app.use(cors(corsOptionsDelegate));
+app.use(cors);
+
 app.use(cookieParser());
 //app.use(express.json());
 app.use(bodyParser.json({ verify: rawBodySaver }));
