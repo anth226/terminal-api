@@ -40,10 +40,10 @@ export async function getCachedSearchResults({
     SELECT *
     FROM edgar_search_results AS e_s_r
     JOIN (
-      SELECT b.*, b_c.ciks, b_c.institution_names
+      SELECT b.*, b_c.ciks
       FROM public.billionaires AS b
       LEFT JOIN (
-        SELECT titan_id, ARRAY_AGG(cik ORDER BY rank ASC) AS ciks, ARRAY_AGG(name ORDER BY rank ASC) AS institution_names
+        SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary) ORDER BY rank ASC) AS ciks
         FROM public.billionaire_ciks
         GROUP BY titan_id
     ) AS b_c ON b.id = b_c.titan_id) AS b
