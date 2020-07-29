@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import firebase from "firebase";
 import admin from "firebase-admin";
-import cors from "cors";
+// import cors from "cors";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import intrinioSDK from "intrinio-sdk";
@@ -127,23 +127,23 @@ const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 //   credentials: true,
 // };
 
-var allowlist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
-var corsOptionsDelegate = function (req, callback) {
-  console.log(allowlist);
-  console.log(req.header("Origin"));
+// var allowlist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
+// var corsOptionsDelegate = function (req, callback) {
+//   console.log(allowlist);
+//   console.log(req.header("Origin"));
 
-  var corsOptions;
-  if (allowlist.indexOf(req.header("Origin")) !== -1) {
-    corsOptions = {
-      // origin: `${apiURL}`,
-      optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-      credentials: true,
-    }; // reflect (enable) the requested origin in the CORS response
-  } else {
-    corsOptions = { origin: false }; // disable CORS for this request
-  }
-  callback(null, corsOptions); // callback expects two parameters: error and options
-};
+//   var corsOptions;
+//   if (allowlist.indexOf(req.header("Origin")) !== -1) {
+//     corsOptions = {
+//       // origin: `${apiURL}`,
+//       optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+//       credentials: true,
+//     }; // reflect (enable) the requested origin in the CORS response
+//   } else {
+//     corsOptions = { origin: false }; // disable CORS for this request
+//   }
+//   callback(null, corsOptions); // callback expects two parameters: error and options
+// };
 
 var rawBodySaver = function (req, res, buf, encoding) {
   if (buf && buf.length) {
@@ -151,9 +151,21 @@ var rawBodySaver = function (req, res, buf, encoding) {
   }
 };
 
+var cors = function (req, res, next) {
+  var whitelist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
+  var origin = req.headers.origin;
+  if (whitelist.indexOf(origin) > -1) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  next();
+};
+app.use(cors);
+
 // set up middlewares
 const app = express();
-app.use(cors(corsOptionsDelegate));
+// app.use(cors(corsOptionsDelegate));
 app.use(cookieParser());
 //app.use(express.json());
 app.use(bodyParser.json({ verify: rawBodySaver }));
