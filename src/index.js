@@ -120,60 +120,14 @@ const apiURL =
 
 const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 
-// var allowlist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
-// var corsOptionsDelegate = function (req, callback) {
-//   console.log(allowlist);
-//   console.log(req.header("Origin"));
-
-//   var corsOptions;
-//   if (allowlist.indexOf(req.header("Origin")) !== -1) {
-//     corsOptions = {
-//       // origin: `${apiURL}`,
-//       optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-//       credentials: true,
-//     }; // reflect (enable) the requested origin in the CORS response
-//   } else {
-//     corsOptions = { origin: false }; // disable CORS for this request
-//   }
-//   callback(null, corsOptions); // callback expects two parameters: error and options
-// };
-
 var rawBodySaver = function (req, res, buf, encoding) {
   if (buf && buf.length) {
     req.rawBody = buf.toString(encoding || "utf8");
   }
 };
 
-// var cors = function (req, res, next) {
-//   var whitelist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
-//   var origin = req.headers.origin;
-//   if (whitelist.indexOf(origin) > -1) {
-//     res.setHeader("Access-Control-Allow-Origin", origin);
-//   }
-//   res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
-//   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
-//   next();
-// };
-
 // set up middlewares
 const app = express();
-// app.use(cors(corsOptionsDelegate));
-
-// var allowedDomains = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
-// app.use(
-//   cors({
-//     origin: function (origin, callback) {
-//       // bypass the requests with no origin (like curl requests, mobile apps, etc )
-//       if (!origin) return callback(null, true);
-
-//       if (allowedDomains.indexOf(origin) === -1) {
-//         var msg = `This site ${origin} does not have an access. Only specific domains are allowed to access it.`;
-//         return callback(new Error(msg), false);
-//       }
-//       return callback(null, true);
-//     },
-//   })
-// );
 
 // configure CORS
 var corsOptions = {
