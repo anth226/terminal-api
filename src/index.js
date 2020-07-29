@@ -129,6 +129,9 @@ const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 
 var allowlist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
 var corsOptionsDelegate = function (req, callback) {
+  console.log(allowlist);
+  console.log(req.header);
+
   var corsOptions;
   if (allowlist.indexOf(req.header("Origin")) !== -1) {
     corsOptions = { origin: true }; // reflect (enable) the requested origin in the CORS response
