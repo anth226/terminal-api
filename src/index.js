@@ -130,7 +130,7 @@ const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 var allowlist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
 var corsOptionsDelegate = function (req, callback) {
   console.log(allowlist);
-  console.log(req.header(origin));
+  console.log(req.header("Origin"));
 
   var corsOptions;
   if (allowlist.indexOf(req.header("Origin")) !== -1) {
