@@ -115,14 +115,27 @@ const cookieParams = {
 
 const apiURL =
   process.env.IS_DEV == "true"
-    ? `http://${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`
+    ? `${process.env.FRONTEND_URL}:${process.env.FRONTEND_PORT}`
     : `${process.env.ENDPOINT_FRONTEND}`;
 
+const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
+
 // configure CORS
-var corsOptions = {
-  origin: `${apiURL}`,
-  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-  credentials: true,
+// var corsOptions = {
+//   origin: `${apiURL}`,
+//   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+//   credentials: true,
+// };
+
+var allowlist = [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`];
+var corsOptions = function (req, callback) {
+  var corsOptions;
+  if (allowlist.indexOf(req.header("Origin")) !== -1) {
+    corsOptions = { origin: true }; // reflect (enable) the requested origin in the CORS response
+  } else {
+    corsOptions = { origin: false }; // disable CORS for this request
+  }
+  callback(null, corsOptions); // callback expects two parameters: error and options
 };
 
 var rawBodySaver = function (req, res, buf, encoding) {
@@ -340,8 +353,9 @@ app.post("/checkout", async (req, res) => {
         trial_from_plan: true,
         coupon: plan,
       },
-      success_url: apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
-      cancel_url: apiURL,
+      success_url:
+        apiProtocol + apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
+      cancel_url: apiProtocol + apiURL,
     });
     res.json({ session: session });
   } else {
@@ -358,8 +372,8 @@ app.post("/checkout", async (req, res) => {
           subscription_id: req.body.subscription_id,
         },
       },
-      success_url: apiURL + "/account?s=1",
-      cancel_url: apiURL,
+      success_url: apiProtocol + apiURL + "/account?s=1",
+      cancel_url: apiProtocol + apiURL,
     });
     res.json({ session: session });
   }
