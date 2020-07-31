@@ -50,8 +50,8 @@ const sendEmail = (subject, body, recipients) => {
         Data: subject,
       },
     },
-    ReturnPath: '"Retirementinsider.com" <support@retirementinsider.com>',
-    Source: '"Retirementinsider.com" <support@retirementinsider.com>',
+    ReturnPath: `"${process.env.FRONTEND_ENDPOINT}" <${process.env.EMAIL_SUPPORT}>`,
+    Source: `"${process.env.FRONTEND_ENDPOINT}" <${process.env.EMAIL_SUPPORT}>`,
   };
 
   ses.sendEmail(params, (err, data) => {
@@ -357,7 +357,7 @@ Need to reset your password? <strong><a href="https://${process.env.FRONTEND_END
                             <h4 style="text-align:center;display:block;margin:0;padding:0;color:#3F3A38;font-family:Georgia;font-size:12px;font-style:normal;font-weight:bold;line-height:125%;letter-spacing:normal;">
 <span style="font-size:12px"><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif">CUSTOMER SERVICE CENTER<br><br>
 PHONE: (877) 960-0615&nbsp;<br><br>
-EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><span style="color:#5c93f2">support@retirementinsider.com</span></span>
+EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><span style="color:#5c93f2">${process.env.EMAIL_SUPPORT}</span></span>
 </h4>
 
                         </td>
@@ -497,12 +497,3 @@ EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lu
     </body>
 </html>
 `;
-
-// sendEmail(emailBody, ["brad@retirementinsider.com", "support@retirementinsider.com", "tblev48@yahoo.com"])
-// sendEmail(emailBody, ["collin@retirementinsider.com", "support@retirementinsider.com", "lovlyvisions@gmail.com"])
-// sendEmail(emailBody, ["jscarb6186@aol.com", "support@retirementinsider.com", "michael@retirementinsider.com"])
-// sendEmail(emailBody, ["support@retirementinsider.com"])
-// sendEmail(emailBody, ["nicole@retirementinsider.com", "jarus2403@gmail.com", "support@retirementinsider.com"])
-// sendEmail(emailBody, ["support@retirementinsider.com", "rachel@retirementinsider.com"])
-
-// module.exports = {sendEmail};

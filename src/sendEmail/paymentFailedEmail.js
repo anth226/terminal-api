@@ -144,7 +144,7 @@ export const paymentFailedEmailBody = `<!doctype html>
 
                   <div><img class="ri-icon" src="https://${process.env.FRONTEND_ENDPOINT}/img/chat-bubble-64.png"/></div>
                   <p class="mb0"><b>Email</b></p>
-                  <p><a href="mailto:support@retirementinsider.com">support@retirementinsider.com</a></p>
+                  <p><a href="mailto:${process.env.EMAIL_SUPPORT}">${process.env.EMAIL_SUPPORT}</a></p>
                   <br/>
                   <div class="blue-divider"></div>
                   <p>
