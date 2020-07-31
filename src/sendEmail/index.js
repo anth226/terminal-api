@@ -1,62 +1,66 @@
-import {paymentFailedEmailBody} from "./paymentFailedEmail";
+import { paymentFailedEmailBody } from "./paymentFailedEmail";
 
-const AWS = require('aws-sdk');
+const AWS = require("aws-sdk");
 require("dotenv").config();
 
 // const config = require('./config'); // load configurations file
 
 AWS.config.update({
-    accessKeyId: process.env.SES_KEY_ID,
-    secretAccessKey: process.env.SES_KEY,
-    region: process.env.SES_REGION,
+  accessKeyId: process.env.SES_KEY_ID,
+  secretAccessKey: process.env.SES_KEY,
+  region: process.env.SES_REGION,
 });
 
-const ses = new AWS.SES({ apiVersion: '2010-12-01' });
+const ses = new AWS.SES({ apiVersion: "2010-12-01" });
 
 export const sendSignupEmail = async (recipient) => {
   sendEmail("Welcome to Terminal!", signupEmailBody, [recipient]);
-}
+};
 
 export const sendPaymentFailedEmail = async (recipient) => {
-  sendEmail("Retirement Insider Payment Failure: Update your payment details today!", paymentFailedEmailBody, [recipient]);
-}
+  sendEmail(
+    "Retirement Insider Payment Failure: Update your payment details today!",
+    paymentFailedEmailBody,
+    [recipient]
+  );
+};
 
 // const sendEmail = (to, subject, message, from) => {
 const sendEmail = (subject, body, recipients) => {
-    const params = {
-        Destination: {
-            ToAddresses: recipients
+  const params = {
+    Destination: {
+      ToAddresses: recipients,
+    },
+    Message: {
+      Body: {
+        Html: {
+          Charset: "UTF-8",
+          // Data: "<html><body><h1>Hello GURGO</h1><p style='color:red'>Sample description</p> <p>Time 1517831318946</p></body></html>"
+          Data: body,
         },
-        Message: {
-            Body: {
-                Html: {
-                    Charset: 'UTF-8',
-                    // Data: "<html><body><h1>Hello GURGO</h1><p style='color:red'>Sample description</p> <p>Time 1517831318946</p></body></html>"
-                    Data: body,
-                },
-                /* replace Html attribute with the following if you want to send plain text emails.
+        /* replace Html attribute with the following if you want to send plain text emails.
                 Text: {
                     Charset: "UTF-8",
                     Data: message
                 }
              */
-            },
-            Subject: {
-                Charset: 'UTF-8',
-                Data: subject
-            }
-        },
-        ReturnPath: '"Retirementinsider.com" <support@retirementinsider.com>',
-        Source: '"Retirementinsider.com" <support@retirementinsider.com>',
-    };
+      },
+      Subject: {
+        Charset: "UTF-8",
+        Data: subject,
+      },
+    },
+    ReturnPath: `"${process.env.FRONTEND_ENDPOINT}" <${process.env.EMAIL_SUPPORT}>`,
+    Source: `"${process.env.FRONTEND_ENDPOINT}" <${process.env.EMAIL_SUPPORT}>`,
+  };
 
-    ses.sendEmail(params, (err, data) => {
-        if (err) {
-            return console.log(err, err.stack);
-        } else {
-            console.log("Intro email sent.", data);
-        }
-    });
+  ses.sendEmail(params, (err, data) => {
+    if (err) {
+      return console.log(err, err.stack);
+    } else {
+      console.log("Intro email sent.", data);
+    }
+  });
 };
 
 const signupEmailBody = `
@@ -191,7 +195,7 @@ const signupEmailBody = `
 <td style="padding-top:0;padding-right:18px;padding-bottom:18px;padding-left:18px;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;" valign="top" align="center" class="mcnButtonBlockInner">
                 <table border="0" cellpadding="0" cellspacing="0" class="mcnButtonContentContainer" style="border-collapse:collapse;border-radius:13px;background-color:#5C93F2;mso-table-lspace:0pt;mso-table-rspace:0pt;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;"><tbody><tr>
 <td align="center" valign="middle" class="mcnButtonContent" style='font-family:Arial, "Helvetica Neue", Helvetica, sans-serif;font-size:16px;padding:15px;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;'>
-                                <a class="mcnButton " title="Sign in to your account" href="https://terminal.retirementinsider.com/signin" target="_blank" style="font-weight:bold;letter-spacing:normal;line-height:100%;text-align:center;text-decoration:none;color:#FFFFFF;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;display:block;">Sign in to your account </a>
+                                <a class="mcnButton " title="Sign in to your account" href="https://${process.env.FRONTEND_ENDPOINT}/signin" target="_blank" style="font-weight:bold;letter-spacing:normal;line-height:100%;text-align:center;text-decoration:none;color:#FFFFFF;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;display:block;">Sign in to your account </a>
                             </td>
                         </tr></tbody></table>
 </td>
@@ -232,7 +236,7 @@ Here are just a few of the many great benefits included with your membership:</s
 
 <p style="text-align:center;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#43404D;font-family:Georgia;font-size:16px;line-height:150%;"><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><span style="font-size:15px">Thank you,<br><br><strong>Retirement Insider Terminal</strong></span><br><br>
 
-Need to reset your password? <strong><a href="https://terminal.retirementinsider.com/reset-password" target="_blank" style="mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#5c93f2;font-weight:normal;text-decoration:underline;"><span style="color:#5c93f2">Click here</span></a></strong></span></p>
+Need to reset your password? <strong><a href="https://${process.env.FRONTEND_ENDPOINT}/reset-password" target="_blank" style="mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#5c93f2;font-weight:normal;text-decoration:underline;"><span style="color:#5c93f2">Click here</span></a></strong></span></p>
 
 <br></br>
 <span style="font-size:13px">You have been charged $0.00 for your current membership. You now have full access to all of our data feeds for the next 7 days. Your paid subscription of $99 will begin at the end of your Free Trial.</span><br><br>
@@ -353,7 +357,7 @@ Need to reset your password? <strong><a href="https://terminal.retirementinsider
                             <h4 style="text-align:center;display:block;margin:0;padding:0;color:#3F3A38;font-family:Georgia;font-size:12px;font-style:normal;font-weight:bold;line-height:125%;letter-spacing:normal;">
 <span style="font-size:12px"><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif">CUSTOMER SERVICE CENTER<br><br>
 PHONE: (877) 960-0615&nbsp;<br><br>
-EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><span style="color:#5c93f2">support@retirementinsider.com</span></span>
+EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><span style="color:#5c93f2">${process.env.EMAIL_SUPPORT}</span></span>
 </h4>
 
                         </td>
@@ -492,13 +496,4 @@ EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lu
 </center>
     </body>
 </html>
-`
-
-// sendEmail(emailBody, ["brad@retirementinsider.com", "support@retirementinsider.com", "tblev48@yahoo.com"])
-// sendEmail(emailBody, ["collin@retirementinsider.com", "support@retirementinsider.com", "lovlyvisions@gmail.com"])
-// sendEmail(emailBody, ["jscarb6186@aol.com", "support@retirementinsider.com", "michael@retirementinsider.com"])
-// sendEmail(emailBody, ["support@retirementinsider.com"])
-// sendEmail(emailBody, ["nicole@retirementinsider.com", "jarus2403@gmail.com", "support@retirementinsider.com"])
-// sendEmail(emailBody, ["support@retirementinsider.com", "rachel@retirementinsider.com"])
-
-// module.exports = {sendEmail};
+`;
