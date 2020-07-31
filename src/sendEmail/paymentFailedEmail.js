@@ -83,7 +83,7 @@ export const paymentFailedEmailBody = `<!doctype html>
                   <table role="presentation" border="0" cellpadding="0" cellspacing="0">
                     <tbody>
                       <tr>
-                        <td class="va-mid"><img class="ri-icon" src="https://terminal.retirementinsider.com/img/high-importance-60.png"/></td>
+                        <td class="va-mid"><img class="ri-icon" src="https://${process.env.FRONTEND_ENDPOINT}/img/high-importance-60.png"/></td>
                         <td class="va-mid" align="center"><h3 style="letter-spacing: .5px;" class="white mb0"><b>PAYMENT FAILURE<b></h3></td>
                         <td class="va-mid" align="center"><p class="white mb0">Update your payment details today.</p></td>
                       </tr>
@@ -111,7 +111,7 @@ export const paymentFailedEmailBody = `<!doctype html>
                                 <table role="presentation" border="0" cellpadding="0" cellspacing="0">
                                   <tbody>
                                     <tr>
-                                      <td> <a href="https://terminal.retirementinsider.com/signin" target="_blank">UPDATE PAYMENT DETAILS</a> </td>
+                                      <td> <a href="https://${process.env.FRONTEND_ENDPOINT}/signin" target="_blank">UPDATE PAYMENT DETAILS</a> </td>
                                     </tr>
                                   </tbody>
                                 </table>
@@ -132,19 +132,19 @@ export const paymentFailedEmailBody = `<!doctype html>
               <tr>
                 <td class="wrapper" align="center">
                   <h1>Update Your Account</h1>
-                  <div><img class="ri-icon" src="https://terminal.retirementinsider.com/img/call-64.png"/></div>
+                  <div><img class="ri-icon" src="https://${process.env.FRONTEND_ENDPOINT}/img/call-64.png"/></div>
                   <p class="mb0"><b>Online</b></p>
-                  <p>Click <a href="https://terminal.retirementinsider.com/signin">here</a> to access your account.</p>
+                  <p>Click <a href="https://${process.env.FRONTEND_ENDPOINT}/signin">here</a> to access your account.</p>
                   <br/>
 
-                  <div><img class="ri-icon" src="https://terminal.retirementinsider.com/img/cursor-50.png"/></div>
+                  <div><img class="ri-icon" src="https://${process.env.FRONTEND_ENDPOINT}/img/cursor-50.png"/></div>
                   <p class="mb0"><b>Call</b></p>
                   <p>Call us at (877) 960-0615</p>
                   <br/>
 
-                  <div><img class="ri-icon" src="https://terminal.retirementinsider.com/img/chat-bubble-64.png"/></div>
+                  <div><img class="ri-icon" src="https://${process.env.FRONTEND_ENDPOINT}/img/chat-bubble-64.png"/></div>
                   <p class="mb0"><b>Email</b></p>
-                  <p><a href="mailto:support@retirementinsider.com">support@retirementinsider.com</a></p>
+                  <p><a href="mailto:${process.env.EMAIL_SUPPORT}">${process.env.EMAIL_SUPPORT}</a></p>
                   <br/>
                   <div class="blue-divider"></div>
                   <p>
@@ -162,4 +162,4 @@ export const paymentFailedEmailBody = `<!doctype html>
       </tr>
     </table>
   </body>
-</html>`
+</html>`;
