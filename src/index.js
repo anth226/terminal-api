@@ -402,6 +402,9 @@ app.post("/authenticate", async (req, res) => {
   try {
     // get idtoken from req body
     const idToken = req.body.token.toString();
+
+    console.log(idToken);
+
     // verify id token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     // check if decoded token is expired
@@ -647,8 +650,8 @@ app.get("/profile", async (req, res) => {
   res.json({
     email: customer.email,
     delinquent: customer.delinquent,
-    card_brand: paymentMethod.card.brand,
-    card_last4: paymentMethod.card.last4,
+    card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
+    card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
     customer_id: req.terminal_app.claims.customer_id,
     subscription_id: customer.subscriptions.data[0].id,
     customer_since: customer.subscriptions.data[0].created,
