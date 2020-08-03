@@ -51,7 +51,7 @@ export const followTitan = async (userID, titanID) => {
   let query = {
     text:
       "INSERT INTO billionaire_watchlists (user_id, titan_id, watched_at) VALUES ($1, $2, now())",
-    values: [userID, titanID],
+    values: [userID, titanID]
   };
 
   return await db(query);
@@ -61,7 +61,7 @@ export const unfollowTitan = async (userID, titanID) => {
   let query = {
     text:
       "DELETE FROM billionaire_watchlists WHERE user_id=($1) AND titan_id=($2)",
-    values: [userID, titanID],
+    values: [userID, titanID]
   };
 
   return await db(query);
@@ -83,8 +83,8 @@ export const getHoldings = async (uri) => {
   if (result.length > 0) {
     let ciks = result[0].ciks;
     if (ciks && ciks.length > 0) {
-      for (let j = 0; j < ciks.length; j += 1){
-        if (ciks[j].cik != "0000000000" && ciks[j].is_primary == true){
+      for (let j = 0; j < ciks.length; j += 1) {
+        if (ciks[j].cik != "0000000000" && ciks[j].is_primary == true) {
           cik = ciks[j].cik;
         }
       }
@@ -103,7 +103,7 @@ export const getHoldings = async (uri) => {
 
     let response = {
       ...result[0],
-      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`,
+      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`
     };
 
     result = await db(`
@@ -116,7 +116,7 @@ export const getHoldings = async (uri) => {
 
     response = {
       ...response,
-      batched_holding: result.length > 0 ? result[0] : null,
+      batched_holding: result.length > 0 ? result[0] : null
     };
 
     return response;
@@ -128,7 +128,7 @@ export const getHoldings = async (uri) => {
 export const getSummary = async (uri, userId) => {
   let data = {
     profile: null,
-    summary: null,
+    summary: null
   };
   let item;
 
@@ -158,9 +158,9 @@ export const getSummary = async (uri, userId) => {
     let ciks = result[0].ciks;
     let id = result[0].id;
     if (ciks && ciks.length > 0) {
-      for (let j = 0; j < ciks.length; j += 1){
-        let cik = ciks[j]
-        if (cik.cik != "0000000000" && cik.is_primary == true){
+      for (let j = 0; j < ciks.length; j += 1) {
+        let cik = ciks[j];
+        if (cik.cik != "0000000000" && cik.is_primary == true) {
           item = await performance.getInstitution(cik.cik);
         }
       }
@@ -173,12 +173,12 @@ export const getSummary = async (uri, userId) => {
     */
     data = {
       profile: result[0],
-      summary: item,
+      summary: item
     };
 
     data = {
       ...data,
-      watching: await watchlist.watching(id, userId),
+      watching: await watchlist.watching(id, userId)
     };
   }
 
@@ -229,7 +229,7 @@ export const getFilledPage = async ({ sort = [], page = 0, size = 100 }) => {
 export const updateBillionaire = async (id, cik) => {
   let query = {
     text: "UPDATE billionaires SET cik=($1) WHERE id=($2)",
-    values: [cik, id],
+    values: [cik, id]
   };
 
   return await db(query);
@@ -239,7 +239,17 @@ export const setCik = async (identifier, rank, cik) => {
   let query = {
     text:
       "UPDATE billionaire_ciks SET cik=($1), updated_at=now() WHERE titan_id=($2) AND rank=($3)",
-    values: [cik, identifier, rank],
+    values: [cik, identifier, rank]
+  };
+
+  return await db(query);
+};
+
+export const setEntityName = async (identifier, rank, name) => {
+  let query = {
+    text:
+      "UPDATE billionaire_ciks SET name=($1), updated_at=now() WHERE titan_id=($2) AND rank=($3)",
+    values: [name, identifier, rank]
   };
 
   return await db(query);
@@ -250,7 +260,7 @@ export const promoteCik = async (identifier, rank) => {
   let query = {
     text:
       "UPDATE billionaire_ciks SET is_primary=false, updated_at=now() WHERE titan_id=($1)",
-    values: [identifier],
+    values: [identifier]
   };
 
   await db(query);
@@ -258,7 +268,7 @@ export const promoteCik = async (identifier, rank) => {
   query = {
     text:
       "UPDATE billionaire_ciks SET is_primary=true, updated_at=now() WHERE titan_id=($1) and rank=($2)",
-    values: [identifier, rank],
+    values: [identifier, rank]
   };
 
   return await db(query);
