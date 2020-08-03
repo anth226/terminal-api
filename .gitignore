@@ -2,6 +2,8 @@ node_modules
 build
 npm-debug.log
 .env
+.env.staging
+.env.prod
 .DS_Store
 src/stocktwits/trending.json
 combined.log
