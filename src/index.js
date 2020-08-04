@@ -46,6 +46,8 @@ import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
 
+import { isAuthorized } from "./middleware/authorized";
+
 import config from "./config";
 
 var bugsnag = require("@bugsnag/js");
@@ -1157,68 +1159,97 @@ app.get("/zacks/editorial", async (req, res) => {
 
 // Cannon
 app.use("/cannon/mutual_funds/daily_summary", checkAuth);
-app.get("/cannon/mutual_funds/daily_summary", async (req, res) => {
-  const result = await cannon.get_daily_summary();
-  res.send(result);
-});
+isAuthorized({ hasRole: ["admin"] }),
+  app.get("/cannon/mutual_funds/daily_summary", async (req, res) => {
+    const result = await cannon.get_daily_summary();
+    res.send(result);
+  });
 
 // ciks
 app.use("/billionaire/:identifier/ciks/:rank/set", checkAuth);
-app.get("/billionaire/:identifier/ciks/:rank/set", async (req, res) => {
-  const result = await titans.setCik(
-    req.params.identifier,
-    req.params.rank,
-    req.query.cik
-  );
-  res.send(result);
-});
+app.get(
+  "/billionaire/:identifier/ciks/:rank/set",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await titans.setCik(
+      req.params.identifier,
+      req.params.rank,
+      req.query.cik
+    );
+    res.send(result);
+  }
+);
 
 // Entity
 app.use("/billionaire/:identifier/name/:rank/set", checkAuth);
-app.get("/billionaire/:identifier/name/:rank/set", async (req, res) => {
-  const result = await titans.setEntityName(
-    req.params.identifier,
-    req.params.rank,
-    req.query.name
-  );
-  res.send(result);
-});
+app.get(
+  "/billionaire/:identifier/name/:rank/set",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await titans.setEntityName(
+      req.params.identifier,
+      req.params.rank,
+      req.query.name
+    );
+    res.send(result);
+  }
+);
 
 app.use("/billionaire/:identifier/ciks/:rank/promote", checkAuth);
-app.get("/billionaire/:identifier/ciks/:rank/promote", async (req, res) => {
-  const result = await titans.promoteCik(
-    req.params.identifier,
-    req.params.rank
-  );
-  res.send(result);
-});
+app.get(
+  "/billionaire/:identifier/ciks/:rank/promote",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await titans.promoteCik(
+      req.params.identifier,
+      req.params.rank
+    );
+    res.send(result);
+  }
+);
 
 // Edgar
 app.use("/edgar/lookup", checkAuth);
-app.get("/edgar/lookup", async (req, res) => {
-  let { name } = req.query;
+app.get(
+  "/edgar/lookup",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    let { name } = req.query;
 
-  const result = await edgar.lookupByName(name);
-  res.send(result);
-});
+    const result = await edgar.lookupByName(name);
+    res.send(result);
+  }
+);
 
 app.use("/edgar/result", checkAuth);
-app.get("/edgar/result", async (req, res) => {
-  const result = await edgar.getCachedSearchResult(req.query.identifier);
-  res.send(result);
-});
+app.get(
+  "/edgar/result",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await edgar.getCachedSearchResult(req.query.identifier);
+    res.send(result);
+  }
+);
 
 app.use("/edgar/results", checkAuth);
-app.get("/edgar/results", async (req, res) => {
-  const result = await edgar.getCachedSearchResults({ size: 5000 });
-  res.send(result);
-});
+app.get(
+  "/edgar/results",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await edgar.getCachedSearchResults({ size: 5000 });
+    res.send(result);
+  }
+);
 
 app.use("/edgar/search", checkAuth);
-app.get("/edgar/search", async (req, res) => {
-  const result = await edgar.search(req.query);
-  res.send(result);
-});
+app.get(
+  "/edgar/search",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await edgar.search(req.query);
+    res.send(result);
+  }
+);
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
