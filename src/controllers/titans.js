@@ -147,7 +147,7 @@ export const getSummary = async (uri, userId) => {
     SELECT b.*, b_c.ciks
     FROM public.billionaires AS b
     LEFT JOIN (
-      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary) ORDER BY rank ASC) AS ciks
+      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary, 'rank', rank) ORDER BY rank ASC) AS ciks
       FROM public.billionaire_ciks
       GROUP BY titan_id
     ) AS b_c ON b.id = b_c.titan_id
