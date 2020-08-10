@@ -1,28 +1,50 @@
 import db from "../db";
+import axios from "axios";
 
 export async function searchCompanies(intrinioApi, query, secApi) {
-  const opts = {
-    pageSize: 20, // Number | The number of results to return
-  };
 
-  let [companyResults] = await Promise.all([
-    // searchETF(secApi, query),
+  let [etfs, companyResults, mutualFunds] = await Promise.all([
+    searchETF(secApi, query),
     searchSec(intrinioApi, query),
-    // intrinioApi.searchCompanies(query, opts),
+    searchMutualFunds(query),
   ]);
 
-  // etfs.forEach(function (etf, idx) {
-  //   let etfTicker = etf.ticker;
-  //   companyResults.companies.forEach(function (com, i) {
-  //     if (etfTicker == com.ticker) {
-  //       companyResults.companies.splice(i, 1);
-  //     }
-  //   });
-  // });
+  etfs.forEach((etf, idx) => {
+    let etfTicker = etf.ticker;
+    etf.secType = "ETF";
+    companyResults.companies.forEach(function (com, i) {
+      if (etfTicker == com.ticker) {
+        companyResults.companies.splice(i, 1);
+      }
+    });
+  });
 
-  console.log(companyResults);
+  mutualFunds.forEach((fund, i) => {
+    let fundTicker = fund.tickerSymbol;
+    fund.ticker = fund.tickerSymbol;
+    fund.secType = "Mutual Fund";
+    companyResults.companies.forEach(function (com, i) {
+      if (fundTicker == com.ticker) {
+        companyResults.companies.splice(i, 1);
+      }
+    });
+  });
 
-  return interleaveArray(companyResults.companies, []);
+  return interleaveArray(interleaveArray(companyResults.companies, etfs), mutualFunds);
+}
+
+export function searchMutualFunds(query) {
+  let data = axios
+  .get("https://fds1.cannonvalleyresearch.com/api/v1/securitySearch?apiKey=lCWj7ozXyLoxvqr28OCC&searchPattern=" + query + "&active=true&listed=true")
+  .then(function (res) {
+    return res.data ;
+  })
+  .catch(function (err) {
+    console.log(err);
+    return [];
+  });
+
+  return data;
 }
 
 export function searchSec(intrinioApi, query) {
@@ -39,7 +61,7 @@ export function searchSec(intrinioApi, query) {
       return error;
     });
 
-  console.log(res);
+  //console.log(res);
 
   return res;
 }

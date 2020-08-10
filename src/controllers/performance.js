@@ -5,7 +5,7 @@ import redis, { KEY_INSTITUTION } from "../redis";
 
 export async function getPortfolios() {
   return {
-    url: "https://ri-terminal.s3.amazonaws.com/portfolios.json"
+    url: "https://ri-terminal.s3.amazonaws.com/portfolios.json",
   };
 }
 
@@ -14,10 +14,10 @@ export async function getInstitution(cik) {
 
   if (!cache) {
     let result = await db(`
-    SELECT *
-    FROM institutions
-    WHERE cik = '${cik}'
-  `);
+      SELECT *
+      FROM institutions
+      WHERE cik = '${cik}'
+    `);
 
     if (result.length > 0) {
       redis.set(
