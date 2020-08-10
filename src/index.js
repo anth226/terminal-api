@@ -36,6 +36,7 @@ import * as performance from "./controllers/performance";
 import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as titans from "./controllers/titans";
+import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
 import * as cannon from "./controllers/cannon";
@@ -1164,6 +1165,31 @@ isAuthorized({ hasRole: ["admin"] }),
     const result = await cannon.get_daily_summary();
     res.send(result);
   });
+
+// Mutual funds
+app.use("/mutual-funds/following", checkAuth);
+app.get("/mutual-funds/following", async (req, res) => {
+  const result = await watchlist.getFollowedTitans(req.terminal_app.claims.uid);
+  res.send(result);
+});
+
+app.use("/mutual-funds/:id/unfollow", checkAuth);
+app.get("/mutual-funds/:id/unfollow", async (req, res) => {
+  const result = await mutual_funds.unfollow(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
+  res.send(result);
+});
+
+app.use("/mutual-funds/:id/follow", checkAuth);
+app.get("/mutual-funds/:id/follow", async (req, res) => {
+  const result = await mutual_funds.follow(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
+  res.send(result);
+});
 
 // ciks
 app.use("/billionaire/:identifier/ciks/:rank/set", checkAuth);
