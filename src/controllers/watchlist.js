@@ -72,3 +72,29 @@ export const isWatching_MutualFund = async (id, userId) => {
 
   return false;
 };
+
+export const getFollowedCompanies = async (userId) => {
+  let result = await db(`
+    SELECT companies.*, company_watchlists.*
+    FROM company_watchlists
+    LEFT JOIN companies
+    ON company_watchlists.mutual_fund_id = companies.id
+    WHERE user_id = '${userId}'
+  `);
+
+  return result;
+};
+
+export const isWatching_Company = async (id, userId) => {
+  let result = await db(`
+    SELECT *
+    FROM company_watchlists
+    WHERE user_id = '${userId}' AND company_id = '${id}'
+  `);
+
+  if (result.length > 0) {
+    return true;
+  }
+
+  return false;
+};
