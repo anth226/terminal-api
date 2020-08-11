@@ -488,8 +488,9 @@ app.post("/authenticate", async (req, res) => {
     }
     // Check if customer has paid for their subscription
     if (
+      customer.subscriptions.data[0].cancel_at_period_end &&
       Math.round(new Date().getTime() / 1000) >
-      customer.subscriptions.data[0].cancel_at
+        customer.subscriptions.data[0].cancel_at
     ) {
       // Bounce to payment page for now
       // we may need to handle this diferently because the customer actually exists
@@ -805,6 +806,32 @@ app.post("/company/data_text", async (req, res) => {
     req.body.tags
   );
   res.send(data);
+});
+
+app.use("/companies/following", checkAuth);
+app.get("/companies/following", async (req, res) => {
+  const result = await watchlist.getFollowedCompanies(
+    req.terminal_app.claims.uid
+  );
+  res.send(result);
+});
+
+app.use("/companies/:id/unfollow", checkAuth);
+app.get("/companies/:id/unfollow", async (req, res) => {
+  const result = await companies.unfollow(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
+  res.send(result);
+});
+
+app.use("/companies/:id/follow", checkAuth);
+app.get("/companies/:id/follow", async (req, res) => {
+  const result = await companies.follow(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
+  res.send(result);
 });
 
 /* Securities */
@@ -1172,7 +1199,9 @@ isAuthorized({ hasRole: ["admin"] }),
 // Mutual funds
 app.use("/mutual-funds/following", checkAuth);
 app.get("/mutual-funds/following", async (req, res) => {
-  const result = await watchlist.getFollowedTitans(req.terminal_app.claims.uid);
+  const result = await watchlist.getFollowedMutualFunds(
+    req.terminal_app.claims.uid
+  );
   res.send(result);
 });
 
