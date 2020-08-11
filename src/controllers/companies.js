@@ -31,3 +31,23 @@ export const lookup = async (companyAPI, identifier) => {
 
   return response;
 };
+
+export const follow = async (userID, companyID) => {
+  let query = {
+    text:
+      "INSERT INTO company_watchlists (user_id, company_id, watched_at) VALUES ($1, $2, now())",
+    values: [userID, companyID],
+  };
+
+  return await db(query);
+};
+
+export const unfollow = async (userID, companyID) => {
+  let query = {
+    text:
+      "DELETE FROM company_watchlists WHERE user_id=($1) AND company_id=($2)",
+    values: [userID, companyID],
+  };
+
+  return await db(query);
+};
