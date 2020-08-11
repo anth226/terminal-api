@@ -477,17 +477,20 @@ app.post("/authenticate", async (req, res) => {
     console.log(customer);
     console.log("\nSUBSCRIPTION\n");
     console.log(customer.subscriptions);
+
     if (customer.subscriptions.total_count < 1) {
       throw {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription.",
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)",
       };
     }
     // Check if customer has paid for their subscription
-    if (customer.subscriptions.data[0].canceled_at) {
-      console.log("HIT CANCELED");
+    if (
+      Math.round(new Date().getTime() / 1000) >
+      customer.subscriptions.data[0].cancel_at
+    ) {
       // Bounce to payment page for now
       // we may need to handle this diferently because the customer actually exists
       // update existing customers payment method and re-charge rather than sign up new customer
@@ -501,7 +504,7 @@ app.post("/authenticate", async (req, res) => {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription.",
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)",
       };
     }
 
