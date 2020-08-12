@@ -24,7 +24,7 @@ export const create = async (userId, widgetType, identifier) => {
       let { id } = dashboards[0];
       let dashboardId = id;
 
-      let { id } = widgets[0];
+      ({ id } = widgets[0]);
       let widgetId = id;
 
       let query = {
@@ -34,7 +34,7 @@ export const create = async (userId, widgetType, identifier) => {
 
       let data = await db(query);
 
-      let { id } = data;
+      ({ id } = data);
       let widgetDataId = data[0];
 
       await pin(dashboardId, widgetId, widgetDataId);
