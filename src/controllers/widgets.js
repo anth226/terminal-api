@@ -28,7 +28,7 @@ export const create = async (userId, widgetType, identifier) => {
       let widgetId = id;
 
       let query = {
-        text: "INSERT INTO widget_data (data) VALUES ($1)",
+        text: "INSERT INTO widget_data (input) VALUES ($1)",
         values: [null],
       };
 
