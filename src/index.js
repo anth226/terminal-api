@@ -1027,7 +1027,7 @@ app.get("/forex", async (req, res) => {
 
 app.use("/savings-accounts", checkAuth);
 app.get("/savings-accounts", async (req, res) => {
-  const accounts = await nerdwalletSavings.getSavingsAccountsList();
+  const accounts = await nerdwalletSavings.getSavingsAccounts();
   res.send(accounts);
 });
 
