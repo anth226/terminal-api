@@ -1199,7 +1199,7 @@ isAuthorized({ hasRole: ["admin"] }),
 // Mutual funds
 app.use("/mutual-fund/:identifier", checkAuth);
 app.get("/mutual-fund/:identifier", async (req, res) => {
-  const result = await mututal_funds.lookup(companyAPI, req.params.identifier);
+  const result = await mutual_funds.lookup(companyAPI, req.params.identifier);
   res.send(result);
 });
 
