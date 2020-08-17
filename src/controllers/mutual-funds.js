@@ -2,6 +2,7 @@ import db from "../db";
 import * as getCompanyData from "../intrinio/get_company_data";
 
 export const lookup = async (companyAPI, identifier) => {
+  console.log("made it into new lookup");
   const companyFundamentals = await getCompanyData.lookupCompany(
     companyAPI,
     identifier
