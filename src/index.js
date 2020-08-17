@@ -1203,8 +1203,8 @@ app.get("/mutual-funds/:identifier", async (req, res) => {
   res.send(result);
 });
 
-app.use("/mutual-funds/following", checkAuth);
-app.get("/mutual-funds/following", async (req, res) => {
+app.use("/mutual-fund/following", checkAuth);
+app.get("/mutual-fund/following", async (req, res) => {
   const result = await watchlist.getFollowedMutualFunds(
     req.terminal_app.claims.uid
   );
