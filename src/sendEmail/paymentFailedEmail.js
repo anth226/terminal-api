@@ -3,7 +3,7 @@ export const paymentFailedEmailBody = `<!doctype html>
   <head>
     <meta name="viewport" content="width=device-width" />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>Retirement Insider - Credit Card Billing Failure</title>
+    <title>${process.env.FRONTEND_TITLE} - Credit Card Billing Failure</title>
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700&amp;display=swap" rel="stylesheet">
     <style>
       /* -------------------------------------
@@ -66,7 +66,7 @@ export const paymentFailedEmailBody = `<!doctype html>
         <td>&nbsp;</td>
         <td align="center">
           <br/>
-          <h1 class="mb0 ri-logo">Retirement Insider</h1>
+          <h1 class="mb0 ri-logo">${process.env.FRONTEND_TITLE}</h1>
         </td>
       </tr>
       <tr>
@@ -150,7 +150,7 @@ export const paymentFailedEmailBody = `<!doctype html>
                   <p>
                     If you do not settle this invoice within 14 days of this email, your account may be suspended. Please contact us immediately if you have any questions or concerns regarding this notice.
                   </p>
-                  <p>Thank you for choosing Retirement Insider.</p>
+                  <p>Thank you for choosing ${process.env.FRONTEND_TITLE}.</p>
 
                 </td>
               </tr>

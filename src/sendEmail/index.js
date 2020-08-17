@@ -19,7 +19,7 @@ export const sendSignupEmail = async (recipient) => {
 
 export const sendPaymentFailedEmail = async (recipient) => {
   sendEmail(
-    "Retirement Insider Payment Failure: Update your payment details today!",
+    `${process.env.FRONTEND_TITLE} Payment Failure: Update your payment details today!`,
     paymentFailedEmailBody,
     [recipient]
   );
@@ -137,7 +137,9 @@ const signupEmailBody = `
 <td valign="top" class="mcnTextContent" style="padding-top:0;padding-right:18px;padding-bottom:9px;padding-left:18px;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;word-break:break-word;color:#43404D;font-family:Georgia;font-size:16px;line-height:150%;text-align:center;">
 
                             <h1 style="text-align:center;display:block;margin:0;padding:0;color:#3F3A38;font-family:Georgia;font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:normal;">
-<strong><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif">Welcome to Terminal by Retirement Insider!</span></strong><br>
+<strong><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif">Welcome to Terminal by ${
+  process.env.FRONTEND_TITLE
+}!</span></strong><br>
 &nbsp;</h1>
 
                         </td>
@@ -195,7 +197,9 @@ const signupEmailBody = `
 <td style="padding-top:0;padding-right:18px;padding-bottom:18px;padding-left:18px;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;" valign="top" align="center" class="mcnButtonBlockInner">
                 <table border="0" cellpadding="0" cellspacing="0" class="mcnButtonContentContainer" style="border-collapse:collapse;border-radius:13px;background-color:#5C93F2;mso-table-lspace:0pt;mso-table-rspace:0pt;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;"><tbody><tr>
 <td align="center" valign="middle" class="mcnButtonContent" style='font-family:Arial, "Helvetica Neue", Helvetica, sans-serif;font-size:16px;padding:15px;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;'>
-                                <a class="mcnButton " title="Sign in to your account" href="https://${process.env.FRONTEND_ENDPOINT}/signin" target="_blank" style="font-weight:bold;letter-spacing:normal;line-height:100%;text-align:center;text-decoration:none;color:#FFFFFF;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;display:block;">Sign in to your account </a>
+                                <a class="mcnButton " title="Sign in to your account" href="https://${
+                                  process.env.FRONTEND_ENDPOINT
+                                }/signin" target="_blank" style="font-weight:bold;letter-spacing:normal;line-height:100%;text-align:center;text-decoration:none;color:#FFFFFF;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;display:block;">Sign in to your account </a>
                             </td>
                         </tr></tbody></table>
 </td>
@@ -234,13 +238,23 @@ Here are just a few of the many great benefits included with your membership:</s
 </ul>
 <div style="text-align: left;">&nbsp;</div>
 
-<p style="text-align:center;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#43404D;font-family:Georgia;font-size:16px;line-height:150%;"><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><span style="font-size:15px">Thank you,<br><br><strong>Retirement Insider Terminal</strong></span><br><br>
+<p style="text-align:center;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#43404D;font-family:Georgia;font-size:16px;line-height:150%;"><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><span style="font-size:15px">Thank you,<br><br><strong>${
+  process.env.FRONTEND_TITLE
+} Terminal</strong></span><br><br>
 
-Need to reset your password? <strong><a href="https://${process.env.FRONTEND_ENDPOINT}/reset-password" target="_blank" style="mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#5c93f2;font-weight:normal;text-decoration:underline;"><span style="color:#5c93f2">Click here</span></a></strong></span></p>
+Need to reset your password? <strong><a href="https://${
+  process.env.FRONTEND_ENDPOINT
+}/reset-password" target="_blank" style="mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#5c93f2;font-weight:normal;text-decoration:underline;"><span style="color:#5c93f2">Click here</span></a></strong></span></p>
 
 <br></br>
-<span style="font-size:13px">You have been charged $0.00 for your current membership. You now have full access to all of our data feeds for the next 7 days. Your paid subscription of $99 will begin at the end of your Free Trial.</span><br><br>
 
+For help getting started, as well as ${
+  process.env.FRONTEND_TITLE
+} tips and best practices, visit our <strong><a href="https://${
+  process.env.FRONTEND_KNOWLEDGE_CENTER_URL
+}" target="_blank" style="mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#5c93f2;font-weight:normal;text-decoration:underline;"><span style="color:#5c93f2">Knowledge Center</span></a></strong></span>.
+
+<br></br>
 
                         </td>
                     </tr></tbody></table>
@@ -297,7 +311,7 @@ Need to reset your password? <strong><a href="https://${process.env.FRONTEND_END
                 <table align="left" border="0" cellpadding="0" cellspacing="0" style="max-width:100%;min-width:100%;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;" width="100%" class="mcnTextContentContainer"><tbody><tr>
 <td valign="top" class="mcnTextContent" style="padding:0px 18px 9px;font-family:Georgia;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;word-break:break-word;color:#43404D;font-size:14px;line-height:150%;text-align:center;">
 
-                            <h4 style="display:block;margin:0;padding:0;color:#3F3A38;font-family:Georgia;font-size:12px;font-style:normal;font-weight:bold;line-height:125%;letter-spacing:normal;text-align:center;"><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif">ABOUT RETIREMENT INSIDER</span></h4>
+                            <h4 style="display:block;margin:0;padding:0;color:#3F3A38;font-family:Georgia;font-size:12px;font-style:normal;font-weight:bold;line-height:125%;letter-spacing:normal;text-align:center;"><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif">ABOUT ${process.env.FRONTEND_TITLE.toUpperCase()}</span></h4>
 
 <p style="font-family:Georgia;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;color:#43404D;font-size:14px;line-height:150%;text-align:center;"><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif">Our mission is to democratize access for the world&rsquo;s most valuable financial data and bring transparency to capital markets</span>.</p>
 
@@ -357,7 +371,9 @@ Need to reset your password? <strong><a href="https://${process.env.FRONTEND_END
                             <h4 style="text-align:center;display:block;margin:0;padding:0;color:#3F3A38;font-family:Georgia;font-size:12px;font-style:normal;font-weight:bold;line-height:125%;letter-spacing:normal;">
 <span style="font-size:12px"><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif">CUSTOMER SERVICE CENTER<br><br>
 PHONE: (877) 960-0615&nbsp;<br><br>
-EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><span style="color:#5c93f2">${process.env.EMAIL_SUPPORT}</span></span>
+EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><span style="color:#5c93f2">${
+  process.env.EMAIL_SUPPORT
+}</span></span>
 </h4>
 
                         </td>
@@ -419,7 +435,11 @@ EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lu
 <td align="left" valign="middle" style="padding-top:5px;padding-right:10px;padding-bottom:5px;padding-left:9px;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;">
                                                                     <table align="left" border="0" cellpadding="0" cellspacing="0" width="" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;"><tbody><tr>
 <td align="left" valign="middle" class="mcnFollowTextContent" style="padding-left:5px;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;">
-                                                                                    <a href="https://retirementinsider.com/" target="" style='font-family:"Trebuchet MS", "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", Tahoma, sans-serif;font-size:16px;text-decoration:none;color:#5C93F2;font-weight:bold;line-height:100%;text-align:center;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;'>Visit Our Website </a>
+                                                                                    <a href="https://${
+                                                                                      process
+                                                                                        .env
+                                                                                        .FRONTEND_ENDPOINT
+                                                                                    }" target="" style='font-family:"Trebuchet MS", "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", Tahoma, sans-serif;font-size:16px;text-decoration:none;color:#5C93F2;font-weight:bold;line-height:100%;text-align:center;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;'>Visit Our Website </a>
                                                                                 </td>
 
                                                                         </tr></tbody></table>
@@ -467,7 +487,9 @@ EMAIL:&nbsp;</span></span><span style="font-family:trebuchet ms,lucida grande,lu
                 <table align="left" border="0" cellpadding="0" cellspacing="0" style="max-width:100%;min-width:100%;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;" width="100%" class="mcnTextContentContainer"><tbody><tr>
 <td valign="top" class="mcnTextContent" style="padding-top:0;padding-right:18px;padding-bottom:9px;padding-left:18px;mso-line-height-rule:exactly;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;word-break:break-word;color:#43404D;font-family:Georgia;font-size:12px;line-height:150%;text-align:center;">
 
-                            <span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><em>Copyright &copy; 2020 Retirement Insider, All rights reserved.</em><br><br><strong>Our mailing address is:</strong><br>
+                            <span style="font-family:trebuchet ms,lucida grande,lucida sans unicode,lucida sans,tahoma,sans-serif"><em>Copyright &copy; 2020 ${
+                              process.env.FRONTEND_TITLE
+                            }, All rights reserved.</em><br><br><strong>Our mailing address is:</strong><br>
 300 New Jersey Avenue NW, Suite 900, Washington, DC 20001<br><br>
 &nbsp;
                         </td>
