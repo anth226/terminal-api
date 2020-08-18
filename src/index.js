@@ -1197,12 +1197,14 @@ isAuthorized({ hasRole: ["admin"] }),
   });
 
 // Mutual funds
+/*
 app.use("/mutual-fund/:identifier", checkAuth);
 app.get("/mutual-fund/:identifier", async (req, res) => {
+  console.log("made it to new route");
   const result = await mutual_funds.lookup(companyAPI, req.params.identifier);
   res.send(result);
 });
-
+*/
 app.use("/mutual-fund/following", checkAuth);
 app.get("/mutual-fund/following", async (req, res) => {
   const result = await watchlist.getFollowedMutualFunds(
