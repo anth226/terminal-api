@@ -1027,7 +1027,7 @@ app.get("/forex", async (req, res) => {
 
 app.use("/savings-accounts", checkAuth);
 app.get("/savings-accounts", async (req, res) => {
-  const accounts = await nerdwalletSavings.getSavingsAccountsList();
+  const accounts = await nerdwalletSavings.getSavingsAccounts();
   res.send(accounts);
 });
 
@@ -1197,8 +1197,16 @@ isAuthorized({ hasRole: ["admin"] }),
   });
 
 // Mutual funds
-app.use("/mutual-funds/following", checkAuth);
-app.get("/mutual-funds/following", async (req, res) => {
+/*
+app.use("/mutual-fund/:identifier", checkAuth);
+app.get("/mutual-fund/:identifier", async (req, res) => {
+  console.log("made it to new route");
+  const result = await mutual_funds.lookup(companyAPI, req.params.identifier);
+  res.send(result);
+});
+*/
+app.use("/mutual-fund/following", checkAuth);
+app.get("/mutual-fund/following", async (req, res) => {
   const result = await watchlist.getFollowedMutualFunds(
     req.terminal_app.claims.uid
   );
