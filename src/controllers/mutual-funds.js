@@ -50,3 +50,46 @@ export const unfollow = async (userID, fundID) => {
 
   return await db(query);
 };
+
+export const getTopFunds = async (topNum) => {
+  let top = [];
+  let all = [];
+  let funds = [];
+  let topFunds = [];
+
+  let result = await db(`
+    SELECT *
+    FROM mutual_funds
+  `);
+
+  if (result.length > 0) {
+    for (let i in result) {
+      let fund = result[i];
+      let jsonSum = fund.json_summary;
+      if (jsonSum) {
+        let marketCap = jsonSum.netAssets;
+        all.push(marketCap);
+        funds.push({
+          fund: fund,
+          marketCap: marketCap,
+        });
+      }
+    }
+  }
+
+  all.sort((a, b) => a - b);
+  for (let j = 0; j < topNum; j++) {
+    top.push(all.pop());
+  }
+
+  for (let z = 0; z < funds.length; z++) {
+    for (let q = 0; q < top.length; q++) {
+      if (funds[z].marketCap == top[q]) {
+        topFunds.push(funds[z]);
+      }
+    }
+  }
+
+  topFunds.sort((a, b) => a.marketCap - b.marketCap);
+  return topFunds;
+};
