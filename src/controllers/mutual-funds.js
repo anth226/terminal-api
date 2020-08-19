@@ -24,8 +24,8 @@ export const lookup = async (companyAPI, identifier) => {
 
   let response = {
     ...companyFundamentals,
-    company: result.length > 0 ? companyResult[0] : null,
-    mutual_fund: result.length > 0 ? mutualFundResult[0] : null,
+    company: companyResult.length > 0 ? companyResult[0] : null,
+    mutual_fund: mutualFundResult.length > 0 ? mutualFundResult[0] : null,
   };
 
   return response;

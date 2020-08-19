@@ -770,7 +770,8 @@ app.get("/futures", async (req, res) => {
 // Companies
 app.use("/company/:symbol", checkAuth);
 app.get("/company/:symbol", async (req, res) => {
-  const result = await companies.lookup(companyAPI, req.params.symbol);
+  const result = await mutual_funds.lookup(companyAPI, req.params.symbol);
+  //const result = await companies.lookup(companyAPI, req.params.symbol);
   res.send(result);
 });
 
