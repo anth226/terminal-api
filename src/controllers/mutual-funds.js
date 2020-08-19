@@ -52,10 +52,10 @@ export const unfollow = async (userID, fundID) => {
 };
 
 export const getTopFunds = async (topNum) => {
-  let top = [];
-  let all = [];
-  let funds = [];
-  let topFunds = [];
+  let cFunds = [];
+  let eFunds = [];
+  let fFunds = [];
+  let hFunds = [];
 
   let result = await db(`
     SELECT *
@@ -66,30 +66,54 @@ export const getTopFunds = async (topNum) => {
     for (let i in result) {
       let fund = result[i];
       let jsonSum = fund.json_summary;
+      let fundCategory = fund.json.fundCategory;
       if (jsonSum) {
         let marketCap = jsonSum.netAssets;
-        all.push(marketCap);
-        funds.push({
-          fund: fund,
-          marketCap: marketCap,
-        });
+        if (fundCategory[0] == "C") {
+          cFunds.push({
+            fund: fund,
+            marketCap: marketCap,
+          });
+        } else if (fundCategory[0] == "E") {
+          eFunds.push({
+            fund: fund,
+            marketCap: marketCap,
+          });
+        } else if (fundCategory[0] == "F") {
+          fFunds.push({
+            fund: fund,
+            marketCap: marketCap,
+          });
+        } else if (fundCategory[0] == "H") {
+          hFunds.push({
+            fund: fund,
+            marketCap: marketCap,
+          });
+        }
       }
     }
   }
 
-  all.sort((a, b) => a - b);
-  for (let j = 0; j < topNum; j++) {
-    top.push(all.pop());
-  }
+  let comFunds = cFunds
+    .sort((a, b) => a.marketCap - b.marketCap)
+    .slice(Math.max(cFunds.length - topNum, 0));
+  let equFunds = eFunds
+    .sort((a, b) => a.marketCap - b.marketCap)
+    .slice(Math.max(eFunds.length - topNum, 0));
+  let fixFunds = fFunds
+    .sort((a, b) => a.marketCap - b.marketCap)
+    .slice(Math.max(fFunds.length - topNum, 0));
+  let hybFunds = hFunds
+    .sort((a, b) => a.marketCap - b.marketCap)
+    .slice(Math.max(hFunds.length - topNum, 0));
 
-  for (let z = 0; z < funds.length; z++) {
-    for (let q = 0; q < top.length; q++) {
-      if (funds[z].marketCap == top[q]) {
-        topFunds.push(funds[z]);
-      }
-    }
-  }
+  let funds = {
+    comFunds,
+    equFunds,
+    fixFunds,
+    hybFunds,
+  };
 
-  topFunds.sort((a, b) => a.marketCap - b.marketCap);
-  return topFunds;
+  //console.log(funds);
+  return funds;
 };
