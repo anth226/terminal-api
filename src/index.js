@@ -711,6 +711,35 @@ app.post("/signup", async (req, res) => {
   }
 });
 
+app.use("/cancellation-request", checkAuth);
+app.post("/cancellation-request", async(req, res) => {
+  const { cancelReason } = req.body;
+
+  const customer = await stripe.customers.retrieve(
+    req.terminal_app.claims.customer_id,
+    {
+      expand: [
+        "subscriptions.data.default_payment_method",
+        "invoice_settings.default_payment_method"
+      ]
+    }
+  );
+
+  let paymentMethod = customer.subscriptions.data[0].default_payment_method;
+  if (paymentMethod == null) {
+    paymentMethod = customer.invoice_settings.default_payment_method;
+  }
+
+  let name = paymentMethod ? paymentMethod.name : "demo";
+  let phone = paymentMethod ? paymentMethod.phone : "demo-phone";
+  let email = customer.email;
+
+  sendEmail.sendCancellationRequest(name, phone, email, cancelReason);
+
+  res.send("success");
+
+});
+
 app.use("/holdings/:symbol", checkAuth);
 app.get("/holdings/:symbol", async (req, res) => {
   const holdingsList = await holdings.getETFHoldings(req.params.symbol);
