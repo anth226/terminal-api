@@ -50,3 +50,57 @@ export const unfollow = async (userID, fundID) => {
 
   return await db(query);
 };
+
+export const getTopFunds = async (topNum) => {
+  let cFunds = [];
+  let eFunds = [];
+  let fFunds = [];
+  let hFunds = [];
+
+  let result = await db(`
+    SELECT *
+    FROM mutual_funds
+  `);
+
+  if (result.length > 0) {
+    for (let i in result) {
+      let fund = result[i];
+      let jsonSum = fund.json_summary;
+      let fundCategory = fund.json.fundCategory;
+      if (jsonSum) {
+        if (fundCategory[0] == "C") {
+          cFunds.push(fund);
+        } else if (fundCategory[0] == "E") {
+          eFunds.push(fund);
+        } else if (fundCategory[0] == "F") {
+          fFunds.push(fund);
+        } else if (fundCategory[0] == "H") {
+          hFunds.push(fund);
+        }
+      }
+    }
+  }
+
+  let comFunds = cFunds
+    .sort((a, b) => a.json_summary.netAssets - b.json_summary.netAssets)
+    .slice(Math.max(cFunds.length - topNum, 0));
+  let equFunds = eFunds
+    .sort((a, b) => a.json_summary.netAssets - b.json_summary.netAssets)
+    .slice(Math.max(eFunds.length - topNum, 0));
+  let fixFunds = fFunds
+    .sort((a, b) => a.json_summary.netAssets - b.json_summary.netAssets)
+    .slice(Math.max(fFunds.length - topNum, 0));
+  let hybFunds = hFunds
+    .sort((a, b) => a.json_summary.netAssets - b.json_summary.netAssets)
+    .slice(Math.max(hFunds.length - topNum, 0));
+
+  let funds = {
+    comFunds,
+    equFunds,
+    fixFunds,
+    hybFunds,
+  };
+
+  //console.log(funds);
+  return funds;
+};
