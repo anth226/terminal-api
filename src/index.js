@@ -13,7 +13,7 @@ import * as getSecurityData from "./intrinio/get_security_data";
 import * as lookupCompany from "./intrinio/get_company_fundamentals";
 import * as screener from "./intrinio/screener";
 import * as analystRatings from "./intrinio/get_analyst_ratings";
-import * as holdings from "./intrinio/get_holdings_data";
+import * as etfs from "./controllers/etfs";
 // import * as gainersLosers from './polygon/get_gainers_losers';
 import * as gainersLosers from "./scrape/get_gainers_losers";
 import * as trending from "./scrape/yahoo_trending";
@@ -711,10 +711,10 @@ app.post("/signup", async (req, res) => {
   }
 });
 
-app.use("/holdings/:symbol", checkAuth);
-app.get("/holdings/:symbol", async (req, res) => {
-  const holdingsList = await holdings.getETFHoldings(req.params.symbol);
-  res.send(holdingsList);
+app.use("/etfs/:identifier/holdings", checkAuth);
+app.get("/etfs/:identifier/holdings", async (req, res) => {
+  const result = await etfs.get_holdings(req.params.identifier);
+  res.send(result);
 });
 
 app.use("/analyst-ratings/:symbol/snapshot", checkAuth);
@@ -1220,6 +1220,12 @@ app.get("/mutual-fund/following", async (req, res) => {
   const result = await watchlist.getFollowedMutualFunds(
     req.terminal_app.claims.uid
   );
+  res.send(result);
+});
+
+app.use("/mutual-funds/:identifier/holdings", checkAuth);
+app.get("/mutual-funds/:identifier/holdings", async (req, res) => {
+  const result = await mutual_funds.getHoldings(req.params.identifier);
   res.send(result);
 });
 

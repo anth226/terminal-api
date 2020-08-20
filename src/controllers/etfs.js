@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export function getETFHoldings(ticker) {
+export function get_holdings(ticker) {
   let holdings = axios
     .get(
       `${
