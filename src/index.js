@@ -770,7 +770,8 @@ app.get("/futures", async (req, res) => {
 // Companies
 app.use("/company/:symbol", checkAuth);
 app.get("/company/:symbol", async (req, res) => {
-  const result = await companies.lookup(companyAPI, req.params.symbol);
+  const result = await mutual_funds.lookup(companyAPI, req.params.symbol);
+  //const result = await companies.lookup(companyAPI, req.params.symbol);
   res.send(result);
 });
 
@@ -1113,6 +1114,15 @@ app.put("/billionaire/:id", async (req, res) => {
   res.send(result);
 });
 
+app.use("/billionaire/:id", checkAuth);
+app.get("/billionaire/:id", async (req, res) => {
+  const result = await titans.updateBillionaireNote(
+    req.params.id,
+    req.query.note
+  );
+  res.send(result);
+});
+
 app.use("/titans/:portfolio", checkAuth);
 app.get("/titans/:portfolio", async (req, res) => {
   const portfolio = await titans
@@ -1210,6 +1220,12 @@ app.get("/mutual-fund/following", async (req, res) => {
   const result = await watchlist.getFollowedMutualFunds(
     req.terminal_app.claims.uid
   );
+  res.send(result);
+});
+
+app.use("/mutual-funds/top10", checkAuth);
+app.get("/mutual-funds/top10", async (req, res) => {
+  const result = await mutual_funds.getTopFunds(10);
   res.send(result);
 });
 
