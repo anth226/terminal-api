@@ -33,6 +33,12 @@ export const lookup = async (companyAPI, identifier) => {
 };
 
 export const follow = async (userID, companyID) => {
+  await db(`
+    UPDATE companies
+    SET follower_count = follower_count + 1
+    WHERE id = '${companyID}'
+  `);
+
   let query = {
     text:
       "INSERT INTO company_watchlists (user_id, company_id, watched_at) VALUES ($1, $2, now())",
@@ -43,6 +49,12 @@ export const follow = async (userID, companyID) => {
 };
 
 export const unfollow = async (userID, companyID) => {
+  await db(`
+    UPDATE companies
+    SET follower_count = follower_count - 1
+    WHERE id = '${companyID}'
+  `);
+
   let query = {
     text:
       "DELETE FROM company_watchlists WHERE user_id=($1) AND company_id=($2)",
