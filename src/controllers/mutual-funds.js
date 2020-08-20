@@ -1,4 +1,6 @@
 import db from "../db";
+
+import * as cannon from "./cannon";
 import * as getCompanyData from "../intrinio/get_company_data";
 
 export const lookup = async (companyAPI, identifier) => {
@@ -103,4 +105,27 @@ export const getTopFunds = async (topNum) => {
 
   //console.log(funds);
   return funds;
+};
+
+export const getHoldings = async (identifier) => {
+  let result = await db(`
+    SELECT *
+    FROM mutual_funds
+    WHERE ticker = '${identifier}'
+    LIMIT 1
+  `);
+
+  if (result && result.length > 0) {
+    let fund = result[0];
+
+    let { json } = fund;
+
+    let { fundId } = json;
+
+    let holdings = await cannon.get_holdings(fundId);
+
+    return holdings;
+  }
+
+  return null;
 };
