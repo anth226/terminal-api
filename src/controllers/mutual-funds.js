@@ -58,6 +58,10 @@ export const getTopFunds = async (topNum) => {
   let eFunds = [];
   let fFunds = [];
   let hFunds = [];
+  let cNetAss = 0;
+  let eNetAss = 0;
+  let fNetAss = 0;
+  let hNetAss = 0;
 
   let result = await db(`
     SELECT *
@@ -72,12 +76,16 @@ export const getTopFunds = async (topNum) => {
       if (jsonSum) {
         if (fundCategory[0] == "C") {
           cFunds.push(fund);
+          cNetAss += jsonSum.netAssets;
         } else if (fundCategory[0] == "E") {
           eFunds.push(fund);
+          eNetAss += jsonSum.netAssets;
         } else if (fundCategory[0] == "F") {
           fFunds.push(fund);
+          fNetAss += jsonSum.netAssets;
         } else if (fundCategory[0] == "H") {
           hFunds.push(fund);
+          hNetAss += jsonSum.netAssets;
         }
       }
     }
@@ -97,13 +105,25 @@ export const getTopFunds = async (topNum) => {
     .slice(Math.max(hFunds.length - topNum, 0));
 
   let funds = {
-    comFunds,
-    equFunds,
-    fixFunds,
-    hybFunds,
+    cFunds: {
+      totalNetAssets: cNetAss,
+      topFunds: comFunds,
+    },
+    eFunds: {
+      totalNetAssets: eNetAss,
+      topFunds: equFunds,
+    },
+    fFunds: {
+      totalNetAssets: fNetAss,
+      topFunds: fixFunds,
+    },
+    hFunds: {
+      totalNetAssets: hNetAss,
+      topFunds: hybFunds,
+    },
   };
 
-  //console.log(funds);
+  //console.log(funds.eFunds.topFunds);
   return funds;
 };
 
