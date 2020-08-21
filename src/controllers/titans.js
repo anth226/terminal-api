@@ -48,35 +48,39 @@ export async function getBillionaires({
 }
 
 export const followTitan = async (userID, titanID) => {
-  await db(`
-    UPDATE billionaires
-    SET follower_count = follower_count + 1
-    WHERE id = '${titanID}'
-  `);
-
   let query = {
     text:
       "INSERT INTO billionaire_watchlists (user_id, titan_id, watched_at) VALUES ($1, $2, now())",
     values: [userID, titanID],
   };
 
-  return await db(query);
-};
+  let result = await db(query);
 
-export const unfollowTitan = async (userID, titanID) => {
   await db(`
     UPDATE billionaires
-    SET follower_count = follower_count - 1
+    SET follower_count = follower_count + 1
     WHERE id = '${titanID}'
   `);
 
+  return result;
+};
+
+export const unfollowTitan = async (userID, titanID) => {
   let query = {
     text:
       "DELETE FROM billionaire_watchlists WHERE user_id=($1) AND titan_id=($2)",
     values: [userID, titanID],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  await db(`
+    UPDATE billionaires
+    SET follower_count = follower_count - 1
+    WHERE id = '${titanID}'
+  `);
+
+  return result;
 };
 
 export const getHoldings = async (uri) => {
