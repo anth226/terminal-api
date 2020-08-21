@@ -131,7 +131,7 @@ export const getHoldings = async (identifier) => {
   let result = await db(`
     SELECT *
     FROM mutual_funds
-    WHERE ticker = '${identifier}'
+    WHERE ticker = '${identifier.toUpperCase()}'
     LIMIT 1
   `);
 
