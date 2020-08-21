@@ -1223,7 +1223,7 @@ app.get("/mutual-fund/following", async (req, res) => {
   res.send(result);
 });
 
-app.use("/mutual-funds/:identifier/holdings", checkAuth);
+// app.use("/mutual-funds/:identifier/holdings", checkAuth);
 app.get("/mutual-funds/:identifier/holdings", async (req, res) => {
   const result = await mutual_funds.getHoldings(req.params.identifier);
   res.send(result);
