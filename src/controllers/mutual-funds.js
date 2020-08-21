@@ -144,7 +144,7 @@ export const getHoldings = async (identifier) => {
 
     let holdings = await cannon.get_holdings(fundId);
 
-    return holdings;
+    return { holdings };
   }
 
   return null;
