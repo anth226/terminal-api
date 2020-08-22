@@ -1,8 +1,6 @@
 import axios from "axios";
 import db from "../db";
 
-import cheerio from "cheerio";
-
 export async function lookupByName(name) {
   const url = "https://efts.sec.gov/LATEST/search-index";
 
@@ -11,8 +9,8 @@ export async function lookupByName(name) {
   try {
     const response = await axios.post(url, data, {
       headers: {
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+      },
     });
     return { data: response.data };
   } catch (error) {
@@ -43,7 +41,7 @@ export async function getCachedSearchResults({
       SELECT b.*, b_c.ciks
       FROM public.billionaires AS b
       LEFT JOIN (
-        SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary,'rank',rank) ORDER BY rank ASC) AS ciks
+        SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary, 'rank', rank) ORDER BY rank ASC) AS ciks
         FROM public.billionaire_ciks
         GROUP BY titan_id
     ) AS b_c ON b.id = b_c.titan_id) AS b
@@ -72,7 +70,7 @@ export const search = async ({ ciks = ["0001043298"] }) => {
     category: "all",
     locationType: "located",
     locationCode: "all",
-    ciks
+    ciks,
   };
 
   const url = "https://efts.sec.gov/LATEST/search-index";
@@ -80,8 +78,8 @@ export const search = async ({ ciks = ["0001043298"] }) => {
   try {
     const response = await axios.post(url, params, {
       headers: {
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+      },
     });
     return { data: response.data };
   } catch (error) {
