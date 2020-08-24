@@ -711,6 +711,27 @@ app.post("/signup", async (req, res) => {
   }
 });
 
+app.use("/cancellation-request", checkAuth);
+app.post("/cancellation-request", async(req, res) => {
+  const { cancelReason } = req.body;
+
+  const doc = await db
+    .collection("users")
+    .doc(req.terminal_app.claims.uid)
+    .get();
+
+  const user = doc.data();
+
+  const customer = await stripe.customers.retrieve(req.terminal_app.claims.customer_id);
+
+  let email = customer.email;
+
+  sendEmail.sendCancellationRequest(`${user.firstName} ${user.lastName}`, 'n/a', email, cancelReason, req.terminal_app.claims.customer_id);
+
+  res.send("success");
+
+});
+
 app.use("/etfs/:identifier/holdings", checkAuth);
 app.get("/etfs/:identifier/holdings", async (req, res) => {
   const result = await etfs.get_holdings(req.params.identifier);
