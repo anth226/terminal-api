@@ -13,6 +13,14 @@ AWS.config.update({
 
 const ses = new AWS.SES({ apiVersion: "2010-12-01" });
 
+export const sendCancellationRequest = async (name, phone, email, reason, customerId) => {
+  sendEmail(
+    "CANCELLATION REQUEST",
+    `<html><body>Name: ${name} <br> Phone: ${phone} <br> Email: ${email} <br> Reason for Cancelling: ${reason} <br> Customer ID: ${customerId}</body></html>`,
+    [process.env.EMAIL_SUPPORT]
+  );
+}
+
 export const sendSignupEmail = async (recipient) => {
   sendEmail("Welcome to Terminal!", signupEmailBody, [recipient]);
 };
