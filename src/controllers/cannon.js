@@ -43,12 +43,6 @@ export async function get_daily_summary() {
     }
 
     if (data) {
-      let commodities = filter(data, (o) => {
-        let { fundCategory } = o;
-        return fundCategory && fundCategory.charAt(0) == "C";
-      });
-      console.log("commodities", commodities.length);
-
       let equity = filter(data, (o) => {
         let { fundCategory } = o;
         return fundCategory && fundCategory.charAt(0) == "E";
@@ -61,17 +55,19 @@ export async function get_daily_summary() {
       });
       console.log("fixed_income", fixed_income.length);
 
-      let hybrid = filter(data, (o) => {
+      let other = filter(data, (o) => {
         let { fundCategory } = o;
-        return fundCategory && fundCategory.charAt(0) == "H";
+        return (
+          fundCategory &&
+          (fundCategory.charAt(0) == "H" || fundCategory.charAt(0) == "C")
+        );
       });
-      console.log("hybrid", hybrid.length);
+      console.log("other", other.length);
 
       data = {
-        commodities,
         equity,
         fixed_income,
-        hybrid,
+        other,
       };
 
       redis.set(
