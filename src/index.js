@@ -33,6 +33,9 @@ import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 
+import * as widgets from "./controllers/widgets";
+import * as dashboards from "./controllers/dashboard";
+
 import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as titans from "./controllers/titans";
@@ -1276,6 +1279,32 @@ app.get("/mutual-funds/:id/unfollow", async (req, res) => {
 app.use("/mutual-funds/:id/follow", checkAuth);
 app.get("/mutual-funds/:id/follow", async (req, res) => {
   const result = await mutual_funds.follow(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
+  res.send(result);
+});
+
+// dashboard & widgets
+app.use("/dashboards", checkAuth);
+app.get("/dashboards", async (req, res) => {
+  const result = await dashboards.get(req.terminal_app.claims.uid);
+  res.send(result);
+});
+
+app.use("/pin", checkAuth);
+app.get("/pin", async (req, res) => {
+  const result = await widgets.create(
+    req.terminal_app.claims.uid,
+    req.params.type,
+    req.params.identifier
+  );
+  res.send(result);
+});
+
+app.use("/widgets/:id/unpin", checkAuth);
+app.get("/widgets/:id/unpin", async (req, res) => {
+  const result = await widgets.unpin(
     req.terminal_app.claims.uid,
     req.params.id
   );
