@@ -60,3 +60,18 @@ export const unpin = async (userId, widgetId) => {
 
   return await db(query);
 };
+
+export const get = async (widgetId) => {
+  let result = await db(`
+    SELECT widget_instances.*, widget_data.*, widgets.*
+    FROM widget_instances
+    JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+    JOIN widgets ON widgets.id = widget_instances.widget_id 
+    WHERE widget_instances.id = '${widgetId}'
+  `);
+
+  if (result && result.length > 0) {
+    return result[0];
+  }
+  return null;
+};
