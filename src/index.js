@@ -1267,6 +1267,12 @@ app.get("/mutual-funds/top/:data/:num", async (req, res) => {
   res.send(result);
 });
 
+app.use("/mutual-funds/topnbot/discount/:num", checkAuth);
+app.get("/mutual-funds/topnbot/discount/:num", async (req, res) => {
+  const result = await mutual_funds.getTopDiscountsFunds(req.params.num);
+  res.send(result);
+});
+
 app.use("/mutual-funds/:id/unfollow", checkAuth);
 app.get("/mutual-funds/:id/unfollow", async (req, res) => {
   const result = await mutual_funds.unfollow(

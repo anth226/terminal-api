@@ -136,6 +136,85 @@ export const getTopFunds = async (topData, topNum) => {
   return funds;
 };
 
+export const getTopDiscountsFunds = async (topNum) => {
+  let eFunds = [];
+  let fFunds = [];
+  let oFunds = [];
+
+  let result = await db(`
+    SELECT *
+    FROM mutual_funds
+  `);
+
+  if (result.length > 0) {
+    for (let i in result) {
+      let fund = result[i];
+      let fundCategory = fund.json.fundCategory;
+
+      if (fund["json"]) {
+        if (fund["json"]["nav"] && fund["json"]["mktPrice"]) {
+          let difference = (
+            (fund.json.mktPrice / fund.json.nav - 1) *
+            100
+          ).toFixed(2);
+          if (fundCategory[0] == "E") {
+            eFunds.push({
+              fund: fund,
+              diff: difference,
+            });
+          } else if (fundCategory[0] == "F") {
+            fFunds.push({
+              fund: fund,
+              diff: difference,
+            });
+          } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
+            oFunds.push({
+              fund: fund,
+              diff: difference,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  let equTopFunds = eFunds
+    .sort((a, b) => a.diff - b.diff)
+    .slice(Math.max(eFunds.length - topNum, 0));
+  let fixTopFunds = fFunds
+    .sort((a, b) => a.diff - b.diff)
+    .slice(Math.max(fFunds.length - topNum, 0));
+  let othTopFunds = oFunds
+    .sort((a, b) => a.diff - b.diff)
+    .slice(Math.max(oFunds.length - topNum, 0));
+  let equBotFunds = eFunds
+    .sort((a, b) => b.diff - a.diff)
+    .slice(Math.max(eFunds.length - topNum, 0));
+  let fixBotFunds = fFunds
+    .sort((a, b) => b.diff - a.diff)
+    .slice(Math.max(fFunds.length - topNum, 0));
+  let othBotFunds = oFunds
+    .sort((a, b) => b.diff - a.diff)
+    .slice(Math.max(oFunds.length - topNum, 0));
+
+  let funds = {
+    eFunds: {
+      topFunds: equTopFunds,
+      botFunds: equBotFunds,
+    },
+    fFunds: {
+      topFunds: fixTopFunds,
+      botFunds: fixBotFunds,
+    },
+    oFunds: {
+      topFunds: othTopFunds,
+      botFunds: othBotFunds,
+    },
+  };
+
+  return funds;
+};
+
 export const getHoldings = async (identifier) => {
   let result = await db(`
     SELECT *
