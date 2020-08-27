@@ -1267,9 +1267,18 @@ app.get("/mutual-funds/:identifier/holdings", async (req, res) => {
   res.send(result);
 });
 
-app.use("/mutual-funds/top10", checkAuth);
-app.get("/mutual-funds/top10", async (req, res) => {
-  const result = await mutual_funds.getTopFunds(10);
+app.use("/mutual-funds/top/:data/:num", checkAuth);
+app.get("/mutual-funds/top/:data/:num", async (req, res) => {
+  const result = await mutual_funds.getTopFunds(
+    req.params.data,
+    req.params.num
+  );
+  res.send(result);
+});
+
+app.use("/mutual-funds/topnbot/discount/:num", checkAuth);
+app.get("/mutual-funds/topnbot/discount/:num", async (req, res) => {
+  const result = await mutual_funds.getTopDiscountsFunds(req.params.num);
   res.send(result);
 });
 
