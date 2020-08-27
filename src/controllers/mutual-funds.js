@@ -140,9 +140,9 @@ export const getHoldings = async (identifier) => {
 
     let { json } = fund;
 
-    let { fundId } = json;
+    let { fundId, portDate } = json;
 
-    let holdings = await cannon.get_holdings(fundId);
+    let holdings = await cannon.get_holdings(fundId, portDate);
 
     return { holdings };
   }
