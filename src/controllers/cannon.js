@@ -88,11 +88,11 @@ export async function get_daily_summary() {
   }
 }
 
-export async function get_holdings(fundId) {
+export async function get_holdings(fundId, portDate) {
   let data;
 
   try {
-    let url = `https://fds1.cannonvalleyresearch.com/api/v1/table/portHolding.json?fundId=${fundId}&apiKey=${process.env.CANNON_API_KEY}`;
+    let url = `https://fds1.cannonvalleyresearch.com/api/v1/table/portHolding.json?fundId=${fundId}&date=${portDate}&apiKey=${process.env.CANNON_API_KEY}`;
 
     const response = await axios.get(url);
     // Success 🎉
