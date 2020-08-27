@@ -1110,6 +1110,12 @@ app.get("/billionaires/:uri/summary", async (req, res) => {
   res.send(result);
 });
 
+// app.use("/billionaires/list", checkAuth);
+app.get("/billionaires/list", async (req, res) => {
+  const result = await titans.getAllBillionaires();
+  res.send(result);
+});
+
 // app.use("/billionaires/page", checkAuth);
 app.get("/billionaires/page", async (req, res) => {
   const result = await titans.getFilledPage(req.query);
