@@ -197,19 +197,14 @@ export const getTopDiscountsFunds = async (topNum) => {
     .sort((a, b) => b.diff - a.diff)
     .slice(Math.max(oFunds.length - topNum, 0));
 
+  let equityFunds = equTopFunds.concat(equBotFunds);
+  let fixedFunds = fixTopFunds.concat(fixBotFunds);
+  let otherFunds = othTopFunds.concat(othBotFunds);
+
   let funds = {
-    eFunds: {
-      topFunds: equTopFunds,
-      botFunds: equBotFunds,
-    },
-    fFunds: {
-      topFunds: fixTopFunds,
-      botFunds: fixBotFunds,
-    },
-    oFunds: {
-      topFunds: othTopFunds,
-      botFunds: othBotFunds,
-    },
+    eFunds: equityFunds,
+    fFunds: fixedFunds,
+    oFunds: otherFunds,
   };
 
   return funds;
