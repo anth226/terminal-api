@@ -21,7 +21,7 @@ export let KEY_ZACKS_EDITORIAL = "KEY_ZACKS_EDITORIAL";
 function connectDatabase() {
   let credentials = {
     host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT
+    port: process.env.REDIS_PORT,
   };
 
   if (!db) {
