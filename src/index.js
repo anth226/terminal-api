@@ -32,6 +32,7 @@ import * as portfolios from "./controllers/portfolios";
 import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
+import * as widgets from "./controllers/widgets";
 
 import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
@@ -1031,6 +1032,14 @@ app.use("/all-insider", checkAuth);
 app.get("/all-insider", async (req, res) => {
   const allInsider = await finviz.getAllInsider().then((data) => data);
   res.send(allInsider);
+});
+
+app.use("/insiders-movers", checkAuth);
+app.get("/insiders-movers", async (req, res) => {
+  const insidersMovers = await widgets
+    .getGlobalInsidersNMovers()
+    .then((data) => data);
+  res.send(insidersMovers);
 });
 
 app.use("/company-ratings/:ticker", checkAuth);
