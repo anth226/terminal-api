@@ -39,7 +39,15 @@ export const follow = async (userID, companyID) => {
     values: [userID, companyID],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  await db(`
+    UPDATE companies
+    SET follower_count = follower_count + 1
+    WHERE id = '${companyID}'
+  `);
+
+  return result;
 };
 
 export const unfollow = async (userID, companyID) => {
@@ -49,7 +57,15 @@ export const unfollow = async (userID, companyID) => {
     values: [userID, companyID],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  await db(`
+    UPDATE companies
+    SET follower_count = follower_count - 1
+    WHERE id = '${companyID}'
+  `);
+
+  return result;
 };
 
 export const getMetricsMarketCaps = async () => {
