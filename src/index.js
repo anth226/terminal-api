@@ -1167,6 +1167,19 @@ app.get("/billionaires/:id/follow", async (req, res) => {
   res.send(result);
 });
 
+app.use("/billionaires/:id/toggle_company_performance_fallback", checkAuth);
+app.get(
+  "/billionaires/:id/toggle_company_performance_fallback",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await titans.updateBillionaire_CompanyPerformanceFallback(
+      req.params.id,
+      req.query.toggle
+    );
+    res.send(result);
+  }
+);
+
 app.use("/billionaire/:id", checkAuth);
 app.put("/billionaire/:id", async (req, res) => {
   const result = await titans.updateBillionaire(req.params.id, req.body.cik);
