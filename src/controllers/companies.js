@@ -67,3 +67,35 @@ export const unfollow = async (userID, companyID) => {
 
   return result;
 };
+
+export const getMetricsMarketCaps = async () => {
+  let comps = [];
+  let result = await db(`
+        SELECT ticker, json_metrics
+        FROM companies
+      `);
+
+  if (result.length > 0) {
+    for (let c in result) {
+      if (
+        result[c] &&
+        result[c].json_metrics &&
+        result[c].json_metrics["Market Cap"]
+      ) {
+        let str = result[c].json_metrics["Market Cap"];
+        let amt = str.slice(-1);
+        let num = parseFloat(str.slice(0, -1));
+        if (amt == "B") {
+          num = num * 1000000000;
+        } else if (amt == "M") {
+          num = num * 1000000;
+        }
+        let ticker = result[c].ticker;
+        let marketCap = num.toString();
+        comps.push({ ticker: ticker, marketCap: marketCap });
+      }
+    }
+    return comps;
+    //console.log(comps);
+  }
+};

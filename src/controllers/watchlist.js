@@ -78,7 +78,7 @@ export const getFollowedCompanies = async (userId) => {
     SELECT companies.*, company_watchlists.*
     FROM company_watchlists
     LEFT JOIN companies
-    ON company_watchlists.mutual_fund_id = companies.id
+    ON company_watchlists.company_id = companies.id
     WHERE user_id = '${userId}'
   `);
 
