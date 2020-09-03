@@ -42,7 +42,15 @@ export const follow = async (userID, fundID) => {
     values: [userID, fundID],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  await db(`
+    UPDATE mutual_funds
+    SET follower_count = follower_count + 1
+    WHERE id = '${fundID}'
+  `);
+
+  return result;
 };
 
 export const unfollow = async (userID, fundID) => {
@@ -52,7 +60,15 @@ export const unfollow = async (userID, fundID) => {
     values: [userID, fundID],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  await db(`
+    UPDATE mutual_funds
+    SET follower_count = follower_count - 1
+    WHERE id = '${fundID}'
+  `);
+
+  return result;
 };
 
 export const getTopFunds = async (topData, topNum) => {

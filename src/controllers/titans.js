@@ -66,7 +66,15 @@ export const followTitan = async (userID, titanID) => {
     values: [userID, titanID],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  await db(`
+    UPDATE billionaires
+    SET follower_count = follower_count + 1
+    WHERE id = '${titanID}'
+  `);
+
+  return result;
 };
 
 export const unfollowTitan = async (userID, titanID) => {
@@ -76,7 +84,15 @@ export const unfollowTitan = async (userID, titanID) => {
     values: [userID, titanID],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  await db(`
+    UPDATE billionaires
+    SET follower_count = follower_count - 1
+    WHERE id = '${titanID}'
+  `);
+
+  return result;
 };
 
 export const getHoldings = async (uri) => {
@@ -242,6 +258,7 @@ export const updateBillionaire = async (id, cik) => {
   let query = {
     text: "UPDATE billionaires SET cik=($1) WHERE id=($2)",
     values: [cik, id],
+
   };
 
   return await db(query);
