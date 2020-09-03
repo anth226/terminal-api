@@ -31,6 +31,18 @@ export async function getTitans({ sort = [], page = 0, size = 100, ...query }) {
   `);
 }
 
+export async function getAllBillionaires() {
+  return await db(`
+    SELECT b.*, i.json
+    FROM (
+       SELECT *
+       FROM   billionaires
+       ORDER  BY id ASC
+    ) b
+    LEFT JOIN institutions i ON b.cik = i.cik
+  `);
+}
+
 export async function getBillionaires({
   sort = [],
   page = 0,
@@ -246,6 +258,20 @@ export const updateBillionaire = async (id, cik) => {
   let query = {
     text: "UPDATE billionaires SET cik=($1) WHERE id=($2)",
     values: [cik, id],
+
+  };
+
+  return await db(query);
+};
+
+export const updateBillionaire_CompanyPerformanceFallback = async (
+  id,
+  toggle
+) => {
+  let query = {
+    text:
+      "UPDATE billionaires SET use_company_performance_fallback=($1) WHERE id=($2)",
+    values: [toggle, id],
   };
 
   return await db(query);

@@ -43,12 +43,6 @@ export async function get_daily_summary() {
     }
 
     if (data) {
-      let commodities = filter(data, (o) => {
-        let { fundCategory } = o;
-        return fundCategory && fundCategory.charAt(0) == "C";
-      });
-      console.log("commodities", commodities.length);
-
       let equity = filter(data, (o) => {
         let { fundCategory } = o;
         return fundCategory && fundCategory.charAt(0) == "E";
@@ -61,17 +55,19 @@ export async function get_daily_summary() {
       });
       console.log("fixed_income", fixed_income.length);
 
-      let hybrid = filter(data, (o) => {
+      let other = filter(data, (o) => {
         let { fundCategory } = o;
-        return fundCategory && fundCategory.charAt(0) == "H";
+        return (
+          fundCategory &&
+          (fundCategory.charAt(0) == "H" || fundCategory.charAt(0) == "C")
+        );
       });
-      console.log("hybrid", hybrid.length);
+      console.log("other", other.length);
 
       data = {
-        commodities,
         equity,
         fixed_income,
-        hybrid,
+        other,
       };
 
       redis.set(
@@ -86,4 +82,42 @@ export async function get_daily_summary() {
   } else {
     return JSON.parse(cache);
   }
+}
+
+export async function get_holdings(fundId, portDate) {
+  let data;
+
+  try {
+    let url = `https://fds1.cannonvalleyresearch.com/api/v1/table/portHolding.json?fundId=${fundId}&date=${portDate}&apiKey=${process.env.CANNON_API_KEY}`;
+
+    const response = await axios.get(url);
+    // Success 🎉
+    // console.log(response);
+
+    data = response.data;
+  } catch (error) {
+    // Error 😨
+    if (error.response) {
+      /*
+       * The request was made and the server responded with a
+       * status code that falls out of the range of 2xx
+       */
+      console.log(error.response.data);
+      console.log(error.response.status);
+      console.log(error.response.headers);
+    } else if (error.request) {
+      /*
+       * The request was made but no response was received, `error.request`
+       * is an instance of XMLHttpRequest in the browser and an instance
+       * of http.ClientRequest in Node.js
+       */
+      console.log(error.request);
+    } else {
+      // Something happened in setting up the request and triggered an Error
+      console.log("Error", error.message);
+    }
+    console.log(error);
+  }
+
+  return data;
 }
