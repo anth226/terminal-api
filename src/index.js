@@ -34,7 +34,6 @@ import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 
-import * as widgets from "./controllers/widgets";
 import * as dashboards from "./controllers/dashboard";
 
 import * as bots from "./controllers/bots";
