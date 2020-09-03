@@ -34,6 +34,9 @@ import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 
+import * as widgets from "./controllers/widgets";
+import * as dashboards from "./controllers/dashboard";
+
 import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as titans from "./controllers/titans";
@@ -800,7 +803,7 @@ app.get("/futures", async (req, res) => {
 // Companies
 app.use("/company/:symbol", checkAuth);
 app.get("/company/:symbol", async (req, res) => {
-  const result = await mutual_funds.lookup(companyAPI, req.params.symbol);
+  const result = await mutual_funds.lookup(companyAPI, req.params.symbol, req.terminal_app.claims.uid);
   //const result = await companies.lookup(companyAPI, req.params.symbol);
   res.send(result);
 });
@@ -1124,6 +1127,12 @@ app.get("/billionaires/:uri/summary", async (req, res) => {
   res.send(result);
 });
 
+// app.use("/billionaires/list", checkAuth);
+app.get("/billionaires/list", async (req, res) => {
+  const result = await titans.getAllBillionaires();
+  res.send(result);
+});
+
 // app.use("/billionaires/page", checkAuth);
 app.get("/billionaires/page", async (req, res) => {
   const result = await titans.getFilledPage(req.query);
@@ -1275,9 +1284,18 @@ app.get("/mutual-funds/:identifier/holdings", async (req, res) => {
   res.send(result);
 });
 
-app.use("/mutual-funds/top10", checkAuth);
-app.get("/mutual-funds/top10", async (req, res) => {
-  const result = await mutual_funds.getTopFunds(10);
+app.use("/mutual-funds/top/:data/:num", checkAuth);
+app.get("/mutual-funds/top/:data/:num", async (req, res) => {
+  const result = await mutual_funds.getTopFunds(
+    req.params.data,
+    req.params.num
+  );
+  res.send(result);
+});
+
+app.use("/mutual-funds/topnbot/discount/:num", checkAuth);
+app.get("/mutual-funds/topnbot/discount/:num", async (req, res) => {
+  const result = await mutual_funds.getTopDiscountsFunds(req.params.num);
   res.send(result);
 });
 
@@ -1296,6 +1314,38 @@ app.get("/mutual-funds/:id/follow", async (req, res) => {
     req.terminal_app.claims.uid,
     req.params.id
   );
+  res.send(result);
+});
+
+// dashboard & widgets
+app.use("/dashboards", checkAuth);
+app.get("/dashboards", async (req, res) => {
+  const result = await dashboards.get(req.terminal_app.claims.uid);
+  res.send(result);
+});
+
+app.use("/pin", checkAuth);
+app.get("/pin", async (req, res) => {
+  const result = await widgets.create(
+    req.terminal_app.claims.uid,
+    req.params.type,
+    req.params.identifier
+  );
+  res.send(result);
+});
+
+app.use("/widgets/:id/unpin", checkAuth);
+app.get("/widgets/:id/unpin", async (req, res) => {
+  const result = await widgets.unpin(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
+  res.send(result);
+});
+
+// app.use("/widgets/:id", checkAuth);
+app.get("/widgets/:id", async (req, res) => {
+  const result = await widgets.get(req.params.id);
   res.send(result);
 });
 
