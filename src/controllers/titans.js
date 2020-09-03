@@ -31,6 +31,18 @@ export async function getTitans({ sort = [], page = 0, size = 100, ...query }) {
   `);
 }
 
+export async function getAllBillionaires() {
+  return await db(`
+    SELECT b.*, i.json
+    FROM (
+       SELECT *
+       FROM   billionaires
+       ORDER  BY id ASC
+    ) b
+    LEFT JOIN institutions i ON b.cik = i.cik
+  `);
+}
+
 export async function getBillionaires({
   sort = [],
   page = 0,

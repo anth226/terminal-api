@@ -3,7 +3,7 @@ import db from "../db";
 import * as cannon from "./cannon";
 import * as getCompanyData from "../intrinio/get_company_data";
 
-export const lookup = async (companyAPI, identifier) => {
+export const lookup = async (companyAPI, identifier, userID) => {
   console.log("made it into new lookup");
   const companyFundamentals = await getCompanyData.lookupCompany(
     companyAPI,
@@ -11,15 +11,17 @@ export const lookup = async (companyAPI, identifier) => {
   );
 
   let companyResult = await db(`
-    SELECT *
-    FROM companies
+    SELECT c.*,
+           EXISTS(SELECT cw.id FROM company_watchlists cw WHERE cw.company_id=c.id AND cw.user_id = '${userID}' LIMIT 1) as following
+    FROM companies c
     WHERE ticker = '${identifier}'
     LIMIT 1
   `);
 
   let mutualFundResult = await db(`
-    SELECT *
-    FROM mutual_funds
+    SELECT m.*,
+           EXISTS(SELECT mw.id FROM mutual_fund_watchlists mw WHERE mw.mutual_fund_id=m.id AND mw.user_id = '${userID}' LIMIT 1) as following
+    FROM mutual_funds m
     WHERE ticker = '${identifier}'
     LIMIT 1
   `);
@@ -53,15 +55,93 @@ export const unfollow = async (userID, fundID) => {
   return await db(query);
 };
 
-export const getTopFunds = async (topNum) => {
-  let cFunds = [];
+export const getTopFunds = async (topData, topNum) => {
   let eFunds = [];
   let fFunds = [];
-  let hFunds = [];
-  let cNetAss = 0;
-  let eNetAss = 0;
-  let fNetAss = 0;
-  let hNetAss = 0;
+  let oFunds = [];
+  let eDataTotal = 0;
+  let fDataTotal = 0;
+  let oDataTotal = 0;
+  let dataObj;
+
+  let result = await db(`
+    SELECT *
+    FROM mutual_funds
+  `);
+
+  switch (topData) {
+    case "netAssets":
+      dataObj = "json_summary";
+      break;
+    case "mgmtFeeRatio":
+    case "mktPrice":
+    case "yield":
+      dataObj = "json";
+      break;
+  }
+
+  if (result.length > 0) {
+    for (let i in result) {
+      let fund = result[i];
+      let fundCategory = fund.json.fundCategory;
+
+      if (fund[dataObj]) {
+        if (fund[dataObj][topData]) {
+          if (fundCategory[0] == "E") {
+            eFunds.push(fund);
+          } else if (fundCategory[0] == "F") {
+            fFunds.push(fund);
+          } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
+            oFunds.push(fund);
+          }
+        }
+      }
+    }
+  }
+
+  for (let e in eFunds) {
+    eDataTotal += eFunds[e][dataObj][topData];
+  }
+  for (let f in fFunds) {
+    fDataTotal += fFunds[f][dataObj][topData];
+  }
+  for (let o in oFunds) {
+    oDataTotal += oFunds[o][dataObj][topData];
+  }
+
+  let equFunds = eFunds
+    .sort((a, b) => a[dataObj][topData] - b[dataObj][topData])
+    .slice(Math.max(eFunds.length - topNum, 0));
+  let fixFunds = fFunds
+    .sort((a, b) => a[dataObj][topData] - b[dataObj][topData])
+    .slice(Math.max(fFunds.length - topNum, 0));
+  let othFunds = oFunds
+    .sort((a, b) => a[dataObj][topData] - b[dataObj][topData])
+    .slice(Math.max(oFunds.length - topNum, 0));
+
+  let funds = {
+    eFunds: {
+      dataTotal: eDataTotal,
+      topFunds: equFunds,
+    },
+    fFunds: {
+      dataTotal: fDataTotal,
+      topFunds: fixFunds,
+    },
+    oFunds: {
+      dataTotal: oDataTotal,
+      topFunds: othFunds,
+    },
+  };
+
+  //console.log(funds);
+  return funds;
+};
+
+export const getTopDiscountsFunds = async (topNum) => {
+  let eFunds = [];
+  let fFunds = [];
+  let oFunds = [];
 
   let result = await db(`
     SELECT *
@@ -71,59 +151,64 @@ export const getTopFunds = async (topNum) => {
   if (result.length > 0) {
     for (let i in result) {
       let fund = result[i];
-      let jsonSum = fund.json_summary;
       let fundCategory = fund.json.fundCategory;
-      if (jsonSum) {
-        if (fundCategory[0] == "C") {
-          cFunds.push(fund);
-          cNetAss += jsonSum.netAssets;
-        } else if (fundCategory[0] == "E") {
-          eFunds.push(fund);
-          eNetAss += jsonSum.netAssets;
-        } else if (fundCategory[0] == "F") {
-          fFunds.push(fund);
-          fNetAss += jsonSum.netAssets;
-        } else if (fundCategory[0] == "H") {
-          hFunds.push(fund);
-          hNetAss += jsonSum.netAssets;
+
+      if (fund["json"]) {
+        if (fund["json"]["nav"] && fund["json"]["mktPrice"]) {
+          let difference = (
+            (fund.json.mktPrice / fund.json.nav - 1) *
+            100
+          ).toFixed(2);
+          if (fundCategory[0] == "E") {
+            eFunds.push({
+              fund: fund,
+              diff: difference,
+            });
+          } else if (fundCategory[0] == "F") {
+            fFunds.push({
+              fund: fund,
+              diff: difference,
+            });
+          } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
+            oFunds.push({
+              fund: fund,
+              diff: difference,
+            });
+          }
         }
       }
     }
   }
 
-  let comFunds = cFunds
-    .sort((a, b) => a.json_summary.netAssets - b.json_summary.netAssets)
-    .slice(Math.max(cFunds.length - topNum, 0));
-  let equFunds = eFunds
-    .sort((a, b) => a.json_summary.netAssets - b.json_summary.netAssets)
+  let equTopFunds = eFunds
+    .sort((a, b) => a.diff - b.diff)
     .slice(Math.max(eFunds.length - topNum, 0));
-  let fixFunds = fFunds
-    .sort((a, b) => a.json_summary.netAssets - b.json_summary.netAssets)
+  let fixTopFunds = fFunds
+    .sort((a, b) => a.diff - b.diff)
     .slice(Math.max(fFunds.length - topNum, 0));
-  let hybFunds = hFunds
-    .sort((a, b) => a.json_summary.netAssets - b.json_summary.netAssets)
-    .slice(Math.max(hFunds.length - topNum, 0));
+  let othTopFunds = oFunds
+    .sort((a, b) => a.diff - b.diff)
+    .slice(Math.max(oFunds.length - topNum, 0));
+  let equBotFunds = eFunds
+    .sort((a, b) => b.diff - a.diff)
+    .slice(Math.max(eFunds.length - topNum, 0));
+  let fixBotFunds = fFunds
+    .sort((a, b) => b.diff - a.diff)
+    .slice(Math.max(fFunds.length - topNum, 0));
+  let othBotFunds = oFunds
+    .sort((a, b) => b.diff - a.diff)
+    .slice(Math.max(oFunds.length - topNum, 0));
+
+  let equityFunds = equTopFunds.concat(equBotFunds);
+  let fixedFunds = fixTopFunds.concat(fixBotFunds);
+  let otherFunds = othTopFunds.concat(othBotFunds);
 
   let funds = {
-    cFunds: {
-      totalNetAssets: cNetAss,
-      topFunds: comFunds,
-    },
-    eFunds: {
-      totalNetAssets: eNetAss,
-      topFunds: equFunds,
-    },
-    fFunds: {
-      totalNetAssets: fNetAss,
-      topFunds: fixFunds,
-    },
-    hFunds: {
-      totalNetAssets: hNetAss,
-      topFunds: hybFunds,
-    },
+    eFunds: equityFunds,
+    fFunds: fixedFunds,
+    oFunds: otherFunds,
   };
 
-  //console.log(funds.eFunds.topFunds);
   return funds;
 };
 
@@ -140,9 +225,9 @@ export const getHoldings = async (identifier) => {
 
     let { json } = fund;
 
-    let { fundId } = json;
+    let { fundId, portDate } = json;
 
-    let holdings = await cannon.get_holdings(fundId);
+    let holdings = await cannon.get_holdings(fundId, portDate);
 
     return { holdings };
   }
