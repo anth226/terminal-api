@@ -36,6 +36,7 @@ import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 import * as dashboards from "./controllers/dashboard";
 
+import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as titans from "./controllers/titans";
@@ -802,7 +803,11 @@ app.get("/futures", async (req, res) => {
 // Companies
 app.use("/company/:symbol", checkAuth);
 app.get("/company/:symbol", async (req, res) => {
-  const result = await mutual_funds.lookup(companyAPI, req.params.symbol, req.terminal_app.claims.uid);
+  const result = await mutual_funds.lookup(
+    companyAPI,
+    req.params.symbol,
+    req.terminal_app.claims.uid
+  );
   //const result = await companies.lookup(companyAPI, req.params.symbol);
   res.send(result);
 });
@@ -1414,6 +1419,18 @@ app.get(
   isAuthorized({ hasRole: ["admin"] }),
   async (req, res) => {
     const result = await edgar.search(req.query);
+    res.send(result);
+  }
+);
+
+app.use("/bots/process_billionaire_summary", checkAuth);
+app.get(
+  "/bots/process_billionaire_summary",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await bots.processBillionaireSummary(
+      req.query.billionaire_id
+    );
     res.send(result);
   }
 );
