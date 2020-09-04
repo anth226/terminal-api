@@ -744,6 +744,18 @@ app.post("/cancellation-request", async (req, res) => {
   res.send("success");
 });
 
+//app.use("/etfs/:identifier/stats", checkAuth);
+app.get("/etfs/:identifier/stats", async (req, res) => {
+  const result = await etfs.get_stats(req.params.identifier);
+  res.send(result);
+});
+
+//app.use("/etfs/:identifier/analytics", checkAuth);
+app.get("/etfs/:identifier/analytics", async (req, res) => {
+  const result = await etfs.get_analytics(req.params.identifier);
+  res.send(result);
+});
+
 app.use("/etfs/:identifier/holdings", checkAuth);
 app.get("/etfs/:identifier/holdings", async (req, res) => {
   const result = await etfs.get_holdings(req.params.identifier);

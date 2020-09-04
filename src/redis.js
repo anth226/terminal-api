@@ -18,6 +18,9 @@ export let KEY_TITAN_SUMMARY = "KEY_TITAN_SUMMARY";
 export let KEY_INSTITUTION = "KEY_INSTITUTION";
 export let KEY_ZACKS_EDITORIAL = "KEY_ZACKS_EDITORIAL";
 
+export let KEY_ETF_STATS = "KEY_ETF_STATS";
+export let KEY_ETF_ANALYTICS = "KEY_ETF_ANALYTICS";
+
 function connectDatabase() {
   let credentials = {
     host: process.env.REDIS_HOST,
