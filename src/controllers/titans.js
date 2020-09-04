@@ -3,6 +3,7 @@ import db from "../db";
 import * as finbox from "../finbox/titans";
 import * as performance from "./performance";
 import * as watchlist from "./watchlist";
+import * as companies from "./companies";
 
 import redis, { KEY_TITAN_SUMMARY } from "../redis";
 
@@ -182,6 +183,8 @@ export const getSummary = async (uri, userId) => {
     WHERE uri = '${uri}'
   `);
 
+  let company;
+
   if (result.length > 0) {
     let ciks = result[0].ciks;
     let id = result[0].id;
@@ -190,6 +193,11 @@ export const getSummary = async (uri, userId) => {
         let cik = ciks[j];
         if (cik.cik != "0000000000" && cik.is_primary == true) {
           item = await performance.getInstitution(cik.cik);
+
+          let { use_company_performance_fallback } = result[0];
+          if (use_company_performance_fallback) {
+            company = await companies.getCompanyByCik(cik.cik);
+          }
         }
       }
     }
@@ -202,6 +210,7 @@ export const getSummary = async (uri, userId) => {
     data = {
       profile: result[0],
       summary: item,
+      company,
     };
 
     data = {
@@ -258,7 +267,6 @@ export const updateBillionaire = async (id, cik) => {
   let query = {
     text: "UPDATE billionaires SET cik=($1) WHERE id=($2)",
     values: [cik, id],
-
   };
 
   return await db(query);
