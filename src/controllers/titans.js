@@ -3,7 +3,6 @@ import db from "../db";
 import * as finbox from "../finbox/titans";
 import * as performance from "./performance";
 import * as watchlist from "./watchlist";
-import * as companies from "./companies";
 
 import redis, { KEY_TITAN_SUMMARY } from "../redis";
 
@@ -34,14 +33,28 @@ export async function getTitans({ sort = [], page = 0, size = 100, ...query }) {
 
 export async function getAllBillionaires() {
   return await db(`
-    SELECT b.*, i.json
-    FROM (
-       SELECT *
-       FROM   billionaires
-       ORDER  BY id ASC
-    ) b
-    LEFT JOIN institutions i ON b.cik = i.cik
+    SELECT b.*, b_c.ciks, i.json, c.json_calculations
+    FROM public.billionaires AS b
+    LEFT JOIN (
+      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary, 'rank', rank) ORDER BY rank ASC) AS ciks
+      FROM public.billionaire_ciks
+      GROUP BY titan_id
+    ) AS b_c ON b.id = b_c.titan_id
+    LEFT JOIN billionaire_ciks bc on bc.titan_id = b.id 
+    LEFT JOIN institutions i ON bc.cik = i.cik
+    LEFT JOIN companies c ON bc.cik = c.cik
+    WHERE bc.is_primary = true
   `);
+
+  // return await db(`
+  //   SELECT b.*, i.json
+  //   FROM (
+  //      SELECT *
+  //      FROM   billionaires
+  //      ORDER  BY id ASC
+  //   ) b
+  //   LEFT JOIN institutions i ON b.cik = i.cik
+  // `);
 }
 
 export async function getBillionaires({
@@ -67,15 +80,7 @@ export const followTitan = async (userID, titanID) => {
     values: [userID, titanID],
   };
 
-  let result = await db(query);
-
-  await db(`
-    UPDATE billionaires
-    SET follower_count = follower_count + 1
-    WHERE id = '${titanID}'
-  `);
-
-  return result;
+  return await db(query);
 };
 
 export const unfollowTitan = async (userID, titanID) => {
@@ -85,15 +90,7 @@ export const unfollowTitan = async (userID, titanID) => {
     values: [userID, titanID],
   };
 
-  let result = await db(query);
-
-  await db(`
-    UPDATE billionaires
-    SET follower_count = follower_count - 1
-    WHERE id = '${titanID}'
-  `);
-
-  return result;
+  return await db(query);
 };
 
 export const getHoldings = async (uri) => {
@@ -183,8 +180,6 @@ export const getSummary = async (uri, userId) => {
     WHERE uri = '${uri}'
   `);
 
-  let company;
-
   if (result.length > 0) {
     let ciks = result[0].ciks;
     let id = result[0].id;
@@ -193,11 +188,6 @@ export const getSummary = async (uri, userId) => {
         let cik = ciks[j];
         if (cik.cik != "0000000000" && cik.is_primary == true) {
           item = await performance.getInstitution(cik.cik);
-
-          let { use_company_performance_fallback } = result[0];
-          if (use_company_performance_fallback) {
-            company = await companies.getCompanyByCik(cik.cik);
-          }
         }
       }
     }
@@ -210,7 +200,6 @@ export const getSummary = async (uri, userId) => {
     data = {
       profile: result[0],
       summary: item,
-      company,
     };
 
     data = {
