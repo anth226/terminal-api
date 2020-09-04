@@ -99,3 +99,17 @@ export const getMetricsMarketCaps = async () => {
     //console.log(comps);
   }
 };
+
+export const getCompanyByCik = async (cik) => {
+  let result = await db(`
+        SELECT *
+        FROM companies
+        WHERE cik = ${cik}
+      `);
+
+  if (result.length > 0) {
+    return result[0];
+  } else {
+    return null;
+  }
+};
