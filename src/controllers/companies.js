@@ -104,7 +104,7 @@ export const getCompanyByCik = async (cik) => {
   let result = await db(`
         SELECT *
         FROM companies
-        WHERE cik = ${cik}
+        WHERE cik = '${cik}'
       `);
 
   if (result.length > 0) {
