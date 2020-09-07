@@ -3,7 +3,7 @@ import db from "../db";
 import * as cannon from "./cannon";
 import * as getCompanyData from "../intrinio/get_company_data";
 
-export const lookup = async (companyAPI, identifier) => {
+export const lookup = async (companyAPI, identifier, userID) => {
   console.log("made it into new lookup");
   const companyFundamentals = await getCompanyData.lookupCompany(
     companyAPI,
@@ -11,15 +11,17 @@ export const lookup = async (companyAPI, identifier) => {
   );
 
   let companyResult = await db(`
-    SELECT *
-    FROM companies
+    SELECT c.*,
+           EXISTS(SELECT cw.id FROM company_watchlists cw WHERE cw.company_id=c.id AND cw.user_id = '${userID}' LIMIT 1) as following
+    FROM companies c
     WHERE ticker = '${identifier}'
     LIMIT 1
   `);
 
   let mutualFundResult = await db(`
-    SELECT *
-    FROM mutual_funds
+    SELECT m.*,
+           EXISTS(SELECT mw.id FROM mutual_fund_watchlists mw WHERE mw.mutual_fund_id=m.id AND mw.user_id = '${userID}' LIMIT 1) as following
+    FROM mutual_funds m
     WHERE ticker = '${identifier}'
     LIMIT 1
   `);
@@ -40,7 +42,15 @@ export const follow = async (userID, fundID) => {
     values: [userID, fundID],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  await db(`
+    UPDATE mutual_funds
+    SET follower_count = follower_count + 1
+    WHERE id = '${fundID}'
+  `);
+
+  return result;
 };
 
 export const unfollow = async (userID, fundID) => {
@@ -50,7 +60,15 @@ export const unfollow = async (userID, fundID) => {
     values: [userID, fundID],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  await db(`
+    UPDATE mutual_funds
+    SET follower_count = follower_count - 1
+    WHERE id = '${fundID}'
+  `);
+
+  return result;
 };
 
 export const getTopFunds = async (topData, topNum) => {
