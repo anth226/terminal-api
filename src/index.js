@@ -32,10 +32,11 @@ import * as portfolios from "./controllers/portfolios";
 import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
-
 import * as widgets from "./controllers/widgets";
+
 import * as dashboards from "./controllers/dashboard";
 
+import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as titans from "./controllers/titans";
@@ -743,6 +744,18 @@ app.post("/cancellation-request", async (req, res) => {
   res.send("success");
 });
 
+//app.use("/etfs/:identifier/stats", checkAuth);
+app.get("/etfs/:identifier/stats", async (req, res) => {
+  const result = await etfs.get_stats(req.params.identifier);
+  res.send(result);
+});
+
+//app.use("/etfs/:identifier/analytics", checkAuth);
+app.get("/etfs/:identifier/analytics", async (req, res) => {
+  const result = await etfs.get_analytics(req.params.identifier);
+  res.send(result);
+});
+
 app.use("/etfs/:identifier/holdings", checkAuth);
 app.get("/etfs/:identifier/holdings", async (req, res) => {
   const result = await etfs.get_holdings(req.params.identifier);
@@ -802,7 +815,11 @@ app.get("/futures", async (req, res) => {
 // Companies
 app.use("/company/:symbol", checkAuth);
 app.get("/company/:symbol", async (req, res) => {
-  const result = await mutual_funds.lookup(companyAPI, req.params.symbol);
+  const result = await mutual_funds.lookup(
+    companyAPI,
+    req.params.symbol,
+    req.terminal_app.claims.uid
+  );
   //const result = await companies.lookup(companyAPI, req.params.symbol);
   res.send(result);
 });
@@ -1036,12 +1053,28 @@ app.get("/all-insider", async (req, res) => {
   res.send(allInsider);
 });
 
+app.use("/insiders-movers", checkAuth);
+app.get("/insiders-movers", async (req, res) => {
+  const insidersMovers = await widgets
+    .getGlobalInsidersNMovers()
+    .then((data) => data);
+  res.send(insidersMovers);
+});
+
 app.use("/company-ratings/:ticker", checkAuth);
 app.get("/company-ratings/:ticker", async (req, res) => {
   const companyRatings = await finviz
     .getCompanyRatings(req.params.ticker)
     .then((data) => data);
   res.send(companyRatings);
+});
+
+app.use("/company-metrics/db/marketCaps", checkAuth);
+app.get("/company-metrics/db/marketCaps", async (req, res) => {
+  const companyMetrics = await companies
+    .getMetricsMarketCaps()
+    .then((data) => data);
+  res.send(companyMetrics);
 });
 
 app.use("/company-metrics/:ticker", checkAuth);
@@ -1145,6 +1178,19 @@ app.get("/billionaires/:id/follow", async (req, res) => {
   );
   res.send(result);
 });
+
+app.use("/billionaires/:id/toggle_company_performance_fallback", checkAuth);
+app.get(
+  "/billionaires/:id/toggle_company_performance_fallback",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await titans.updateBillionaire_CompanyPerformanceFallback(
+      req.params.id,
+      req.query.toggle
+    );
+    res.send(result);
+  }
+);
 
 app.use("/billionaire/:id", checkAuth);
 app.put("/billionaire/:id", async (req, res) => {
@@ -1414,6 +1460,18 @@ app.get(
   isAuthorized({ hasRole: ["admin"] }),
   async (req, res) => {
     const result = await edgar.search(req.query);
+    res.send(result);
+  }
+);
+
+app.use("/bots/process_billionaire_summary", checkAuth);
+app.get(
+  "/bots/process_billionaire_summary",
+  isAuthorized({ hasRole: ["admin"] }),
+  async (req, res) => {
+    const result = await bots.processBillionaireSummary(
+      req.query.billionaire_id
+    );
     res.send(result);
   }
 );

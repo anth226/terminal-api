@@ -1,6 +1,26 @@
 import db from "../db";
-
 import * as dashboard from "./dashboard";
+
+
+export async function getGlobalWidgetByType(widgetType) {
+  let result = await db(`
+    SELECT widget_instances.*, widget_data.*, widgets.*
+    FROM widget_instances
+    JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+    JOIN widgets ON widgets.id = widget_instances.widget_id
+    WHERE widgets.type = '${widgetType}' AND widget_instances.dashboard_id = 0
+    `);
+    if (result.length > 0) {
+      return result[0];
+    }
+}
+
+export async function getGlobalInsidersNMovers() {
+  let widget = await getGlobalWidgetByType("InsidersNMovers");
+  if (widget && widget.output) {
+    return widget.output;
+  }
+}
 
 export const create = async (userId, widgetType, identifier) => {
   // Lookup widget type
@@ -63,11 +83,11 @@ export const unpin = async (userId, widgetId) => {
 
 export const get = async (widgetId) => {
   let result = await db(`
-    SELECT widget_instances.*, widget_data.*, widgets.*
+    SELECT widget_instances.*, widget_data.*, widgets.*, widget_instances.id AS widget_instance_id
     FROM widget_instances
     JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
     JOIN widgets ON widgets.id = widget_instances.widget_id 
-    WHERE widget_instances.id = '${widgetId}'
+    WHERE widget_instance_id = '${widgetId}'
   `);
 
   if (result && result.length > 0) {
