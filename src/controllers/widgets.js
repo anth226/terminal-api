@@ -1,7 +1,6 @@
 import db from "../db";
 import * as dashboard from "./dashboard";
 
-
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
     SELECT widget_instances.*, widget_data.*, widgets.*
@@ -10,9 +9,9 @@ export async function getGlobalWidgetByType(widgetType) {
     JOIN widgets ON widgets.id = widget_instances.widget_id
     WHERE widgets.type = '${widgetType}' AND widget_instances.dashboard_id = 0
     `);
-    if (result.length > 0) {
-      return result[0];
-    }
+  if (result.length > 0) {
+    return result[0];
+  }
 }
 
 export async function getGlobalInsidersNMovers() {
@@ -22,11 +21,15 @@ export async function getGlobalInsidersNMovers() {
   }
 }
 
-export const create = async (userId, widgetType, identifier) => {
+export const create = async (userId, widgetType, input) => {
   // Lookup widget type
   // Find default dashboard
   // Create widget if does not exist
   // Create widget type if does not exist
+
+  if (widgetType === "CompanyPrice") {
+    let { ticker } = input;
+  }
 
   let result = await db(`
     SELECT *
@@ -49,7 +52,7 @@ export const create = async (userId, widgetType, identifier) => {
 
       let query = {
         text: "INSERT INTO widget_data (input) VALUES ($1)",
-        values: [null],
+        values: [null]
       };
 
       let data = await db(query);
@@ -66,7 +69,7 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
   let query = {
     text:
       "INSERT INTO widget_instances (dashboard_id, widget_id, widget_data_id, weight, is_pinned) VALUES ($1, $2, $3, $4, $5)",
-    values: [dashboardId, widgetId, widgetDataId, weight, true],
+    values: [dashboardId, widgetId, widgetDataId, weight, true]
   };
 
   return await db(query);
@@ -75,7 +78,7 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
 export const unpin = async (userId, widgetId) => {
   let query = {
     text: "DELETE FROM widget_instances WHERE widget_id=($1)",
-    values: [widgetId],
+    values: [widgetId]
   };
 
   return await db(query);
