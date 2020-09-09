@@ -50,6 +50,7 @@ export const create = async (userId, widgetType, input) => {
   if (result) {
     if (result.length > 0) {
       let widgetDataId;
+      let id;
       let widgets = result;
 
       let dashboardId = await dashboard.getDashboardId(userId);
