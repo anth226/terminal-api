@@ -744,6 +744,12 @@ app.post("/cancellation-request", async (req, res) => {
   res.send("success");
 });
 
+//app.use("/etfs/:identifier", checkAuth);
+app.get("/etfs/:identifier", async (req, res) => {
+  const result = await etfs.lookup(req.params.identifier);
+  res.send(result);
+});
+
 app.use("/etfs/:identifier/stats", checkAuth);
 app.get("/etfs/:identifier/stats", async (req, res) => {
   const result = await etfs.get_stats(req.params.identifier);
