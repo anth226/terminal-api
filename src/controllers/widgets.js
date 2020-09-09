@@ -1,5 +1,6 @@
 import db from "../db";
 import * as dashboard from "./dashboard";
+import * as bots from "./bots";
 
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
@@ -82,17 +83,21 @@ export const create = async (userId, widgetType, input) => {
 
       if (!widgetDataId) {
         let query = {
-          text: "INSERT INTO widget_data (input) VALUES ($1)",
+          text: "INSERT INTO widget_data (input) VALUES ($1) RETURNING *",
           values: [input],
         };
 
-        let data = await db(query);
+        result = await db(query);
 
-        ({ id } = data);
-        widgetDataId = data[0];
+        ({ id } = result[0]);
+        widgetDataId = id;
       }
 
-      await pin(dashboardId, widgetId, widgetDataId);
+      result = await pin(dashboardId, widgetId, widgetDataId);
+
+      let widgetInstanceId = result[0].id;
+
+      await bots.processWidgetInput(widgetInstanceId);
     }
   }
 };
@@ -100,17 +105,17 @@ export const create = async (userId, widgetType, input) => {
 export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
   let query = {
     text:
-      "INSERT INTO widget_instances (dashboard_id, widget_id, widget_data_id, weight, is_pinned) VALUES ($1, $2, $3, $4, $5)",
+      "INSERT INTO widget_instances (dashboard_id, widget_id, widget_data_id, weight, is_pinned) VALUES ($1, $2, $3, $4, $5) RETURNING *",
     values: [dashboardId, widgetId, widgetDataId, weight, true],
   };
 
   return await db(query);
 };
 
-export const unpin = async (userId, widgetId) => {
+export const unpin = async (userId, widgetInstanceId) => {
   let query = {
-    text: "DELETE FROM widget_instances WHERE widget_id=($1)",
-    values: [widgetId],
+    text: "DELETE FROM widget_instances WHERE id=($1)",
+    values: [widgetInstanceId],
   };
 
   return await db(query);
