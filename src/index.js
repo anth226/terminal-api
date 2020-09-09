@@ -1363,6 +1363,16 @@ app.get("/pin", async (req, res) => {
   res.send(result);
 });
 
+app.use("/widgets/pin", checkAuth);
+app.post("/widgets/pin", async (req, res) => {
+  const result = await widgets.create(
+    req.terminal_app.claims.uid,
+    req.body.type,
+    req.body.input
+  );
+  res.send(result);
+});
+
 app.use("/widgets/:id/unpin", checkAuth);
 app.get("/widgets/:id/unpin", async (req, res) => {
   const result = await widgets.unpin(

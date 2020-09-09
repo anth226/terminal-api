@@ -32,38 +32,38 @@ export const create = async (userId, widgetType, input) => {
     if (!ticker) {
       return;
     }
-  }
 
-  let result = await db(`
+    let result = await db(`
     SELECT *
     FROM widgets
     WHERE type = '${widgetType}'
     LIMIT 1
   `);
 
-  if (result) {
-    if (result.length > 0) {
-      let widgets = result;
+    if (result) {
+      if (result.length > 0) {
+        let widgets = result;
 
-      let dashboards = await dashboard.get(userId);
+        let dashboards = await dashboard.get(userId);
 
-      let { id } = dashboards[0];
-      let dashboardId = id;
+        let { id } = dashboards[0];
+        let dashboardId = id;
 
-      ({ id } = widgets[0]);
-      let widgetId = id;
+        ({ id } = widgets[0]);
+        let widgetId = id;
 
-      let query = {
-        text: "INSERT INTO widget_data (input) VALUES ($1)",
-        values: [input],
-      };
+        let query = {
+          text: "INSERT INTO widget_data (input) VALUES ($1)",
+          values: [input]
+        };
 
-      let data = await db(query);
+        let data = await db(query);
 
-      ({ id } = data);
-      let widgetDataId = data[0];
+        ({ id } = data);
+        let widgetDataId = data[0];
 
-      await pin(dashboardId, widgetId, widgetDataId);
+        await pin(dashboardId, widgetId, widgetDataId);
+      }
     }
   }
 };
@@ -72,7 +72,7 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
   let query = {
     text:
       "INSERT INTO widget_instances (dashboard_id, widget_id, widget_data_id, weight, is_pinned) VALUES ($1, $2, $3, $4, $5)",
-    values: [dashboardId, widgetId, widgetDataId, weight, true],
+    values: [dashboardId, widgetId, widgetDataId, weight, true]
   };
 
   return await db(query);
@@ -81,7 +81,7 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
 export const unpin = async (userId, widgetId) => {
   let query = {
     text: "DELETE FROM widget_instances WHERE widget_id=($1)",
-    values: [widgetId],
+    values: [widgetId]
   };
 
   return await db(query);
