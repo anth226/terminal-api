@@ -60,7 +60,7 @@ var bugsnagExpress = require("@bugsnag/plugin-express");
 
 var bugsnagClient = bugsnag({
   apiKey: process.env.BUGSNAG_KEY,
-  otherOption: process.env.RELEASE_STAGE,
+  otherOption: process.env.RELEASE_STAGE
 });
 
 bugsnagClient.use(bugsnagExpress);
@@ -75,11 +75,11 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({
       level: "info",
-      format: winston.format.simple(),
-    }),
+      format: winston.format.simple()
+    })
     //new winston.transports.File({ filename: 'combined.log' })
     //new winston.transports.File({ filename: 'error.log', level: 'error' }),
-  ],
+  ]
 });
 
 // init firebase
@@ -87,7 +87,7 @@ const serviceAccount = config.firebase;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DATABASE_URL,
+  databaseURL: process.env.FIREBASE_DATABASE_URL
 });
 
 // firebase db
@@ -116,7 +116,7 @@ const expiresIn = 60 * 60 * 24 * 5 * 1000;
 const cookieParams = {
   maxAge: expiresIn,
   httpOnly: true, // dont let browser javascript access cookie ever
-  ephemeral: true, // delete this cookie while browser close
+  ephemeral: true // delete this cookie while browser close
 };
 //secure: true, // only use cookie over https
 
@@ -140,7 +140,7 @@ const app = express();
 var corsOptions = {
   origin: [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`],
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-  credentials: true,
+  credentials: true
 };
 app.use(cors(corsOptions));
 
@@ -256,7 +256,7 @@ app.post("/hooks", async (req, res) => {
             userId: userId,
             customerId: customerId,
             subscriptionId: subscriptionId,
-            email: email,
+            email: email
           },
           { merge: true }
         );
@@ -264,7 +264,7 @@ app.post("/hooks", async (req, res) => {
         // Set custom auth claims with Firebase
         await admin.auth().setCustomUserClaims(userId, {
           customer_id: customerId,
-          subscription_id: subscriptionId,
+          subscription_id: subscriptionId
         });
 
         sendEmail.sendSignupEmail(email);
@@ -294,12 +294,12 @@ app.post("/hooks", async (req, res) => {
 
         //Set a default payment method for future invoices
         const customer = await stripe.customers.update(customerId, {
-          invoice_settings: { default_payment_method: paymentMethodId },
+          invoice_settings: { default_payment_method: paymentMethodId }
         });
 
         //Set default_payment_method on the Subscription
         const subscription = await stripe.subscriptions.update(subscriptionId, {
-          default_payment_method: paymentMethodId,
+          default_payment_method: paymentMethodId
         });
       } catch (err) {
         logger.error("Stripe Checkout SetupIntent Webhook Error: ", err);
@@ -330,7 +330,7 @@ app.post("/checkout", async (req, res) => {
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
-      message: "please enter your email",
+      message: "please enter your email"
     });
     return;
   }
@@ -344,15 +344,15 @@ app.post("/checkout", async (req, res) => {
       subscription_data: {
         items: [
           {
-            plan: planId,
-          },
+            plan: planId
+          }
         ],
         trial_from_plan: true,
-        coupon: plan,
+        coupon: plan
       },
       success_url:
         apiProtocol + apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
-      cancel_url: apiProtocol + apiURL,
+      cancel_url: apiProtocol + apiURL
     });
     res.json({ session: session });
   } else {
@@ -366,11 +366,11 @@ app.post("/checkout", async (req, res) => {
       setup_intent_data: {
         metadata: {
           customer_id: req.body.customer_id,
-          subscription_id: req.body.subscription_id,
-        },
+          subscription_id: req.body.subscription_id
+        }
       },
       success_url: apiProtocol + apiURL + "/account?s=1",
-      cancel_url: apiProtocol + apiURL,
+      cancel_url: apiProtocol + apiURL
     });
     res.json({ session: session });
   }
@@ -419,7 +419,7 @@ app.post("/authenticate", async (req, res) => {
       throw {
         terminal_error: true,
         error_code: "SESSION_EXPIRED",
-        message: "Your login session has expired, please try logging in again.",
+        message: "Your login session has expired, please try logging in again."
       };
     }
 
@@ -439,7 +439,7 @@ app.post("/authenticate", async (req, res) => {
       if (user.isAdmin) {
         await admin.auth().setCustomUserClaims(decodedToken.uid, {
           isAdmin: true,
-          customer_id: customerId,
+          customer_id: customerId
         });
       }
     } else {
@@ -453,7 +453,7 @@ app.post("/authenticate", async (req, res) => {
         throw {
           terminal_error: true,
           error_code: "USER_NOT_FOUND",
-          message: "Unable to verify your user record.",
+          message: "Unable to verify your user record."
         };
       }
       // found user in db, get data
@@ -462,7 +462,7 @@ app.post("/authenticate", async (req, res) => {
       customerId = firestoreData.customerId;
       // set claim in firestore auth
       await admin.auth().setCustomUserClaims(decodedToken.uid, {
-        customer_id: customerId,
+        customer_id: customerId
       });
     }
     if (!customerId) {
@@ -471,7 +471,7 @@ app.post("/authenticate", async (req, res) => {
       throw {
         terminal_error: true,
         error_code: "PAYMENT_INCOMPLETE",
-        message: "Please complete your payment",
+        message: "Please complete your payment"
       };
     }
 
@@ -487,7 +487,7 @@ app.post("/authenticate", async (req, res) => {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)",
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)"
       };
     }
     // Check if customer has paid for their subscription
@@ -509,7 +509,7 @@ app.post("/authenticate", async (req, res) => {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)",
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)"
       };
     }
 
@@ -548,7 +548,7 @@ app.post("/payment", async (req, res) => {
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
-      message: "please enter your email",
+      message: "please enter your email"
     });
     return;
   }
@@ -562,8 +562,8 @@ app.post("/payment", async (req, res) => {
       payment_method: req.body.payment_method,
       email: req.body.email,
       invoice_settings: {
-        default_payment_method: req.body.payment_method,
-      },
+        default_payment_method: req.body.payment_method
+      }
     });
 
     console.log("THE CUSTOMER");
@@ -574,7 +574,7 @@ app.post("/payment", async (req, res) => {
       customer: customer.id,
       items: [{ plan: planId }],
       expand: ["latest_invoice.payment_intent"],
-      coupon: couponId,
+      coupon: couponId
     });
     console.log("THE SUBSCRIPTION");
     console.log(subscription);
@@ -593,13 +593,13 @@ app.post("/payment", async (req, res) => {
       userId: userId,
       customerId: customer.id,
       subscriptionId: subscription.id,
-      email: email,
+      email: email
     });
 
     // Set custom auth claims with Firebase
     await admin.auth().setCustomUserClaims(userId, {
       customer_id: customer.id,
-      subscription_id: subscription.id,
+      subscription_id: subscription.id
     });
 
     res.json({ success: true });
@@ -608,7 +608,7 @@ app.post("/payment", async (req, res) => {
     console.log("/Payment Error: ", err);
     res.json({
       error_code: "USER_PAYMENT_AUTH_ERROR",
-      message: "Unable to validate your payment.",
+      message: "Unable to validate your payment."
     });
   }
 });
@@ -625,12 +625,12 @@ app.get("/user", async (req, res) => {
 
     res.json({
       success: true,
-      user,
+      user
     });
   } catch (error) {
     res.json({
       success: false,
-      error,
+      error
     });
   }
 });
@@ -649,8 +649,8 @@ app.get("/profile", async (req, res) => {
     {
       expand: [
         "subscriptions.data.default_payment_method",
-        "invoice_settings.default_payment_method",
-      ],
+        "invoice_settings.default_payment_method"
+      ]
     }
   );
 
@@ -670,7 +670,7 @@ app.get("/profile", async (req, res) => {
     trial_end: customer.subscriptions.data[0].trial_end,
     next_payment: customer.subscriptions.data[0].current_period_end,
     firstName: user.firstName,
-    lastName: user.lastName,
+    lastName: user.lastName
   });
 });
 
@@ -683,14 +683,14 @@ app.post("/profile", async (req, res) => {
 
     await docRef.update({
       firstName,
-      lastName,
+      lastName
     });
 
     res.send({ success: true });
   } catch (error) {
     res.json({
       success: false,
-      error,
+      error
     });
   }
 });
@@ -704,14 +704,14 @@ app.post("/signup", async (req, res) => {
       email,
       firstName,
       lastName,
-      phoneNumber,
+      phoneNumber
     });
 
     res.send({ success: true });
   } catch (error) {
     res.json({
       success: false,
-      error,
+      error
     });
   }
 });
@@ -1358,7 +1358,7 @@ app.get("/pin", async (req, res) => {
   const result = await widgets.create(
     req.terminal_app.claims.uid,
     req.params.type,
-    req.params.identifier
+    req.params.inputs
   );
   res.send(result);
 });
