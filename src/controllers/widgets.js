@@ -14,6 +14,19 @@ export async function getGlobalWidgetByType(widgetType) {
   }
 }
 
+export async function getWidgetsByType(widgetType) {
+  let result = await db(`
+    SELECT widget_instances.*, widget_data.*, widgets.*
+    FROM widget_instances
+    JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+    JOIN widgets ON widgets.id = widget_instances.widget_id
+    WHERE widgets.type = '${widgetType}'
+    `);
+  if (result.length > 0) {
+    return result;
+  }
+}
+
 export async function getGlobalInsidersNMovers() {
   let widget = await getGlobalWidgetByType("InsidersNMovers");
   if (widget && widget.output) {
@@ -27,13 +40,6 @@ export const create = async (userId, widgetType, input) => {
   // Create widget if does not exist
   // Create widget type if does not exist
 
-  if (widgetType === "CompanyPrice") {
-    let { ticker } = input;
-    if (!ticker) {
-      return;
-    }
-  }
-
   let result = await db(`
     SELECT *
     FROM widgets
@@ -43,25 +49,47 @@ export const create = async (userId, widgetType, input) => {
 
   if (result) {
     if (result.length > 0) {
+      let widgetDataId;
       let widgets = result;
 
-      let dashboards = await dashboard.get(userId);
-
-      let { dashboard_id } = dashboards[0];
-      let dashboardId = dashboard_id;
+      let dashboardId = await dashboard.getDashboardId(userId);
 
       ({ id } = widgets[0]);
       let widgetId = id;
 
-      let query = {
-        text: "INSERT INTO widget_data (input) VALUES ($1)",
-        values: [input],
-      };
+      if (widgetType === "CompanyPrice") {
+        let { ticker } = input;
+        if (!ticker) {
+          return;
+        }
 
-      let data = await db(query);
+        let priceWidgets = await getWidgetsByType("CompanyPrice");
+        for (let p in priceWidgets) {
+          let input = priceWidgets[p].input;
+          let dataId = priceWidgets[p].widget_data_id;
+          let params = {};
+          if (input) {
+            Object.entries(input).map((item) => {
+              params[item[0]] = item[1];
+            });
+          }
+          if (params.ticker && params.ticker == ticker) {
+            widgetDataId = dataId;
+          }
+        }
+      }
 
-      ({ id } = data);
-      let widgetDataId = data[0];
+      if (!widgetDataId) {
+        let query = {
+          text: "INSERT INTO widget_data (input) VALUES ($1)",
+          values: [input],
+        };
+
+        let data = await db(query);
+
+        ({ id } = data);
+        widgetDataId = data[0];
+      }
 
       await pin(dashboardId, widgetId, widgetDataId);
     }
