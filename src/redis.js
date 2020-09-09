@@ -20,6 +20,7 @@ export let KEY_ZACKS_EDITORIAL = "KEY_ZACKS_EDITORIAL";
 
 export let KEY_ETF_STATS = "KEY_ETF_STATS";
 export let KEY_ETF_ANALYTICS = "KEY_ETF_ANALYTICS";
+export let KEY_ETF_INFO = "KEY_ETF_INFO";
 
 function connectDatabase() {
   let credentials = {
