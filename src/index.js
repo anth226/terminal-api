@@ -744,7 +744,7 @@ app.post("/cancellation-request", async (req, res) => {
   res.send("success");
 });
 
-//app.use("/etfs/:identifier", checkAuth);
+app.use("/etfs/:identifier", checkAuth);
 app.get("/etfs/:identifier", async (req, res) => {
   const result = await etfs.lookup(req.params.identifier);
   res.send(result);
