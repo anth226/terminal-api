@@ -2,6 +2,7 @@ import axios from "axios";
 import redis, {
   KEY_ETF_STATS,
   KEY_ETF_ANALYTICS,
+  KEY_ETF_INFO,
 } from "../redis";
 
 export function get_holdings(ticker) {
@@ -22,6 +23,34 @@ export function get_holdings(ticker) {
     });
 
   return holdings;
+}
+
+export async function lookup(ticker) {
+  let cache = await redis.get(`${KEY_ETF_INFO}-${ticker}`);
+
+  if(!cache) {
+    let stats = await axios.get(
+      `${process.env.INTRINIO_BASE_PATH}/etfs/${ticker}?api_key=${process.env.INTRINIO_API_KEY}`
+    ).then(res => {
+      return res.data;
+    }).catch(err => {
+      console.log(err)
+      return {};
+    });
+
+    await redis.set(
+      `${KEY_ETF_INFO}-${ticker}`,
+      JSON.stringify(stats),
+      "EX",
+      60 * 5
+    );
+
+    return stats;
+  } else {
+    console.log("HIT CACHE")
+    return JSON.parse(cache);
+  }
+
 }
 
 export async function get_stats(ticker) {
