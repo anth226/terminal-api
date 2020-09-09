@@ -29,6 +29,9 @@ export const create = async (userId, widgetType, input) => {
 
   if (widgetType === "CompanyPrice") {
     let { ticker } = input;
+    if (!ticker) {
+      return;
+    }
   }
 
   let result = await db(`
@@ -52,7 +55,7 @@ export const create = async (userId, widgetType, input) => {
 
       let query = {
         text: "INSERT INTO widget_data (input) VALUES ($1)",
-        values: [null]
+        values: [input],
       };
 
       let data = await db(query);
@@ -69,7 +72,7 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
   let query = {
     text:
       "INSERT INTO widget_instances (dashboard_id, widget_id, widget_data_id, weight, is_pinned) VALUES ($1, $2, $3, $4, $5)",
-    values: [dashboardId, widgetId, widgetDataId, weight, true]
+    values: [dashboardId, widgetId, widgetDataId, weight, true],
   };
 
   return await db(query);
@@ -78,7 +81,7 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
 export const unpin = async (userId, widgetId) => {
   let query = {
     text: "DELETE FROM widget_instances WHERE widget_id=($1)",
-    values: [widgetId]
+    values: [widgetId],
   };
 
   return await db(query);
