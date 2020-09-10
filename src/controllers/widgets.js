@@ -15,6 +15,22 @@ export async function getGlobalWidgetByType(widgetType) {
   }
 }
 
+//3 problems:
+
+//  1) not selecting data that isn't attached to instance on pinning ---DELET DATA ON LAST UNPIN
+
+//  2) not updating data that isn't attached to instance on every 10 minute update ---DELET DATA ON LAST UNPIN
+
+//  3) The every 10 minute update updates the same data multiple times if it has multiple instances ---FIX UPDATE TO ONLY INCLUDE DATA 1CE
+
+//solution 1)
+//  change widget instance join in both places and somehow get all the widgets that are local with just the
+//  wiget_data and widgets tables by changing the db somehow
+
+//solution 2) (Probably the best? no db change)
+//  have some sort of system to delete old rows from widget_data table that aren't being used in any instance, and another
+//  way of filtering out during 10 minute update data entries that have already been updated
+
 export async function getWidgetsByType(widgetType) {
   let result = await db(`
     SELECT widget_instances.*, widget_data.*, widgets.*
@@ -113,12 +129,39 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
 };
 
 export const unpin = async (userId, widgetInstanceId) => {
+  let widgetDataId;
+  let dataResult;
   let query = {
-    text: "DELETE FROM widget_instances WHERE id=($1)",
+    text: "DELETE FROM widget_instances WHERE id=($1) RETURNING *",
     values: [widgetInstanceId],
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  if (result && result.length > 0) {
+    widgetDataId = result[0].widget_data_id;
+
+    if (widgetDataId) {
+      dataResult = await db(`
+      SELECT widget_instances.*, widget_data.*, widgets.*, widget_instances.id AS widget_instance_id
+      FROM widget_instances
+      JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+      JOIN widgets ON widgets.id = widget_instances.widget_id 
+      WHERE widget_data_id = '${widgetDataId}'
+    `);
+    }
+
+    if (dataResult && dataResult.length == 0) {
+      query = {
+        text: "DELETE FROM widget_data WHERE id=($1)",
+        values: [widgetDataId],
+      };
+
+      result = await db(query);
+    }
+  }
+
+  return result;
 };
 
 export const get = async (widgetId) => {
