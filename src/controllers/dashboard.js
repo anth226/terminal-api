@@ -23,23 +23,22 @@ export async function get(userId) {
     if (result.length < 1) {
       let query = {
         text:
-          "INSERT INTO dashboards (user_id, is_default, name) VALUES ($1, $2, $3)",
-        values: [userId, true, ""]
+          "INSERT INTO dashboards (user_id, is_default, name) VALUES ($1, $2, $3) RETURNING *",
+        values: [userId, true, ""],
       };
       result = await db(query);
-    } else {
-      let dashboards = result;
-
-      let { id } = dashboards[0];
-
-      result = await db(`
-        SELECT widget_instances.*, widget_data.*, widgets.*, widget_instances.id AS widget_instance_id
-        FROM widget_instances
-        JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
-        JOIN widgets ON widgets.id = widget_instances.widget_id 
-        WHERE dashboard_id = '${id}'
-      `);
     }
+    let dashboards = result;
+
+    let { id } = dashboards[0];
+
+    result = await db(`
+      SELECT widget_instances.*, widget_data.*, widgets.*, widget_instances.id AS widget_instance_id
+      FROM widget_instances
+      JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+      JOIN widgets ON widgets.id = widget_instances.widget_id 
+      WHERE dashboard_id = '${id}'
+    `);
   }
   return result;
 }
@@ -56,7 +55,7 @@ export async function getDashboardId(userId) {
       let query = {
         text:
           "INSERT INTO dashboards (user_id, is_default, name) VALUES ($1, $2, $3)",
-        values: [userId, true, ""]
+        values: [userId, true, ""],
       };
       result = await db(query);
 
