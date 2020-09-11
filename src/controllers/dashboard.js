@@ -23,23 +23,51 @@ export async function get(userId) {
     if (result.length < 1) {
       let query = {
         text:
+          "INSERT INTO dashboards (user_id, is_default, name) VALUES ($1, $2, $3) RETURNING *",
+        values: [userId, true, ""],
+      };
+      result = await db(query);
+    }
+    let dashboards = result;
+
+    let { id } = dashboards[0];
+
+    result = await db(`
+      SELECT widget_instances.*, widget_data.*, widgets.*, widget_instances.id AS widget_instance_id
+      FROM widget_instances
+      JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+      JOIN widgets ON widgets.id = widget_instances.widget_id 
+      WHERE dashboard_id = '${id}'
+    `);
+  }
+  return result;
+}
+
+export async function getDashboardId(userId) {
+  let result = await db(`
+    SELECT *
+    FROM dashboards
+    WHERE user_id = '${userId}'
+  `);
+
+  if (result) {
+    if (result.length < 1) {
+      let query = {
+        text:
           "INSERT INTO dashboards (user_id, is_default, name) VALUES ($1, $2, $3)",
         values: [userId, true, ""],
       };
       result = await db(query);
+
+      let { id } = result[0];
+
+      return id;
     } else {
       let dashboards = result;
 
       let { id } = dashboards[0];
 
-      result = await db(`
-        SELECT widget_instances.*, widget_data.*, widgets.*
-        FROM widget_instances
-        JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
-        JOIN widgets ON widgets.id = widget_instances.widget_id 
-        WHERE dashboard_id = '${id}'
-      `);
+      return id;
     }
   }
-  return result;
 }

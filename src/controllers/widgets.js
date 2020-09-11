@@ -1,6 +1,6 @@
 import db from "../db";
 import * as dashboard from "./dashboard";
-
+import * as bots from "./bots";
 
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
@@ -10,9 +10,22 @@ export async function getGlobalWidgetByType(widgetType) {
     JOIN widgets ON widgets.id = widget_instances.widget_id
     WHERE widgets.type = '${widgetType}' AND widget_instances.dashboard_id = 0
     `);
-    if (result.length > 0) {
-      return result[0];
-    }
+  if (result.length > 0) {
+    return result[0];
+  }
+}
+
+export async function getWidgetsByType(widgetType) {
+  let result = await db(`
+    SELECT widget_instances.*, widget_data.*, widgets.*
+    FROM widget_instances
+    JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+    JOIN widgets ON widgets.id = widget_instances.widget_id
+    WHERE widgets.type = '${widgetType}'
+    `);
+  if (result.length > 0) {
+    return result;
+  }
 }
 
 export async function getGlobalInsidersNMovers() {
@@ -22,7 +35,7 @@ export async function getGlobalInsidersNMovers() {
   }
 }
 
-export const create = async (userId, widgetType, identifier) => {
+export const create = async (userId, widgetType, input) => {
   // Lookup widget type
   // Find default dashboard
   // Create widget if does not exist
@@ -37,27 +50,56 @@ export const create = async (userId, widgetType, identifier) => {
 
   if (result) {
     if (result.length > 0) {
+      let widgetDataId;
+      let id;
       let widgets = result;
 
-      let dashboards = await dashboard.get(userId);
-
-      let { id } = dashboards[0];
-      let dashboardId = id;
+      let dashboardId = await dashboard.getDashboardId(userId);
 
       ({ id } = widgets[0]);
       let widgetId = id;
 
-      let query = {
-        text: "INSERT INTO widget_data (input) VALUES ($1)",
-        values: [null],
-      };
+      if (widgetType === "CompanyPrice") {
+        let { ticker } = input;
+        if (!ticker) {
+          return;
+        }
 
-      let data = await db(query);
+        let priceWidgets = await getWidgetsByType("CompanyPrice");
+        for (let p in priceWidgets) {
+          let input = priceWidgets[p].input;
+          let dataId = priceWidgets[p].widget_data_id;
+          let params = {};
+          if (input) {
+            Object.entries(input).map((item) => {
+              params[item[0]] = item[1];
+            });
+          }
+          if (params.ticker && params.ticker == ticker) {
+            widgetDataId = dataId;
+          }
+        }
+      }
 
-      ({ id } = data);
-      let widgetDataId = data[0];
+      if (!widgetDataId) {
+        let query = {
+          text: "INSERT INTO widget_data (input) VALUES ($1) RETURNING *",
+          values: [input]
+        };
 
-      await pin(dashboardId, widgetId, widgetDataId);
+        result = await db(query);
+
+        ({ id } = result[0]);
+        widgetDataId = id;
+      }
+
+      result = await pin(dashboardId, widgetId, widgetDataId);
+
+      let widgetInstanceId = result[0].id;
+
+      await bots.processWidgetInput(widgetInstanceId);
+
+      return result;
     }
   }
 };
@@ -65,20 +107,47 @@ export const create = async (userId, widgetType, identifier) => {
 export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
   let query = {
     text:
-      "INSERT INTO widget_instances (dashboard_id, widget_id, widget_data_id, weight, is_pinned) VALUES ($1, $2, $3, $4, $5)",
-    values: [dashboardId, widgetId, widgetDataId, weight, true],
+      "INSERT INTO widget_instances (dashboard_id, widget_id, widget_data_id, weight, is_pinned) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+    values: [dashboardId, widgetId, widgetDataId, weight, true]
   };
 
   return await db(query);
 };
 
-export const unpin = async (userId, widgetId) => {
+export const unpin = async (userId, widgetInstanceId) => {
+  let widgetDataId;
+  let dataResult;
   let query = {
-    text: "DELETE FROM widget_instances WHERE widget_id=($1)",
-    values: [widgetId],
+    text: "DELETE FROM widget_instances WHERE id=($1) RETURNING *",
+    values: [widgetInstanceId]
   };
 
-  return await db(query);
+  let result = await db(query);
+
+  if (result && result.length > 0) {
+    widgetDataId = result[0].widget_data_id;
+
+    if (widgetDataId) {
+      dataResult = await db(`
+      SELECT widget_instances.*, widget_data.*, widgets.*, widget_instances.id AS widget_instance_id
+      FROM widget_instances
+      JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+      JOIN widgets ON widgets.id = widget_instances.widget_id 
+      WHERE widget_data_id = '${widgetDataId}'
+    `);
+    }
+
+    if (dataResult && dataResult.length == 0) {
+      query = {
+        text: "DELETE FROM widget_data WHERE id=($1)",
+        values: [widgetDataId]
+      };
+
+      result = await db(query);
+    }
+  }
+
+  return result;
 };
 
 export const get = async (widgetId) => {
