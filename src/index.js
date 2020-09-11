@@ -614,6 +614,38 @@ app.post("/payment", async (req, res) => {
   }
 });
 
+app.post("/upgrade-subscription", async (req, res) => {
+  const { type } = req.body;
+
+  const customer = await stripe.customers.retrieve(req.terminal_app.claims.customer_id);
+  const subscriptionID = customer.subscriptions.data[0].id;
+
+  let price;
+  if(type == "yearly") {
+    price = "price_1HPxX3BNiHwzGq61fr2QyoPX"
+  } else if(type == "lifetyime") {
+    price = "price_1HPxXyBNiHwzGq61XYt5TgOO"
+  } else {
+    res.json({
+      status: "error",
+      message: "Invalid subscription type"
+    });
+    return
+  }
+
+  await stripe.subscriptions.update(subscriptionID, {
+    cancel_at_period_end: false,
+    proration_behavior: 'always_invoice',
+    items: [{
+      id: subscriptionID,
+      price: price,
+    }]
+  });
+
+  res.json({ status: "success" });
+
+});
+
 app.use("/user", checkAuth);
 app.get("/user", async (req, res) => {
   try {
