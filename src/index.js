@@ -614,6 +614,7 @@ app.post("/payment", async (req, res) => {
   }
 });
 
+app.use("/upgrade-subscription", checkAuth);
 app.post("/upgrade-subscription", async (req, res) => {
   const { type } = req.body;
 
