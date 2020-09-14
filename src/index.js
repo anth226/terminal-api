@@ -634,7 +634,7 @@ app.post("/upgrade-subscription", async (req, res) => {
     return
   }
 
-  await stripe.subscriptions.update(subscriptionID, {
+  let updatedSubscription = await stripe.subscriptions.update(subscriptionID, {
     cancel_at_period_end: false,
     proration_behavior: 'always_invoice',
     items: [{
@@ -642,6 +642,8 @@ app.post("/upgrade-subscription", async (req, res) => {
       price: price,
     }]
   });
+
+  console.log(updatedSubscription);
 
   res.json({ status: "success" });
 
