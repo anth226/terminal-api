@@ -621,6 +621,9 @@ app.post("/upgrade-subscription", async (req, res) => {
   const customer = await stripe.customers.retrieve(req.terminal_app.claims.customer_id);
   const subscriptionID = customer.subscriptions.data[0].id;
 
+  const subProduct = await stripe.subscriptions.retrieve(customer.subscriptions.data[0].id);
+  const subProductID = subProduct.items.data[0].id;
+
   let price;
   if(type == "yearly") {
     price = "price_1HPxX3BNiHwzGq61fr2QyoPX"
@@ -634,16 +637,26 @@ app.post("/upgrade-subscription", async (req, res) => {
     return
   }
 
-  await stripe.subscriptions.update(subscriptionID, {
+  let updatedSubscription = await stripe.subscriptions.update(subscriptionID, {
     cancel_at_period_end: false,
     proration_behavior: 'always_invoice',
     items: [{
-      id: subscriptionID,
+      id: subProductID,
       price: price,
     }]
   });
 
-  res.json({ status: "success" });
+  console.log(updatedSubscription);
+  console.log("PENDING UPDATE");
+  console.log(updatedSubscription.pending_update);
+
+  if(updatedSubscription.pending_update === null) {
+    res.json({ status: "success" });
+    return
+  } else {
+    res.json({status: "action_needed"});
+    return
+  }
 
 });
 
