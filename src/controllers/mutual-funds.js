@@ -28,7 +28,7 @@ export const lookup = async (companyAPI, identifier, userID) => {
 
   let etfResult = await db(`
     SELECT e.*,
-          EXISTS(SELECT ew.id FROM etf_watchlists mw WHERE ew.etf_id=e.id AND ew.user_id = '${userID}' LIMIT 1) as following
+          EXISTS(SELECT ew.id FROM etf_watchlists ew WHERE ew.etf_id=e.id AND ew.user_id = '${userID}' LIMIT 1) as following
     FROM etfs e
     WHERE ticker = '${identifier}'
     LIMIT 1
@@ -38,7 +38,7 @@ export const lookup = async (companyAPI, identifier, userID) => {
     ...companyFundamentals,
     company: companyResult.length > 0 ? companyResult[0] : null,
     mutual_fund: mutualFundResult.length > 0 ? mutualFundResult[0] : null,
-    etf: etfResult.length > 0 ? etfResult[0] : null,
+    etf: etfResult.length > 0 ? etfResult[0] : null
   };
 
   return response;
@@ -48,7 +48,7 @@ export const follow = async (userID, fundID) => {
   let query = {
     text:
       "INSERT INTO mutual_fund_watchlists (user_id, mutual_fund_id, watched_at) VALUES ($1, $2, now())",
-    values: [userID, fundID],
+    values: [userID, fundID]
   };
 
   let result = await db(query);
@@ -66,7 +66,7 @@ export const unfollow = async (userID, fundID) => {
   let query = {
     text:
       "DELETE FROM mutual_fund_watchlists WHERE user_id=($1) AND mutual_fund_id=($2)",
-    values: [userID, fundID],
+    values: [userID, fundID]
   };
 
   let result = await db(query);
@@ -147,16 +147,16 @@ export const getTopFunds = async (topData, topNum) => {
   let funds = {
     eFunds: {
       dataTotal: eDataTotal,
-      topFunds: equFunds,
+      topFunds: equFunds
     },
     fFunds: {
       dataTotal: fDataTotal,
-      topFunds: fixFunds,
+      topFunds: fixFunds
     },
     oFunds: {
       dataTotal: oDataTotal,
-      topFunds: othFunds,
-    },
+      topFunds: othFunds
+    }
   };
 
   //console.log(funds);
@@ -187,17 +187,17 @@ export const getTopDiscountsFunds = async (topNum) => {
           if (fundCategory[0] == "E") {
             eFunds.push({
               fund: fund,
-              diff: difference,
+              diff: difference
             });
           } else if (fundCategory[0] == "F") {
             fFunds.push({
               fund: fund,
-              diff: difference,
+              diff: difference
             });
           } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
             oFunds.push({
               fund: fund,
-              diff: difference,
+              diff: difference
             });
           }
         }
@@ -231,7 +231,7 @@ export const getTopDiscountsFunds = async (topNum) => {
   let funds = {
     eFunds: equityFunds,
     fFunds: fixedFunds,
-    oFunds: otherFunds,
+    oFunds: otherFunds
   };
 
   return funds;
