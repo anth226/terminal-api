@@ -26,10 +26,19 @@ export const lookup = async (companyAPI, identifier, userID) => {
     LIMIT 1
   `);
 
+  let etfResult = await db(`
+    SELECT e.*,
+          EXISTS(SELECT ew.id FROM etf_watchlists mw WHERE ew.etf_id=e.id AND ew.user_id = '${userID}' LIMIT 1) as following
+    FROM etfs e
+    WHERE ticker = '${identifier}'
+    LIMIT 1
+  `);
+
   let response = {
     ...companyFundamentals,
     company: companyResult.length > 0 ? companyResult[0] : null,
     mutual_fund: mutualFundResult.length > 0 ? mutualFundResult[0] : null,
+    etf: etfResult.length > 0 ? etfResult[0] : null,
   };
 
   return response;

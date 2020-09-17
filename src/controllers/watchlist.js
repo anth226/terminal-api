@@ -98,3 +98,29 @@ export const isWatching_Company = async (id, userId) => {
 
   return false;
 };
+
+export const getFollowedETFs = async (userId) => {
+  let result = await db(`
+    SELECT etfs.*, etf_watchlists.*
+    FROM etf_watchlists
+    LEFT JOIN etfs
+    ON etf_watchlists.etf_id = etfs.id
+    WHERE user_id = '${userId}'
+  `);
+
+  return result;
+};
+
+export const isWatching_ETFs = async (id, userId) => {
+  let result = await db(`
+    SELECT *
+    FROM etf_watchlists
+    WHERE user_id = '${userId}' AND etf_id = '${id}'
+  `);
+
+  if (result.length > 0) {
+    return true;
+  }
+
+  return false;
+};
