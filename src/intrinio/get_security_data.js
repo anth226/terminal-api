@@ -9,7 +9,7 @@ export function getIntradayPrices(intrinioApi, identifier) {
     endDate: new Date("2019-12-28"), // Date | Return intraday prices stopping at the specified date
     endTime: Date.now(), // String | Return intraday prices stopping at the specified time on the `end_date` (timezone is UTC)
     pageSize: 100, // Number | The number of results to return
-    nextPage: null, // String | Gets the next page of data from a previous API call
+    nextPage: null // String | Gets the next page of data from a previous API call
   };
 
   let res = intrinioApi
@@ -56,7 +56,7 @@ export function getHistoricalData(intrinioApi, identifier, days, freq) {
     endDate: null, // Date | Get historical date on or before this date
     sortOrder: "desc", // String | Sort by date `asc` or `desc`
     pageSize: 100, // Number | The number of results to return
-    nextPage: null, // String | Gets the next page of data from a previous API call
+    nextPage: null // String | Gets the next page of data from a previous API call
   };
 
   return historicalPages(intrinioApi, identifier, opts, []);
@@ -68,7 +68,7 @@ export async function getChartData(intrinioApi, identifier) {
   if (!cache) {
     const [daily, weekly] = await Promise.all([
       getHistoricalData(intrinioApi, identifier, 365, "daily"),
-      getHistoricalData(intrinioApi, identifier, 1825, "weekly"),
+      getHistoricalData(intrinioApi, identifier, 1825, "weekly")
     ]);
     let data = { daily: daily, weekly: weekly };
 

@@ -1,14 +1,10 @@
-export function lookupCompany(intrinioApi, ticker) {
-  let res = intrinioApi
-    .getCompany(ticker)
-    .then(function (data) {
-      return data;
-    })
-    .catch(function (error) {
-      return error;
-    });
-
-  return res;
+export async function lookupCompany(intrinioApi, ticker) {
+  try {
+    const company = await intrinioApi.getCompany(ticker);
+    return company ? company : {};
+  } catch (error) {
+    return {};
+  }
 }
 
 export function companyFundamentals(intrinioApi, ticker) {
@@ -22,7 +18,7 @@ export function companyFundamentals(intrinioApi, ticker) {
     startDate: null, // Date | Only on or after the given date
     endDate: null, // Date | Only on or before the given date
     pageSize: 100, // Number | The number of results to return
-    nextPage: null, // String | Gets the next page of data from a previous API call
+    nextPage: null // String | Gets the next page of data from a previous API call
   };
 
   let res = intrinioApi
@@ -40,7 +36,7 @@ export function companyFundamentals(intrinioApi, ticker) {
 export function companyNews(intrinioApi, ticker) {
   const opts = {
     pageSize: 20, // Number | The number of results to return
-    nextPage: null, // String | Gets the next page of data from a previous API call
+    nextPage: null // String | Gets the next page of data from a previous API call
   };
 
   let res = intrinioApi
@@ -63,7 +59,7 @@ export async function getDataPoint(intrinioApi, reqData) {
     reqData[symbol].forEach((tag) => {
       reqs.push({
         symbol: symbol.toUpperCase(),
-        tag: tag,
+        tag: tag
       });
     });
   });
@@ -112,7 +108,7 @@ export async function getNumberDataPoint(intrinioApi, symbols, tags) {
     tags.forEach((tag) => {
       reqs.push({
         symbol: symbol.toUpperCase(),
-        tag: tag,
+        tag: tag
       });
     });
   });
