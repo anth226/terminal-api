@@ -1,45 +1,12 @@
 import db from "../db";
 
 import * as cannon from "./cannon";
-import * as getCompanyData from "../intrinio/get_company_data";
-
-export const lookup = async (companyAPI, identifier, userID) => {
-  console.log("made it into new lookup");
-  const companyFundamentals = await getCompanyData.lookupCompany(
-    companyAPI,
-    identifier
-  );
-
-  let companyResult = await db(`
-    SELECT c.*,
-           EXISTS(SELECT cw.id FROM company_watchlists cw WHERE cw.company_id=c.id AND cw.user_id = '${userID}' LIMIT 1) as following
-    FROM companies c
-    WHERE ticker = '${identifier}'
-    LIMIT 1
-  `);
-
-  let mutualFundResult = await db(`
-    SELECT m.*,
-           EXISTS(SELECT mw.id FROM mutual_fund_watchlists mw WHERE mw.mutual_fund_id=m.id AND mw.user_id = '${userID}' LIMIT 1) as following
-    FROM mutual_funds m
-    WHERE ticker = '${identifier}'
-    LIMIT 1
-  `);
-
-  let response = {
-    ...companyFundamentals,
-    company: companyResult.length > 0 ? companyResult[0] : null,
-    mutual_fund: mutualFundResult.length > 0 ? mutualFundResult[0] : null,
-  };
-
-  return response;
-};
 
 export const follow = async (userID, fundID) => {
   let query = {
     text:
       "INSERT INTO mutual_fund_watchlists (user_id, mutual_fund_id, watched_at) VALUES ($1, $2, now())",
-    values: [userID, fundID],
+    values: [userID, fundID]
   };
 
   let result = await db(query);
@@ -57,7 +24,7 @@ export const unfollow = async (userID, fundID) => {
   let query = {
     text:
       "DELETE FROM mutual_fund_watchlists WHERE user_id=($1) AND mutual_fund_id=($2)",
-    values: [userID, fundID],
+    values: [userID, fundID]
   };
 
   let result = await db(query);
@@ -138,16 +105,16 @@ export const getTopFunds = async (topData, topNum) => {
   let funds = {
     eFunds: {
       dataTotal: eDataTotal,
-      topFunds: equFunds,
+      topFunds: equFunds
     },
     fFunds: {
       dataTotal: fDataTotal,
-      topFunds: fixFunds,
+      topFunds: fixFunds
     },
     oFunds: {
       dataTotal: oDataTotal,
-      topFunds: othFunds,
-    },
+      topFunds: othFunds
+    }
   };
 
   //console.log(funds);
@@ -178,17 +145,17 @@ export const getTopDiscountsFunds = async (topNum) => {
           if (fundCategory[0] == "E") {
             eFunds.push({
               fund: fund,
-              diff: difference,
+              diff: difference
             });
           } else if (fundCategory[0] == "F") {
             fFunds.push({
               fund: fund,
-              diff: difference,
+              diff: difference
             });
           } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
             oFunds.push({
               fund: fund,
-              diff: difference,
+              diff: difference
             });
           }
         }
@@ -222,7 +189,7 @@ export const getTopDiscountsFunds = async (topNum) => {
   let funds = {
     eFunds: equityFunds,
     fFunds: fixedFunds,
-    oFunds: otherFunds,
+    oFunds: otherFunds
   };
 
   return funds;

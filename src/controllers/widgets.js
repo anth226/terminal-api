@@ -84,7 +84,7 @@ export const create = async (userId, widgetType, input) => {
       if (!widgetDataId) {
         let query = {
           text: "INSERT INTO widget_data (input) VALUES ($1) RETURNING *",
-          values: [input]
+          values: [input],
         };
 
         result = await db(query);
@@ -108,7 +108,7 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
   let query = {
     text:
       "INSERT INTO widget_instances (dashboard_id, widget_id, widget_data_id, weight, is_pinned) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-    values: [dashboardId, widgetId, widgetDataId, weight, true]
+    values: [dashboardId, widgetId, widgetDataId, weight, true],
   };
 
   return await db(query);
@@ -119,7 +119,7 @@ export const unpin = async (userId, widgetInstanceId) => {
   let dataResult;
   let query = {
     text: "DELETE FROM widget_instances WHERE id=($1) RETURNING *",
-    values: [widgetInstanceId]
+    values: [widgetInstanceId],
   };
 
   let result = await db(query);
@@ -140,7 +140,7 @@ export const unpin = async (userId, widgetInstanceId) => {
     if (dataResult && dataResult.length == 0) {
       query = {
         text: "DELETE FROM widget_data WHERE id=($1)",
-        values: [widgetDataId]
+        values: [widgetDataId],
       };
 
       result = await db(query);
@@ -156,7 +156,7 @@ export const get = async (widgetId) => {
     FROM widget_instances
     JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
     JOIN widgets ON widgets.id = widget_instances.widget_id 
-    WHERE widget_instance_id = '${widgetId}'
+    WHERE widget_instances.id = '${widgetId}'
   `);
 
   if (result && result.length > 0) {
