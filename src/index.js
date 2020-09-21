@@ -819,6 +819,27 @@ app.get("/security/:symbol/meta", async (req, res) => {
   res.send(companyFundamentals);
 });
 
+app.use("/etfs/following", checkAuth);
+app.get("/etfs/following", async (req, res) => {
+  const result = await watchlist.getFollowedETFs(req.terminal_app.claims.uid);
+  res.send(result);
+});
+
+app.use("/etfs/:id/unfollow", checkAuth);
+app.get("/etfs/:id/unfollow", async (req, res) => {
+  const result = await etfs.unfollow(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
+  res.send(result);
+});
+
+app.use("/etfs/:id/follow", checkAuth);
+app.get("/etfs/:id/follow", async (req, res) => {
+  const result = await etfs.follow(req.terminal_app.claims.uid, req.params.id);
+  res.send(result);
+});
+
 app.use("/etfs/:identifier", checkAuth);
 app.get("/etfs/:identifier", async (req, res) => {
   const result = await etfs.lookup(req.params.identifier);
@@ -840,27 +861,6 @@ app.get("/etfs/:identifier/analytics", async (req, res) => {
 app.use("/etfs/:identifier/holdings", checkAuth);
 app.get("/etfs/:identifier/holdings", async (req, res) => {
   const result = await etfs.get_holdings(req.params.identifier);
-  res.send(result);
-});
-
-app.use("/etfs/following", checkAuth);
-app.get("/etfs/following", async (req, res) => {
-  const result = await watchlist.getFollowedETFs(req.terminal_app.claims.uid);
-  res.send(result);
-});
-
-app.use("/etfs/:id/unfollow", checkAuth);
-app.get("/etfs/:id/unfollow", async (req, res) => {
-  const result = await etfs.unfollow(
-    req.terminal_app.claims.uid,
-    req.params.id
-  );
-  res.send(result);
-});
-
-app.use("/etfs/:id/follow", checkAuth);
-app.get("/etfs/:id/follow", async (req, res) => {
-  const result = await etfs.follow(req.terminal_app.claims.uid, req.params.id);
   res.send(result);
 });
 
