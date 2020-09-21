@@ -18,14 +18,14 @@ export const getFollowedTitans = async (userId) => {
 
     let query = {
       text: "SELECT * FROM institutions WHERE cik = ANY($1::text[])",
-      values: [ciks],
+      values: [ciks]
     };
 
     let buffer = await db(query);
 
     result = result.map((x) =>
       Object.assign(x, {
-        institutions: [buffer.find((y) => y.cik == x.cik)].filter((n) => n),
+        institutions: [buffer.find((y) => y.cik == x.cik)].filter((n) => n)
       })
     );
   }
@@ -90,6 +90,32 @@ export const isWatching_Company = async (id, userId) => {
     SELECT *
     FROM company_watchlists
     WHERE user_id = '${userId}' AND company_id = '${id}'
+  `);
+
+  if (result.length > 0) {
+    return true;
+  }
+
+  return false;
+};
+
+export const getFollowedETFs = async (userId) => {
+  let result = await db(`
+    SELECT etfs.*, etf_watchlists.*
+    FROM etf_watchlists
+    LEFT JOIN etfs
+    ON etf_watchlists.etf_id = etfs.id
+    WHERE user_id = '${userId}'
+  `);
+
+  return result;
+};
+
+export const isWatching_ETFs = async (id, userId) => {
+  let result = await db(`
+    SELECT *
+    FROM etf_watchlists
+    WHERE user_id = '${userId}' AND etf_id = '${id}'
   `);
 
   if (result.length > 0) {

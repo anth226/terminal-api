@@ -34,8 +34,7 @@ import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 import * as dashboard from "./controllers/dashboard";
-
-import * as dashboards from "./controllers/dashboard";
+import * as securities from "./controllers/securities";
 
 import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
@@ -614,6 +613,57 @@ app.post("/payment", async (req, res) => {
   }
 });
 
+app.use("/upgrade-subscription", checkAuth);
+app.post("/upgrade-subscription", async (req, res) => {
+  const { type } = req.body;
+
+  const customer = await stripe.customers.retrieve(
+    req.terminal_app.claims.customer_id
+  );
+  const subscriptionID = customer.subscriptions.data[0].id;
+
+  const subProduct = await stripe.subscriptions.retrieve(
+    customer.subscriptions.data[0].id
+  );
+  const subProductID = subProduct.items.data[0].id;
+
+  let price;
+  if (type == "yearly") {
+    price = "price_1HPxX3BNiHwzGq61fr2QyoPX";
+  } else if (type == "lifetyime") {
+    price = "price_1HPxXyBNiHwzGq61XYt5TgOO";
+  } else {
+    res.json({
+      status: "error",
+      message: "Invalid subscription type"
+    });
+    return;
+  }
+
+  let updatedSubscription = await stripe.subscriptions.update(subscriptionID, {
+    cancel_at_period_end: false,
+    proration_behavior: "always_invoice",
+    items: [
+      {
+        id: subProductID,
+        price: price
+      }
+    ]
+  });
+
+  console.log(updatedSubscription);
+  console.log("PENDING UPDATE");
+  console.log(updatedSubscription.pending_update);
+
+  if (updatedSubscription.pending_update === null) {
+    res.json({ status: "success" });
+    return;
+  } else {
+    res.json({ status: "action_needed" });
+    return;
+  }
+});
+
 app.use("/user", checkAuth);
 app.get("/user", async (req, res) => {
   try {
@@ -748,6 +798,48 @@ app.post("/cancellation-request", async (req, res) => {
   res.send("success");
 });
 
+// Securities
+app.use("/security/:symbol", checkAuth);
+app.get("/security/:symbol", async (req, res) => {
+  const result = await securities.lookup(
+    companyAPI,
+    req.params.symbol,
+    req.terminal_app.claims.uid
+  );
+  //const result = await companies.lookup(companyAPI, req.params.symbol);
+  res.send(result);
+});
+
+app.use("/security/:symbol/meta", checkAuth);
+app.get("/security/:symbol/meta", async (req, res) => {
+  const companyFundamentals = await getSecurityData.lookupSecurity(
+    securityAPI,
+    req.params.symbol
+  );
+  res.send(companyFundamentals);
+});
+
+app.use("/etfs/following", checkAuth);
+app.get("/etfs/following", async (req, res) => {
+  const result = await watchlist.getFollowedETFs(req.terminal_app.claims.uid);
+  res.send(result);
+});
+
+app.use("/etfs/:id/unfollow", checkAuth);
+app.get("/etfs/:id/unfollow", async (req, res) => {
+  const result = await etfs.unfollow(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
+  res.send(result);
+});
+
+app.use("/etfs/:id/follow", checkAuth);
+app.get("/etfs/:id/follow", async (req, res) => {
+  const result = await etfs.follow(req.terminal_app.claims.uid, req.params.id);
+  res.send(result);
+});
+
 app.use("/etfs/:identifier", checkAuth);
 app.get("/etfs/:identifier", async (req, res) => {
   const result = await etfs.lookup(req.params.identifier);
@@ -823,17 +915,6 @@ app.get("/futures", async (req, res) => {
 });
 
 // Companies
-app.use("/company/:symbol", checkAuth);
-app.get("/company/:symbol", async (req, res) => {
-  const result = await mutual_funds.lookup(
-    companyAPI,
-    req.params.symbol,
-    req.terminal_app.claims.uid
-  );
-  //const result = await companies.lookup(companyAPI, req.params.symbol);
-  res.send(result);
-});
-
 app.use("/company/:symbol/owners", checkAuth);
 app.get("/company/:symbol/owners", async (req, res) => {
   const result = await companies.getOwners(req.params.symbol);
@@ -908,15 +989,6 @@ app.post("/sec-screener", async (req, res) => {
   res.send(result);
 });
 
-app.use("/security/:symbol", checkAuth);
-app.get("/security/:symbol", async (req, res) => {
-  const companyFundamentals = await getSecurityData.lookupSecurity(
-    securityAPI,
-    req.params.symbol
-  );
-  res.send(companyFundamentals);
-});
-
 app.use("/sec-intraday-prices/:symbol", checkAuth);
 app.get("/sec-intraday-prices/:symbol", async (req, res) => {
   const intradayPrices = await getSecurityData.getIntradayPrices(
@@ -930,6 +1002,7 @@ app.get("/sec-last-price/:symbol", async (req, res) => {
   const lastPrice = await getSecurityData.getSecurityLastPrice(
     req.params.symbol
   );
+
   res.send(lastPrice);
 });
 
@@ -1359,7 +1432,7 @@ app.get("/mutual-funds/:id/follow", async (req, res) => {
 // dashboard & widgets
 app.use("/dashboards", checkAuth);
 app.get("/dashboards", async (req, res) => {
-  const result = await dashboards.get(req.terminal_app.claims.uid);
+  const result = await dashboard.get(req.terminal_app.claims.uid);
   res.send(result);
 });
 
