@@ -2,8 +2,10 @@ import axios from "axios";
 import redis, {
   KEY_ETF_STATS,
   KEY_ETF_ANALYTICS,
-  KEY_ETF_INFO,
+  KEY_ETF_INFO
 } from "../redis";
+
+import db from "../db";
 
 export function get_holdings(ticker) {
   let holdings = axios
@@ -59,7 +61,7 @@ export const follow = async (userId, etfId) => {
   let query = {
     text:
       "INSERT INTO etf_watchlists (user_id, etf_id, watched_at) VALUES ($1, $2, now())",
-    values: [userId, etfId],
+    values: [userId, etfId]
   };
 
   let result = await db(query);
@@ -76,7 +78,7 @@ export const follow = async (userId, etfId) => {
 export const unfollow = async (userId, etfId) => {
   let query = {
     text: "DELETE FROM etf_watchlists WHERE user_id=($1) AND etf_id=($2)",
-    values: [userId, etfId],
+    values: [userId, etfId]
   };
 
   let result = await db(query);

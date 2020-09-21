@@ -18,14 +18,14 @@ export const getFollowedTitans = async (userId) => {
 
     let query = {
       text: "SELECT * FROM institutions WHERE cik = ANY($1::text[])",
-      values: [ciks],
+      values: [ciks]
     };
 
     let buffer = await db(query);
 
     result = result.map((x) =>
       Object.assign(x, {
-        institutions: [buffer.find((y) => y.cik == x.cik)].filter((n) => n),
+        institutions: [buffer.find((y) => y.cik == x.cik)].filter((n) => n)
       })
     );
   }
