@@ -6,10 +6,10 @@ export function getAllNews(intrinioApi) {
 
   let res = intrinioApi
     .getAllCompanyNews(opts)
-    .then(function(data) {
+    .then(function (data) {
       return data;
     })
-    .catch(function(error) {
+    .catch(function (error) {
       return error;
     });
 
