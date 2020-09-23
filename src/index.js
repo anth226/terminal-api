@@ -34,7 +34,8 @@ import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 import * as dashboard from "./controllers/dashboard";
-import * as securities from "./controllers/securities";
+
+import * as dashboards from "./controllers/dashboard";
 
 import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
@@ -60,7 +61,7 @@ var bugsnagExpress = require("@bugsnag/plugin-express");
 
 var bugsnagClient = bugsnag({
   apiKey: process.env.BUGSNAG_KEY,
-  otherOption: process.env.RELEASE_STAGE
+  otherOption: process.env.RELEASE_STAGE,
 });
 
 bugsnagClient.use(bugsnagExpress);
@@ -75,11 +76,11 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({
       level: "info",
-      format: winston.format.simple()
-    })
+      format: winston.format.simple(),
+    }),
     //new winston.transports.File({ filename: 'combined.log' })
     //new winston.transports.File({ filename: 'error.log', level: 'error' }),
-  ]
+  ],
 });
 
 // init firebase
@@ -87,7 +88,7 @@ const serviceAccount = config.firebase;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DATABASE_URL
+  databaseURL: process.env.FIREBASE_DATABASE_URL,
 });
 
 // firebase db
@@ -116,7 +117,7 @@ const expiresIn = 60 * 60 * 24 * 5 * 1000;
 const cookieParams = {
   maxAge: expiresIn,
   httpOnly: true, // dont let browser javascript access cookie ever
-  ephemeral: true // delete this cookie while browser close
+  ephemeral: true, // delete this cookie while browser close
 };
 //secure: true, // only use cookie over https
 
@@ -140,7 +141,7 @@ const app = express();
 var corsOptions = {
   origin: [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`],
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-  credentials: true
+  credentials: true,
 };
 app.use(cors(corsOptions));
 
@@ -256,7 +257,7 @@ app.post("/hooks", async (req, res) => {
             userId: userId,
             customerId: customerId,
             subscriptionId: subscriptionId,
-            email: email
+            email: email,
           },
           { merge: true }
         );
@@ -264,7 +265,7 @@ app.post("/hooks", async (req, res) => {
         // Set custom auth claims with Firebase
         await admin.auth().setCustomUserClaims(userId, {
           customer_id: customerId,
-          subscription_id: subscriptionId
+          subscription_id: subscriptionId,
         });
 
         sendEmail.sendSignupEmail(email);
@@ -294,23 +295,18 @@ app.post("/hooks", async (req, res) => {
 
         //Set a default payment method for future invoices
         const customer = await stripe.customers.update(customerId, {
-          invoice_settings: { default_payment_method: paymentMethodId }
+          invoice_settings: { default_payment_method: paymentMethodId },
         });
 
         //Set default_payment_method on the Subscription
         const subscription = await stripe.subscriptions.update(subscriptionId, {
-          default_payment_method: paymentMethodId
+          default_payment_method: paymentMethodId,
         });
       } catch (err) {
         logger.error("Stripe Checkout SetupIntent Webhook Error: ", err);
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
     }
-  } else if (evt.type === "invoice.payment_failed") {
-    // email customer to let them know their payment failed
-    // and their subscription will be canceled if they dont update payment info
-    const customer = await stripe.customers.retrieve(evt.data.object.customer);
-    sendPaymentFailedEmail(customer.email);
   }
 
   res.json({ success: true });
@@ -330,7 +326,7 @@ app.post("/checkout", async (req, res) => {
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
-      message: "please enter your email"
+      message: "please enter your email",
     });
     return;
   }
@@ -344,15 +340,15 @@ app.post("/checkout", async (req, res) => {
       subscription_data: {
         items: [
           {
-            plan: planId
-          }
+            plan: planId,
+          },
         ],
         trial_from_plan: true,
-        coupon: plan
+        coupon: plan,
       },
       success_url:
         apiProtocol + apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
-      cancel_url: apiProtocol + apiURL
+      cancel_url: apiProtocol + apiURL,
     });
     res.json({ session: session });
   } else {
@@ -366,11 +362,11 @@ app.post("/checkout", async (req, res) => {
       setup_intent_data: {
         metadata: {
           customer_id: req.body.customer_id,
-          subscription_id: req.body.subscription_id
-        }
+          subscription_id: req.body.subscription_id,
+        },
       },
       success_url: apiProtocol + apiURL + "/account?s=1",
-      cancel_url: apiProtocol + apiURL
+      cancel_url: apiProtocol + apiURL,
     });
     res.json({ session: session });
   }
@@ -419,7 +415,7 @@ app.post("/authenticate", async (req, res) => {
       throw {
         terminal_error: true,
         error_code: "SESSION_EXPIRED",
-        message: "Your login session has expired, please try logging in again."
+        message: "Your login session has expired, please try logging in again.",
       };
     }
 
@@ -427,6 +423,7 @@ app.post("/authenticate", async (req, res) => {
     console.log(decodedToken);
 
     let customerId;
+    let userData;
     if (decodedToken.customer_id) {
       // check if customer id is in decoded claims
       console.log("customer is in decoded claims!!!");
@@ -434,12 +431,12 @@ app.post("/authenticate", async (req, res) => {
       customerId = decodedToken.customer_id;
 
       let doc = await db.collection("users").doc(decodedToken.uid).get();
-      let user = doc.data();
+      userData = doc.data();
 
-      if (user.isAdmin) {
+      if (userData.isAdmin) {
         await admin.auth().setCustomUserClaims(decodedToken.uid, {
           isAdmin: true,
-          customer_id: customerId
+          customer_id: customerId,
         });
       }
     } else {
@@ -453,16 +450,16 @@ app.post("/authenticate", async (req, res) => {
         throw {
           terminal_error: true,
           error_code: "USER_NOT_FOUND",
-          message: "Unable to verify your user record."
+          message: "Unable to verify your user record.",
         };
       }
       // found user in db, get data
-      let firestoreData = doc.data();
+      userData = doc.data();
       // retrieve customer data from stripe using customer id from firestore
-      customerId = firestoreData.customerId;
+      customerId = userData.customerId;
       // set claim in firestore auth
       await admin.auth().setCustomUserClaims(decodedToken.uid, {
-        customer_id: customerId
+        customer_id: customerId,
       });
     }
     if (!customerId) {
@@ -471,23 +468,23 @@ app.post("/authenticate", async (req, res) => {
       throw {
         terminal_error: true,
         error_code: "PAYMENT_INCOMPLETE",
-        message: "Please complete your payment"
+        message: "Please complete your payment",
       };
     }
 
     // retrieve customer data from stripe using customer id from firestore
     const customer = await stripe.customers.retrieve(customerId);
-    console.log("\nCUSTOMER OBJ\n");
-    console.log(customer);
-    console.log("\nSUBSCRIPTION\n");
-    console.log(customer.subscriptions);
+    // console.log("\nCUSTOMER OBJ\n");
+    // console.log(customer);
+    // console.log("\nSUBSCRIPTION\n");
+    // console.log(customer.subscriptions);
 
     if (customer.subscriptions.total_count < 1) {
       throw {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)"
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)",
       };
     }
     // Check if customer has paid for their subscription
@@ -509,8 +506,15 @@ app.post("/authenticate", async (req, res) => {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)"
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)",
       };
+    }
+
+    let subStatus = customer.subscriptions.data[0].status;
+    if(userData.subscriptionStatus !== subStatus) {
+      db.collection("users").doc(decodedToken.uid).update({
+        subscriptionStatus: customer.subscriptions.data[0].status
+      })
     }
 
     // Finally, create a session cookie with firebase for this user
@@ -548,7 +552,7 @@ app.post("/payment", async (req, res) => {
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
-      message: "please enter your email"
+      message: "please enter your email",
     });
     return;
   }
@@ -562,8 +566,8 @@ app.post("/payment", async (req, res) => {
       payment_method: req.body.payment_method,
       email: req.body.email,
       invoice_settings: {
-        default_payment_method: req.body.payment_method
-      }
+        default_payment_method: req.body.payment_method,
+      },
     });
 
     console.log("THE CUSTOMER");
@@ -574,7 +578,7 @@ app.post("/payment", async (req, res) => {
       customer: customer.id,
       items: [{ plan: planId }],
       expand: ["latest_invoice.payment_intent"],
-      coupon: couponId
+      coupon: couponId,
     });
     console.log("THE SUBSCRIPTION");
     console.log(subscription);
@@ -593,13 +597,13 @@ app.post("/payment", async (req, res) => {
       userId: userId,
       customerId: customer.id,
       subscriptionId: subscription.id,
-      email: email
+      email: email,
     });
 
     // Set custom auth claims with Firebase
     await admin.auth().setCustomUserClaims(userId, {
       customer_id: customer.id,
-      subscription_id: subscription.id
+      subscription_id: subscription.id,
     });
 
     res.json({ success: true });
@@ -608,7 +612,7 @@ app.post("/payment", async (req, res) => {
     console.log("/Payment Error: ", err);
     res.json({
       error_code: "USER_PAYMENT_AUTH_ERROR",
-      message: "Unable to validate your payment."
+      message: "Unable to validate your payment.",
     });
   }
 });
@@ -617,51 +621,46 @@ app.use("/upgrade-subscription", checkAuth);
 app.post("/upgrade-subscription", async (req, res) => {
   const { type } = req.body;
 
-  const customer = await stripe.customers.retrieve(
-    req.terminal_app.claims.customer_id
-  );
+  const customer = await stripe.customers.retrieve(req.terminal_app.claims.customer_id);
   const subscriptionID = customer.subscriptions.data[0].id;
 
-  const subProduct = await stripe.subscriptions.retrieve(
-    customer.subscriptions.data[0].id
-  );
+  const subProduct = await stripe.subscriptions.retrieve(customer.subscriptions.data[0].id);
   const subProductID = subProduct.items.data[0].id;
 
   let price;
-  if (type == "yearly") {
-    price = "price_1HPxX3BNiHwzGq61fr2QyoPX";
-  } else if (type == "lifetyime") {
-    price = "price_1HPxXyBNiHwzGq61XYt5TgOO";
+  if(type == "yearly") {
+    price = "price_1HPxX3BNiHwzGq61fr2QyoPX"
+  } else if(type == "lifetyime") {
+    price = "price_1HPxXyBNiHwzGq61XYt5TgOO"
   } else {
     res.json({
       status: "error",
       message: "Invalid subscription type"
     });
-    return;
+    return
   }
 
   let updatedSubscription = await stripe.subscriptions.update(subscriptionID, {
-    cancel_at_period_end: false,
-    proration_behavior: "always_invoice",
-    items: [
-      {
-        id: subProductID,
-        price: price
-      }
-    ]
+    payment_behavior: 'pending_if_incomplete',
+    proration_behavior: 'always_invoice',
+    items: [{
+      id: subProductID,
+      price: price,
+    }]
   });
 
   console.log(updatedSubscription);
   console.log("PENDING UPDATE");
   console.log(updatedSubscription.pending_update);
 
-  if (updatedSubscription.pending_update === null) {
+  if(updatedSubscription.pending_update === null) {
     res.json({ status: "success" });
-    return;
+    return
   } else {
-    res.json({ status: "action_needed" });
-    return;
+    res.json({status: "action_needed"});
+    return
   }
+
 });
 
 app.use("/user", checkAuth);
@@ -679,12 +678,12 @@ app.get("/user", async (req, res) => {
     res.json({
       success: true,
       user,
-      dashboards
+      dashboards,
     });
   } catch (error) {
     res.json({
       success: false,
-      error
+      error,
     });
   }
 });
@@ -703,8 +702,8 @@ app.get("/profile", async (req, res) => {
     {
       expand: [
         "subscriptions.data.default_payment_method",
-        "invoice_settings.default_payment_method"
-      ]
+        "invoice_settings.default_payment_method",
+      ],
     }
   );
 
@@ -724,7 +723,7 @@ app.get("/profile", async (req, res) => {
     trial_end: customer.subscriptions.data[0].trial_end,
     next_payment: customer.subscriptions.data[0].current_period_end,
     firstName: user.firstName,
-    lastName: user.lastName
+    lastName: user.lastName,
   });
 });
 
@@ -737,16 +736,80 @@ app.post("/profile", async (req, res) => {
 
     await docRef.update({
       firstName,
-      lastName
+      lastName,
     });
 
     res.send({ success: true });
   } catch (error) {
     res.json({
       success: false,
-      error
+      error,
     });
   }
+});
+
+// complete a user signup for someone who pays for a
+// subscription thru a 3rd party platform (i.e. clickfunnels)
+app.post("/complete-signup", async (req, res) => {
+  const { email, password, firstName, lastName } = req.body;
+  if(email.length < 1 || password.length < 1 || firstName.length < 1 || lastName.length < 1) {
+    res.json({error:"Required fields are missing"});
+    return;
+  }
+
+  const customers = await stripe.customers.list({
+    email: email,
+    limit: 1,
+  });
+
+  if(customers.data.length < 1) {
+    res.json({error:"We could not find a customer with that email address."});
+    return;
+  }
+
+  admin.auth().createUser({
+    email: email,
+    emailVerified: false,
+    password: password,
+    disabled: false
+  })
+  .then(async function(userRecord) {
+    // See the UserRecord reference doc for the contents of userRecord.
+    console.log('Successfully created new user:', userRecord.uid);
+
+    // Add user data to db
+    let docRef = db.collection("users").doc(userRecord.uid);
+    let setUser = await docRef.set(
+      {
+        userId: userRecord.uid,
+        customerId: customers.data[0].id,
+        subscriptionId: customers.data[0].subscriptions.data[0].id,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: customers.data[0].phone,
+      },
+      { merge: true }
+    );
+
+    // Set custom auth claims with Firebase
+    await admin.auth().setCustomUserClaims(userRecord.uid, {
+      customer_id: customers.data[0].id,
+      subscription_id: customers.data[0].subscriptions.data[0].id,
+    });
+
+
+    res.json({success:true});
+    return;
+
+  })
+  .catch(function(error) {
+    console.log('Error creating new user:', error);
+    res.json({error:"We were unable to complete your account setup at this time, please contact support."});
+    return;
+  });
+
+
 });
 
 // save user details when signup
@@ -758,14 +821,14 @@ app.post("/signup", async (req, res) => {
       email,
       firstName,
       lastName,
-      phoneNumber
+      phoneNumber,
     });
 
     res.send({ success: true });
   } catch (error) {
     res.json({
       success: false,
-      error
+      error,
     });
   }
 });
@@ -796,48 +859,6 @@ app.post("/cancellation-request", async (req, res) => {
   );
 
   res.send("success");
-});
-
-// Securities
-app.use("/security/:symbol", checkAuth);
-app.get("/security/:symbol", async (req, res) => {
-  const result = await securities.lookup(
-    companyAPI,
-    req.params.symbol,
-    req.terminal_app.claims.uid
-  );
-  //const result = await companies.lookup(companyAPI, req.params.symbol);
-  res.send(result);
-});
-
-app.use("/security/:symbol/meta", checkAuth);
-app.get("/security/:symbol/meta", async (req, res) => {
-  const companyFundamentals = await getSecurityData.lookupSecurity(
-    securityAPI,
-    req.params.symbol
-  );
-  res.send(companyFundamentals);
-});
-
-app.use("/etfs/following", checkAuth);
-app.get("/etfs/following", async (req, res) => {
-  const result = await watchlist.getFollowedETFs(req.terminal_app.claims.uid);
-  res.send(result);
-});
-
-app.use("/etfs/:id/unfollow", checkAuth);
-app.get("/etfs/:id/unfollow", async (req, res) => {
-  const result = await etfs.unfollow(
-    req.terminal_app.claims.uid,
-    req.params.id
-  );
-  res.send(result);
-});
-
-app.use("/etfs/:id/follow", checkAuth);
-app.get("/etfs/:id/follow", async (req, res) => {
-  const result = await etfs.follow(req.terminal_app.claims.uid, req.params.id);
-  res.send(result);
 });
 
 app.use("/etfs/:identifier", checkAuth);
@@ -915,6 +936,17 @@ app.get("/futures", async (req, res) => {
 });
 
 // Companies
+app.use("/company/:symbol", checkAuth);
+app.get("/company/:symbol", async (req, res) => {
+  const result = await mutual_funds.lookup(
+    companyAPI,
+    req.params.symbol,
+    req.terminal_app.claims.uid
+  );
+  //const result = await companies.lookup(companyAPI, req.params.symbol);
+  res.send(result);
+});
+
 app.use("/company/:symbol/owners", checkAuth);
 app.get("/company/:symbol/owners", async (req, res) => {
   const result = await companies.getOwners(req.params.symbol);
@@ -989,6 +1021,15 @@ app.post("/sec-screener", async (req, res) => {
   res.send(result);
 });
 
+app.use("/security/:symbol", checkAuth);
+app.get("/security/:symbol", async (req, res) => {
+  const companyFundamentals = await getSecurityData.lookupSecurity(
+    securityAPI,
+    req.params.symbol
+  );
+  res.send(companyFundamentals);
+});
+
 app.use("/sec-intraday-prices/:symbol", checkAuth);
 app.get("/sec-intraday-prices/:symbol", async (req, res) => {
   const intradayPrices = await getSecurityData.getIntradayPrices(
@@ -1002,7 +1043,6 @@ app.get("/sec-last-price/:symbol", async (req, res) => {
   const lastPrice = await getSecurityData.getSecurityLastPrice(
     req.params.symbol
   );
-
   res.send(lastPrice);
 });
 
@@ -1432,7 +1472,7 @@ app.get("/mutual-funds/:id/follow", async (req, res) => {
 // dashboard & widgets
 app.use("/dashboards", checkAuth);
 app.get("/dashboards", async (req, res) => {
-  const result = await dashboard.get(req.terminal_app.claims.uid);
+  const result = await dashboards.get(req.terminal_app.claims.uid);
   res.send(result);
 });
 
@@ -1443,7 +1483,6 @@ app.get("/pin", async (req, res) => {
     req.params.type,
     req.params.inputs
   );
-
   res.send(result);
 });
 
