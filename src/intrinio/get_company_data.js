@@ -33,22 +33,18 @@ export function companyFundamentals(intrinioApi, ticker) {
   return res;
 }
 
-export function companyNews(intrinioApi, ticker) {
+export async function companyNews(intrinioApi, ticker) {
   const opts = {
     pageSize: 20, // Number | The number of results to return
     nextPage: null // String | Gets the next page of data from a previous API call
   };
 
-  let res = intrinioApi
-    .getCompanyNews(ticker, opts)
-    .then(function (data) {
-      return data;
-    })
-    .catch(function (error) {
-      return error;
-    });
-
-  return res;
+  try {
+    const res = await intrinioApi.getCompanyNews(ticker, opts);
+    return res ? res : {};
+  } catch (error) {
+    return {};
+  }
 }
 
 export async function getDataPoint(intrinioApi, reqData) {
