@@ -99,17 +99,13 @@ export function getSecurityLastPrice(symbol) {
   return lastPrice.then((data) => data.data);
 }
 
-export function lookupSecurity(intrinioApi, ticker) {
-  let res = intrinioApi
-    .getSecurityById(ticker)
-    .then(function (data) {
-      return data;
-    })
-    .catch(function (error) {
-      return error;
-    });
-
-  return res;
+export async function lookupSecurity(intrinioApi, ticker) {
+  try {
+    const res = await intrinioApi.getSecurityById(ticker);
+    return res ? res : {};
+  } catch (error) {
+    return {};
+  }
 }
 // export function getRealtimePrice(intrinioApi, identifier) {
 

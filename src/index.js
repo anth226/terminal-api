@@ -306,11 +306,6 @@ app.post("/hooks", async (req, res) => {
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
     }
-  } else if (evt.type === "invoice.payment_failed") {
-    // email customer to let them know their payment failed
-    // and their subscription will be canceled if they dont update payment info
-    const customer = await stripe.customers.retrieve(evt.data.object.customer);
-    sendPaymentFailedEmail(customer.email);
   }
 
   res.json({ success: true });
@@ -427,6 +422,7 @@ app.post("/authenticate", async (req, res) => {
     console.log(decodedToken);
 
     let customerId;
+    let userData;
     if (decodedToken.customer_id) {
       // check if customer id is in decoded claims
       console.log("customer is in decoded claims!!!");
@@ -434,9 +430,9 @@ app.post("/authenticate", async (req, res) => {
       customerId = decodedToken.customer_id;
 
       let doc = await db.collection("users").doc(decodedToken.uid).get();
-      let user = doc.data();
+      userData = doc.data();
 
-      if (user.isAdmin) {
+      if (userData.isAdmin) {
         await admin.auth().setCustomUserClaims(decodedToken.uid, {
           isAdmin: true,
           customer_id: customerId
@@ -457,9 +453,9 @@ app.post("/authenticate", async (req, res) => {
         };
       }
       // found user in db, get data
-      let firestoreData = doc.data();
+      userData = doc.data();
       // retrieve customer data from stripe using customer id from firestore
-      customerId = firestoreData.customerId;
+      customerId = userData.customerId;
       // set claim in firestore auth
       await admin.auth().setCustomUserClaims(decodedToken.uid, {
         customer_id: customerId
@@ -477,10 +473,10 @@ app.post("/authenticate", async (req, res) => {
 
     // retrieve customer data from stripe using customer id from firestore
     const customer = await stripe.customers.retrieve(customerId);
-    console.log("\nCUSTOMER OBJ\n");
-    console.log(customer);
-    console.log("\nSUBSCRIPTION\n");
-    console.log(customer.subscriptions);
+    // console.log("\nCUSTOMER OBJ\n");
+    // console.log(customer);
+    // console.log("\nSUBSCRIPTION\n");
+    // console.log(customer.subscriptions);
 
     if (customer.subscriptions.total_count < 1) {
       throw {
@@ -511,6 +507,13 @@ app.post("/authenticate", async (req, res) => {
         message:
           "Your subscription has been canceled, please contact support to update your subscription. (Code 2)"
       };
+    }
+
+    let subStatus = customer.subscriptions.data[0].status;
+    if (userData.subscriptionStatus !== subStatus) {
+      db.collection("users").doc(decodedToken.uid).update({
+        subscriptionStatus: customer.subscriptions.data[0].status
+      });
     }
 
     // Finally, create a session cookie with firebase for this user
@@ -641,7 +644,7 @@ app.post("/upgrade-subscription", async (req, res) => {
   }
 
   let updatedSubscription = await stripe.subscriptions.update(subscriptionID, {
-    cancel_at_period_end: false,
+    payment_behavior: "pending_if_incomplete",
     proration_behavior: "always_invoice",
     items: [
       {
@@ -747,6 +750,78 @@ app.post("/profile", async (req, res) => {
       error
     });
   }
+});
+
+// complete a user signup for someone who pays for a
+// subscription thru a 3rd party platform (i.e. clickfunnels)
+app.post("/complete-signup", async (req, res) => {
+  const { email, password, firstName, lastName } = req.body;
+  if (
+    email.length < 1 ||
+    password.length < 1 ||
+    firstName.length < 1 ||
+    lastName.length < 1
+  ) {
+    res.json({ error: "Required fields are missing" });
+    return;
+  }
+
+  const customers = await stripe.customers.list({
+    email: email,
+    limit: 1
+  });
+
+  if (customers.data.length < 1) {
+    res.json({
+      error: "We could not find a customer with that email address."
+    });
+    return;
+  }
+
+  admin
+    .auth()
+    .createUser({
+      email: email,
+      emailVerified: false,
+      password: password,
+      disabled: false
+    })
+    .then(async function (userRecord) {
+      // See the UserRecord reference doc for the contents of userRecord.
+      console.log("Successfully created new user:", userRecord.uid);
+
+      // Add user data to db
+      let docRef = db.collection("users").doc(userRecord.uid);
+      let setUser = await docRef.set(
+        {
+          userId: userRecord.uid,
+          customerId: customers.data[0].id,
+          subscriptionId: customers.data[0].subscriptions.data[0].id,
+          email: email,
+          firstName: firstName,
+          lastName: lastName,
+          phoneNumber: customers.data[0].phone
+        },
+        { merge: true }
+      );
+
+      // Set custom auth claims with Firebase
+      await admin.auth().setCustomUserClaims(userRecord.uid, {
+        customer_id: customers.data[0].id,
+        subscription_id: customers.data[0].subscriptions.data[0].id
+      });
+
+      res.json({ success: true });
+      return;
+    })
+    .catch(function (error) {
+      console.log("Error creating new user:", error);
+      res.json({
+        error:
+          "We were unable to complete your account setup at this time, please contact support."
+      });
+      return;
+    });
 });
 
 // save user details when signup
@@ -915,6 +990,17 @@ app.get("/futures", async (req, res) => {
 });
 
 // Companies
+app.use("/company/:symbol", checkAuth);
+app.get("/company/:symbol", async (req, res) => {
+  const result = await mutual_funds.lookup(
+    companyAPI,
+    req.params.symbol,
+    req.terminal_app.claims.uid
+  );
+  //const result = await companies.lookup(companyAPI, req.params.symbol);
+  res.send(result);
+});
+
 app.use("/company/:symbol/owners", checkAuth);
 app.get("/company/:symbol/owners", async (req, res) => {
   const result = await companies.getOwners(req.params.symbol);
@@ -1002,7 +1088,6 @@ app.get("/sec-last-price/:symbol", async (req, res) => {
   const lastPrice = await getSecurityData.getSecurityLastPrice(
     req.params.symbol
   );
-
   res.send(lastPrice);
 });
 
@@ -1443,7 +1528,6 @@ app.get("/pin", async (req, res) => {
     req.params.type,
     req.params.inputs
   );
-
   res.send(result);
 });
 
