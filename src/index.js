@@ -34,8 +34,7 @@ import * as news from "./controllers/news";
 import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 import * as dashboard from "./controllers/dashboard";
-
-import * as dashboards from "./controllers/dashboard";
+import * as securities from "./controllers/securities";
 
 import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
@@ -1518,7 +1517,7 @@ app.get("/mutual-funds/:id/follow", async (req, res) => {
 // dashboard & widgets
 app.use("/dashboards", checkAuth);
 app.get("/dashboards", async (req, res) => {
-  const result = await dashboards.get(req.terminal_app.claims.uid);
+  const result = await dashboard.get(req.terminal_app.claims.uid);
   res.send(result);
 });
 
