@@ -475,46 +475,54 @@ app.post("/authenticate", async (req, res) => {
     const customer = await stripe.customers.retrieve(customerId);
     console.log("\nCUSTOMER OBJ\n");
     console.log(customer);
-    // console.log("\nSUBSCRIPTION\n");
-    // console.log(customer.subscriptions);
+    console.log("\nSUBSCRIPTION\n");
+    console.log(customer.subscriptions);
+    console.log("\nEND\n");
 
-    if (customer.subscriptions.total_count < 1) {
-      throw {
-        terminal_error: true,
-        error_code: "SUBSCRIPTION_CANCELED",
-        message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)",
-      };
-    }
-    // Check if customer has paid for their subscription
-    if (
-      customer.subscriptions.data[0].cancel_at_period_end &&
-      Math.round(new Date().getTime() / 1000) >
-        customer.subscriptions.data[0].cancel_at
-    ) {
-      // Bounce to payment page for now
-      // we may need to handle this diferently because the customer actually exists
-      // update existing customers payment method and re-charge rather than sign up new customer
-      //customer.subscriptions.data[0].id
-      // if(customer.subscriptions.total_count > 0) {
-      //   throw { terminal_error: true, error_code:"USER_PAYMENT_NEEDED", message: "Payment needed", customer_id: customerId, subscription_id: customer.subscriptions.data[0].id };
-      // } else {
-      //   throw { terminal_error: true, error_code:"NO_SUBSCRIPTION", message: "We found your customer record but not your subscription, please contact support." };
-      // }
-      throw {
-        terminal_error: true,
-        error_code: "SUBSCRIPTION_CANCELED",
-        message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)",
-      };
-    }
+    // // ---------
+    // // OVERRIDE
+    // // ---------
+    // if (customer.subscriptions.total_count < 1) {
+    //   throw {
+    //     terminal_error: true,
+    //     error_code: "SUBSCRIPTION_CANCELED",
+    //     message:
+    //       "Your subscription has been canceled, please contact support to update your subscription. (Code 1)",
+    //   };
+    // }
+    // // Check if customer has paid for their subscription
+    // if (
+    //   customer.subscriptions.data[0].cancel_at_period_end &&
+    //   Math.round(new Date().getTime() / 1000) >
+    //     customer.subscriptions.data[0].cancel_at
+    // ) {
+    //   // Bounce to payment page for now
+    //   // we may need to handle this diferently because the customer actually exists
+    //   // update existing customers payment method and re-charge rather than sign up new customer
+    //   //customer.subscriptions.data[0].id
+    //   // if(customer.subscriptions.total_count > 0) {
+    //   //   throw { terminal_error: true, error_code:"USER_PAYMENT_NEEDED", message: "Payment needed", customer_id: customerId, subscription_id: customer.subscriptions.data[0].id };
+    //   // } else {
+    //   //   throw { terminal_error: true, error_code:"NO_SUBSCRIPTION", message: "We found your customer record but not your subscription, please contact support." };
+    //   // }
+    //   throw {
+    //     terminal_error: true,
+    //     error_code: "SUBSCRIPTION_CANCELED",
+    //     message:
+    //       "Your subscription has been canceled, please contact support to update your subscription. (Code 2)",
+    //   };
+    // }
 
-    let subStatus = customer.subscriptions.data[0].status;
-    if (userData.subscriptionStatus !== subStatus) {
-      db.collection("users").doc(decodedToken.uid).update({
-        subscriptionStatus: customer.subscriptions.data[0].status,
-      });
-    }
+    // let subStatus = customer.subscriptions.data[0].status;
+    // if (userData.subscriptionStatus !== subStatus) {
+    //   db.collection("users").doc(decodedToken.uid).update({
+    //     subscriptionStatus: customer.subscriptions.data[0].status,
+    //   });
+    // }
+
+    // // ---------
+    // // OVERRIDE
+    // // ---------
 
     // Finally, create a session cookie with firebase for this user
     const sessionCookie = await admin
