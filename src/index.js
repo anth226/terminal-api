@@ -479,6 +479,16 @@ app.post("/authenticate", async (req, res) => {
     console.log(customer.subscriptions);
     console.log("\nEND\n");
 
+    const response = await stripe.subscriptions.list({
+      customer: customerId,
+    });
+
+    let { data } = response;
+
+    let subscriptions = data;
+
+    console.log(subscriptions);
+
     // // ---------
     // // OVERRIDE
     // // ---------
