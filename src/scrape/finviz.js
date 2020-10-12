@@ -6,7 +6,7 @@ const siteUrl = "https://finviz.com/";
 const insiderPage = "https://finviz.com/insidertrading.ashx";
 
 const s3AllInsider =
-  "https://terminal-scrape-data.s3.amazonaws.com/all-insider-trading/allInsider.json";
+  `https://${process.env.AWS_BUCKET_TERMINAL_SCRAPE}.s3.amazonaws.com/all-insider-trading/allInsider.json`;
 
 export async function getAllInsider() {
   try {
