@@ -146,7 +146,7 @@ export const getHoldings = async (uri) => {
 
     let response = {
       ...result[0],
-      url: `https://intrinio-zaks.s3.amazonaws.com/holdings/${cik}/`
+      url: `https://${process.env.AWS_BUCKET_INTRINIO_ZAKS}.s3.amazonaws.com/holdings/${cik}/`
     };
 
     result = await db(`
