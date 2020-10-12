@@ -4,7 +4,7 @@ import { finished } from 'stream';
 
 const siteUrl = "https://finance.yahoo.com/trending-tickers";
 
-const trendingJson = "https://terminal-scrape-data.s3.amazonaws.com/trending/trending.json"
+const trendingJson = `https://${process.env.AWS_BUCKET_TERMINAL_SCRAPE}.s3.amazonaws.com/trending/trending.json`;
 
 export async function getTrending() {
     try {

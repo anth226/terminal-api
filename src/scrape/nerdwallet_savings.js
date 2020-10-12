@@ -1,7 +1,7 @@
 import axios from 'axios';
 //import cheerio from 'cheerio';
 
-const s3Savings = "https://terminal-scrape-data.s3.amazonaws.com/savings/accounts.json";
+const s3Savings = `https://${process.env.AWS_BUCKET_TERMINAL_SCRAPE}.s3.amazonaws.com/savings/accounts.json`;
 
 export async function getSavingsAccounts() {
   try {
