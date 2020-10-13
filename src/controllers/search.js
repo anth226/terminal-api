@@ -2,16 +2,15 @@ import db from "../db";
 import axios from "axios";
 
 export async function searchCompanies(intrinioApi, query, secApi) {
-
   let [etfs, companyResults, mutualFunds] = await Promise.all([
     searchETF(secApi, query),
     searchSec(intrinioApi, query),
-    searchMutualFunds(query),
+    searchMutualFunds(query)
   ]);
 
   etfs.forEach((etf, idx) => {
     let etfTicker = etf.ticker;
-    etf.secType = "ETF";
+    etf.secType = "etf";
     companyResults.companies.forEach(function (com, i) {
       if (etfTicker == com.ticker) {
         companyResults.companies.splice(i, 1);
@@ -22,7 +21,7 @@ export async function searchCompanies(intrinioApi, query, secApi) {
   mutualFunds.forEach((fund, i) => {
     let fundTicker = fund.tickerSymbol;
     fund.ticker = fund.tickerSymbol;
-    fund.secType = "Mutual Fund";
+    fund.secType = "mfund";
     companyResults.companies.forEach(function (com, i) {
       if (fundTicker == com.ticker) {
         companyResults.companies.splice(i, 1);
@@ -30,26 +29,33 @@ export async function searchCompanies(intrinioApi, query, secApi) {
     });
   });
 
-  return interleaveArray(interleaveArray(companyResults.companies, etfs), mutualFunds);
+  return interleaveArray(
+    interleaveArray(companyResults.companies, etfs),
+    mutualFunds
+  );
 }
 
 export function searchMutualFunds(query) {
   let data = axios
-  .get("https://fds1.cannonvalleyresearch.com/api/v1/securitySearch?apiKey=lCWj7ozXyLoxvqr28OCC&searchPattern=" + query + "&active=true&listed=true")
-  .then(function (res) {
-    return res.data ;
-  })
-  .catch(function (err) {
-    console.log(err);
-    return [];
-  });
+    .get(
+      "https://fds1.cannonvalleyresearch.com/api/v1/securitySearch?apiKey=lCWj7ozXyLoxvqr28OCC&searchPattern=" +
+        query +
+        "&active=true&listed=true"
+    )
+    .then(function (res) {
+      return res.data;
+    })
+    .catch(function (err) {
+      console.log(err);
+      return [];
+    });
 
   return data;
 }
 
 export function searchSec(intrinioApi, query) {
   const opts = {
-    pageSize: 20, // Number | The number of results to return
+    pageSize: 20 // Number | The number of results to return
   };
 
   let res = intrinioApi
@@ -68,7 +74,7 @@ export function searchSec(intrinioApi, query) {
 
 async function searchETF(intrinioApi, query) {
   const opts = {
-    pageSize: 30, // Number | The number of results to return
+    pageSize: 30 // Number | The number of results to return
   };
 
   let res = intrinioApi
