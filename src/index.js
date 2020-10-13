@@ -330,12 +330,25 @@ app.post("/checkout", async (req, res) => {
     return;
   }
 
+  let phone = req.body.phone;
+
+  if (!phone) {
+    // trying to get phone number from db
+    let doc = await db.collection("users").doc(userId).get();
+    if (doc.exists) {
+      phone = doc.data().phoneNumber;
+    }
+  }
+
   if (!req.body.customer_id) {
     // create checkout session for new customer
     const session = await stripe.checkout.sessions.create({
       customer_email: email,
       client_reference_id: userId,
       payment_method_types: ["card"],
+      metadata: {
+        phone:phone
+      },
       subscription_data: {
         items: [
           {
