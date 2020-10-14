@@ -330,10 +330,31 @@ app.post("/checkout", async (req, res) => {
     return;
   }
 
+  let phone = req.body.phone;
+  let firstName = req.body.firstName;
+  let lastName = req.body.lastName;
+
+  if (!phone || !firstName || !lastName) {
+    // trying to get user data from db
+    let doc = await db.collection("users").doc(userId).get();
+    if (doc.exists) {
+      phone = doc.data().phoneNumber;
+      firstName = doc.data().firstName;
+      lastName = doc.data().lastName;
+    }
+  }
+
   if (!req.body.customer_id) {
     // create checkout session for new customer
+    const customer = await stripe.customers.create({
+      email:email,
+      phone: phone,
+      name: firstName+" "+lastName,
+      description: firstName+" "+lastName
+    });
+
     const session = await stripe.checkout.sessions.create({
-      customer_email: email,
+      customer: customer.id,
       client_reference_id: userId,
       payment_method_types: ["card"],
       subscription_data: {

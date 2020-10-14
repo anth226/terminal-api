@@ -24,27 +24,50 @@ export function getIntradayPrices(intrinioApi, identifier) {
   return res;
 }
 
-function historicalPages(intrinioApi, identifier, opts, hist) {
-  return intrinioApi
-    .getSecurityHistoricalData(identifier, "adj_close_price", opts)
-    .then(
-      function (data) {
-        data.historical_data.forEach((item, i) => {
-          hist.push(item);
-        });
-        if (data.next_page == null) {
-          return hist;
-        } else {
-          let newOpts = opts;
-          newOpts.nextPage = data.next_page;
-          return historicalPages(intrinioApi, identifier, newOpts, hist);
-        }
-      },
-      function (error) {
-        return error;
-      }
+async function historicalPages(intrinioApi, identifier, opts, hist) {
+  try {
+    let data = await intrinioApi.getSecurityHistoricalData(
+      identifier,
+      "adj_close_price",
+      opts
     );
+
+    data.historical_data.forEach((item, i) => {
+      hist.push(item);
+    });
+
+    if (data.next_page == null) {
+      return hist;
+    } else {
+      let newOpts = opts;
+      newOpts.nextPage = data.next_page;
+      return historicalPages(intrinioApi, identifier, newOpts, hist);
+    }
+  } catch (error) {
+    return [];
+  }
 }
+
+//   return intrinioApi
+//     .getSecurityHistoricalData(identifier, "adj_close_price", opts)
+//     .then(
+//       function (data) {
+//         data.historical_data.forEach((item, i) => {
+//           hist.push(item);
+//         });
+//         if (data.next_page == null) {
+//           return hist;
+//         } else {
+//           let newOpts = opts;
+//           newOpts.nextPage = data.next_page;
+//           return historicalPages(intrinioApi, identifier, newOpts, hist);
+//         }
+//       },
+//       function (error) {
+//         return error;
+//       }
+//     );
+// }
 
 export function getHistoricalData(intrinioApi, identifier, days, freq) {
   let startDate = new Date(Date.now());
