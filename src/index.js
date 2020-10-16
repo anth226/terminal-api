@@ -1,7 +1,5 @@
 import "dotenv/config";
 import express from "express";
-import firebase from "firebase";
-import admin from "firebase-admin";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import axios from "axios";
@@ -52,8 +50,8 @@ import winston, { log } from "winston";
 import Stripe from "stripe";
 
 import { isAuthorized } from "./middleware/authorized";
-
-import config from "./config";
+import { db, admin } from "./services/firebase";
+import { stripe, endpointSecret, couponId, planId } from "./services/stripe";
 
 var bugsnag = require("@bugsnag/js");
 var bugsnagExpress = require("@bugsnag/plugin-express");
@@ -81,25 +79,6 @@ const logger = winston.createLogger({
     //new winston.transports.File({ filename: 'error.log', level: 'error' }),
   ]
 });
-
-// init firebase
-const serviceAccount = config.firebase;
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DATABASE_URL
-});
-
-// firebase db
-const db = admin.firestore();
-
-// init stripe
-const couponId = process.env.STRIPE_COUPON_ID;
-const planId = process.env.STRIPE_PLAN_ID;
-const stripeKey = process.env.STRIPE_API_KEY;
-const endpointSecret = process.env.STRIPE_ENDPOINT_SECRET;
-
-const stripe = Stripe(stripeKey);
 
 // init intrinio
 intrinioSDK.ApiClient.instance.authentications["ApiKeyAuth"].apiKey =
@@ -347,10 +326,10 @@ app.post("/checkout", async (req, res) => {
   if (!req.body.customer_id) {
     // create checkout session for new customer
     const customer = await stripe.customers.create({
-      email:email,
+      email: email,
       phone: phone,
-      name: firstName+" "+lastName,
-      description: firstName+" "+lastName
+      name: firstName + " " + lastName,
+      description: firstName + " " + lastName
     });
 
     const session = await stripe.checkout.sessions.create({
@@ -857,8 +836,9 @@ app.post("/complete-signup", async (req, res) => {
 
 // save user details when signup
 app.post("/signup", async (req, res) => {
-  const { userId, email, firstName, lastName, phoneNumber } = req.body;
   try {
+    const { userId, email, firstName, lastName, phoneNumber } = req.body;
+
     const docRef = db.collection("users").doc(userId);
     await docRef.set({
       email,
