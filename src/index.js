@@ -288,6 +288,7 @@ app.post("/hooks", async (req, res) => {
   }
 
   console.log(evt.type);
+  console.log(evt.data.object);
 
   res.json({ success: true });
 });
