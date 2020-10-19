@@ -287,6 +287,8 @@ app.post("/hooks", async (req, res) => {
     }
   }
 
+  console.log(evt.type);
+
   res.json({ success: true });
 });
 
