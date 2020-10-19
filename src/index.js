@@ -215,80 +215,41 @@ app.post("/hooks", async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (evt.type === "checkout.session.completed") {
-    logger.info("-- checkout session completed --");
-
-    if (evt.data.object.mode == "subscription") {
-      console.log("hit subscription type checkout session");
-
-      const subscriptionId = evt.data.object.subscription;
-      const customerId = evt.data.object.customer;
-      const userId = evt.data.object.client_reference_id;
-      const email = evt.data.object.customer_email;
-
-      // FIREBASE + FIRESTORE
-      try {
-        // Add user data to db
-        let docRef = db.collection("users").doc(userId);
-        let setUser = await docRef.set(
-          {
-            userId: userId,
-            customerId: customerId,
-            subscriptionId: subscriptionId,
-            email: email
-          },
-          { merge: true }
-        );
-
-        // Set custom auth claims with Firebase
-        await admin.auth().setCustomUserClaims(userId, {
-          customer_id: customerId,
-          subscription_id: subscriptionId
-        });
-
-        sendEmail.sendSignupEmail(email);
-        klaviyo.subscribeToList(email);
-      } catch (err) {
-        // error with firebase and firestore
-        logger.error("Stripe Checkout Webhook Error: ", err);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-      }
-    } else if (evt.data.object.mode == "setup") {
-      console.log("hit setup type checkout session");
-      try {
-        const setupIntentId = evt.data.object.setup_intent;
-
-        // Retrieve the SetupIntent
-        const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
-
-        const paymentMethodId = setupIntent.payment_method;
-        const customerId = setupIntent.metadata.customer_id;
-        const subscriptionId = setupIntent.metadata.subscription_id;
-
-        // Attach the PaymentMethod to the customer
-        const paymentMethod = await stripe.paymentMethods.attach(
-          paymentMethodId,
-          { customer: customerId }
-        );
-
-        //Set a default payment method for future invoices
-        const customer = await stripe.customers.update(customerId, {
-          invoice_settings: { default_payment_method: paymentMethodId }
-        });
-
-        //Set default_payment_method on the Subscription
-        const subscription = await stripe.subscriptions.update(subscriptionId, {
-          default_payment_method: paymentMethodId
-        });
-      } catch (err) {
-        logger.error("Stripe Checkout SetupIntent Webhook Error: ", err);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-      }
-    }
-  }
-
   console.log(evt.type);
   console.log(evt.data.object);
+
+  if (evt.type === "charge.succeeded") {
+    let { customer } = evt.data.object.source;
+
+    let response = await stripe.subscriptions.list({
+      customer
+    });
+
+    let { data } = response;
+
+    let subscriptions = data;
+
+    console.log(subscriptions);
+
+    let trial_seconds = 0;
+    if (evt.data.object.amount_captured == 49400) {
+      trial_seconds = 60 * 60 * 24 * 365;
+    }
+
+    if (evt.data.object.amount_captured == 16400) {
+      trial_seconds = 60 * 60 * 24 * 182;
+    }
+    
+    let subscriptionId = subscriptions[0].id;
+
+    console.log(subscriptionId);
+    
+    response = await stripe.subscriptions.update(subscriptionId, {
+      'trial_end': Math.floor(new Date().getTime() / 1000) + trial_seconds
+    })
+
+    console.log(response);
+  }
 
   res.json({ success: true });
 });
