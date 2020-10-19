@@ -219,36 +219,31 @@ app.post("/hooks", async (req, res) => {
   console.log(evt.data.object);
 
   if (evt.type === "charge.succeeded") {
-    let { customer } = evt.data.object.source;
+    if (evt.data.object.amount_captured == 49400 || evt.data.object.amount_captured == 16400) {
+      let { customer } = evt.data.object.source;
 
-    let response = await stripe.subscriptions.list({
-      customer
-    });
+      let response = await stripe.subscriptions.list({
+        customer
+      });
+  
+      let { data } = response;
+  
+      let subscriptions = data;
+  
+      console.log("-- subscriptions --");
+      console.log(subscriptions);
 
-    let { data } = response;
+      let trial_seconds = evt.data.object.amount_captured == 49400 ? 60 * 60 * 24 * 365 : 60 * 60 * 24 * 182;
+      let subscriptionId = subscriptions[0].id;
 
-    let subscriptions = data;
-
-    console.log(subscriptions);
-
-    let trial_seconds = 0;
-    if (evt.data.object.amount_captured == 49400) {
-      trial_seconds = 60 * 60 * 24 * 365;
+      console.log(subscriptionId);
+  
+      response = await stripe.subscriptions.update(subscriptionId, {
+        'trial_end': Math.floor(new Date().getTime() / 1000) + trial_seconds
+      })
+  
+      console.log(response);
     }
-
-    if (evt.data.object.amount_captured == 16400) {
-      trial_seconds = 60 * 60 * 24 * 182;
-    }
-    
-    let subscriptionId = subscriptions[0].id;
-
-    console.log(subscriptionId);
-    
-    response = await stripe.subscriptions.update(subscriptionId, {
-      'trial_end': Math.floor(new Date().getTime() / 1000) + trial_seconds
-    })
-
-    console.log(response);
   }
 
   res.json({ success: true });
