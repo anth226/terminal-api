@@ -360,11 +360,28 @@ app.post("/checkout", async (req, res) => {
 
   if (!req.body.customer_id) {
     // create checkout session for new customer
+
+    // get utm parameters
+    let customerMetadata = {};
+    if (req.body.utm_source && req.body.utm_source !== 'null') {
+      customerMetadata.utm_source = req.body.utm_source;
+    }
+    if (req.body.utm_campaign && req.body.utm_campaign !== 'null') {
+      customerMetadata.utm_campaign = req.body.utm_campaign;
+    }
+    if (req.body.utm_term && req.body.utm_term !== 'null') {
+      customerMetadata.utm_term = req.body.utm_term;
+    }
+    if (req.body.utm_content && req.body.utm_content !== 'null') {
+      customerMetadata.utm_content = req.body.utm_content;
+    }
+
     const customer = await stripe.customers.create({
       email: email,
       phone: phone,
       name: firstName + " " + lastName,
-      description: firstName + " " + lastName
+      description: firstName + " " + lastName,
+      metadata: customerMetadata
     });
 
     const session = await stripe.checkout.sessions.create({
