@@ -19,6 +19,30 @@ export async function getInstitutions({
   `);
 }
 
+export const getSummary = async (cik, userId) => {
+  let data = {
+    summary: null,
+    company: null
+  };
+
+  let result = await db(`
+    SELECT *
+    FROM institutions AS i
+    WHERE cik = '${cik}'
+  `);
+
+  let company;
+
+  if (result.length > 0) {
+    data = {
+      summary: result[0],
+      company
+    };
+  }
+
+  return data;
+};
+
 export const getInstitutionByCIK = async (cik) =>
   db(`
     SELECT *

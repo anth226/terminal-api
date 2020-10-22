@@ -1386,7 +1386,7 @@ app.get("/institutions/list", async (req, res) => {
 app.use("/institutions/:cik/summary", checkAuth);
 app.get("/institutions/:cik/summary", async (req, res) => {
   const result = await institutions.getSummary(
-    req.params.uri,
+    req.params.cik,
     req.terminal_app.claims.uid
   );
   res.send(result);
