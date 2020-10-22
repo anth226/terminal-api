@@ -33,7 +33,7 @@ export async function getTitans({ sort = [], page = 0, size = 100, ...query }) {
 }
 
 export async function getAllBillionaires() {
-  return await db(`
+  let result = await db(`
     SELECT b.*, b_c.ciks, i.json, c.json_calculations, c.ticker, c.json -> 'name' As companyName
     FROM public.billionaires AS b
     LEFT JOIN (
@@ -46,6 +46,17 @@ export async function getAllBillionaires() {
     LEFT JOIN companies c ON bc.cik = c.cik
     WHERE bc.is_primary = true
   `);
+
+  const unique = [...result.reduce((a,c)=>{
+    a.set(c.id, c);
+    return a;
+  }, new Map()).values()];
+
+  return unique;
+  // var unique = data.filter(
+  //   function (x, i) {
+  //      return data[i].id.indexOf(x.id) === i
+  //   });
 
   // return await db(`
   //   SELECT b.*, i.json
