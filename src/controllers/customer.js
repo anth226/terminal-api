@@ -65,7 +65,7 @@ async function createCustomer() {
     });
 
     sendEmail.sendSignupEmail(user.email);
-    klaviyo.subscribeToList(user.email);
+    await klaviyo.subscribeToList(user.email);
 
     await admin.auth().setCustomUserClaims(userDb.uid, {
       customer_id: customerId,

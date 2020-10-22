@@ -247,7 +247,7 @@ app.post("/hooks", async (req, res) => {
         });
 
         sendEmail.sendSignupEmail(email);
-        klaviyo.subscribeToList(email);
+        await klaviyo.subscribeToList(email);
       } catch (err) {
         // error with firebase and firestore
         logger.error("Stripe Checkout Webhook Error: ", err);
