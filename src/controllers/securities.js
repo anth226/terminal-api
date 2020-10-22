@@ -36,7 +36,8 @@ export const lookup = async (companyAPI, identifier, userID) => {
     meta: { ...companyFundamentals },
     company: companyResult.length > 0 ? companyResult[0] : null,
     mutual_fund: mutualFundResult.length > 0 ? mutualFundResult[0] : null,
-    etf: etfResult.length > 0 ? etfResult[0] : null
+    etf: etfResult.length > 0 ? etfResult[0] : null,
+    security: null
   };
 
   return response;
