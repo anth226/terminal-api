@@ -286,31 +286,37 @@ app.post("/hooks", async (req, res) => {
       }
     }
   }
-  
-  if (evt.type === "charge.succeeded") { 
-    if (evt.data.object.amount_captured == 49400 || evt.data.object.amount_captured == 16400) {
+
+  if (evt.type === "charge.succeeded") {
+    if (
+      evt.data.object.amount_captured == 49400 ||
+      evt.data.object.amount_captured == 16400
+    ) {
       let { customer } = evt.data.object.source;
 
       let response = await stripe.subscriptions.list({
         customer
       });
-  
+
       let { data } = response;
-  
+
       let subscriptions = data;
-  
+
       console.log("-- subscriptions --");
       console.log(subscriptions);
 
-      let trial_seconds = evt.data.object.amount_captured == 49400 ? 60 * 60 * 24 * 365 : 60 * 60 * 24 * 182;
+      let trial_seconds =
+        evt.data.object.amount_captured == 49400
+          ? 60 * 60 * 24 * 365
+          : 60 * 60 * 24 * 182;
       let subscriptionId = subscriptions[0].id;
 
       console.log(subscriptionId);
-  
+
       response = await stripe.subscriptions.update(subscriptionId, {
-        'trial_end': Math.floor(new Date().getTime() / 1000) + trial_seconds
-      })
-  
+        trial_end: Math.floor(new Date().getTime() / 1000) + trial_seconds
+      });
+
       console.log("-- subscription update --");
       console.log(response);
     }
@@ -354,11 +360,28 @@ app.post("/checkout", async (req, res) => {
 
   if (!req.body.customer_id) {
     // create checkout session for new customer
+
+    // get utm parameters
+    let customerMetadata = {};
+    if (req.body.utm_source && req.body.utm_source !== 'null') {
+      customerMetadata.utm_source = req.body.utm_source;
+    }
+    if (req.body.utm_campaign && req.body.utm_campaign !== 'null') {
+      customerMetadata.utm_campaign = req.body.utm_campaign;
+    }
+    if (req.body.utm_term && req.body.utm_term !== 'null') {
+      customerMetadata.utm_term = req.body.utm_term;
+    }
+    if (req.body.utm_content && req.body.utm_content !== 'null') {
+      customerMetadata.utm_content = req.body.utm_content;
+    }
+
     const customer = await stripe.customers.create({
       email: email,
       phone: phone,
       name: firstName + " " + lastName,
-      description: firstName + " " + lastName
+      description: firstName + " " + lastName,
+      metadata: customerMetadata
     });
 
     const session = await stripe.checkout.sessions.create({
@@ -751,6 +774,16 @@ app.get("/profile", async (req, res) => {
     }
   );
 
+  const charges = await stripe.charges.list({
+    customer: customer.id
+  });
+
+  const chargesAmount = [];
+
+  charges.data.map((charge) => {
+    chargesAmount.push(charge.amount);
+  });
+
   let paymentMethod = customer.subscriptions.data[0].default_payment_method;
   if (paymentMethod == null) {
     paymentMethod = customer.invoice_settings.default_payment_method;
@@ -766,7 +799,8 @@ app.get("/profile", async (req, res) => {
     amount: customer.subscriptions.data[0].plan.amount / 100.0,
     trial_end: customer.subscriptions.data[0].trial_end,
     next_payment: customer.subscriptions.data[0].current_period_end,
-    ...user
+    ...user,
+    charges: chargesAmount
   });
 });
 
@@ -794,73 +828,84 @@ app.post("/profile", async (req, res) => {
 // complete a user signup for someone who pays for a
 // subscription thru a 3rd party platform (i.e. clickfunnels)
 app.post("/complete-signup", async (req, res) => {
-  const { email, password, firstName, lastName } = req.body;
-  if (
-    email.length < 1 ||
-    password.length < 1 ||
-    firstName.length < 1 ||
-    lastName.length < 1
-  ) {
-    res.json({ error: "Required fields are missing" });
-    return;
-  }
+  try {
+    const { email, password } = req.body;
+    if (email.length < 1 || password.length < 1) {
+      res.json({ error: "Required fields are missing" });
+      return;
+    }
 
-  const customers = await stripe.customers.list({
-    email: email,
-    limit: 1
-  });
-
-  if (customers.data.length < 1) {
-    res.json({
-      error: "We could not find a customer with that email address."
-    });
-    return;
-  }
-
-  admin
-    .auth()
-    .createUser({
+    const customers = await stripe.customers.list({
       email: email,
-      emailVerified: false,
-      password: password,
-      disabled: false
-    })
-    .then(async function (userRecord) {
-      // See the UserRecord reference doc for the contents of userRecord.
-      console.log("Successfully created new user:", userRecord.uid);
-
-      // Add user data to db
-      let docRef = db.collection("users").doc(userRecord.uid);
-      let setUser = await docRef.set(
-        {
-          userId: userRecord.uid,
-          customerId: customers.data[0].id,
-          subscriptionId: customers.data[0].subscriptions.data[0].id,
-          email: email,
-          firstName: firstName,
-          lastName: lastName,
-          phoneNumber: customers.data[0].phone
-        },
-        { merge: true }
-      );
-
-      // Set custom auth claims with Firebase
-      await admin.auth().setCustomUserClaims(userRecord.uid, {
-        customer_id: customers.data[0].id,
-        subscription_id: customers.data[0].subscriptions.data[0].id
-      });
-
-      res.json({ success: true });
-      return;
-    })
-    .catch(function (error) {
-      console.log("Error creating new user:", error);
-      res.json({
-        error:
-          "We were unable to complete your account setup at this time, please contact support."
-      });
-      return;
+      limit: 1
     });
+
+    if (customers.data.length < 1) {
+      return res.json({
+        error: "We could not find a customer with that email address."
+      });
+    }
+
+    const customerId = customers.data[0].id;
+    const firstName = customers.data[0].metadata.first_name;
+
+    const response = await stripe.subscriptions.list({
+      customer: customerId
+    });
+
+    const { data } = response;
+    const subscriptions = data;
+
+    const subscriptionId = subscriptions[0].id;
+
+    const charges = await stripe.charges.list({
+      customer: customerId
+    });
+
+    const chargesAmount = [];
+
+    charges.data.map((charge) => {
+      chargesAmount.push(charge.amount);
+    });
+
+    const authUser = await admin.auth().createUser({
+      email,
+      emailVerified: false,
+      password,
+      disabled: false
+    });
+
+    const docRef = db.collection("users").doc(authUser.uid);
+    await docRef.set(
+      {
+        userId: authUser.uid,
+        customerId,
+        subscriptionId,
+        email: email,
+        firstName,
+        lastName: "",
+        phoneNumber: customers.data[0].phone
+      },
+      { merge: true }
+    );
+
+    await admin.auth().setCustomUserClaims(authUser.uid, {
+      customer_id: customerId,
+      subscription_id: subscriptionId
+    });
+
+    const userMeta = {
+      firstName,
+      charges: chargesAmount
+    };
+
+    res.json({ success: true, userMeta });
+  } catch (error) {
+    res.json({
+      error:
+        "We were unable to complete your account setup at this time, please contact support."
+    });
+  }
 });
 
 // save user details when signup
