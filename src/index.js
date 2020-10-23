@@ -37,6 +37,7 @@ import * as securities from "./controllers/securities";
 import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
+import * as institutions from "./controllers/institutions";
 import * as titans from "./controllers/titans";
 import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
@@ -1372,6 +1373,23 @@ app.use("/industry-performance", checkAuth);
 app.get("/industry-performance", async (req, res) => {
   const industryPerf = await finvizGroups.getIndustriesPerformance();
   res.send(industryPerf);
+});
+
+// Institutions
+
+// app.use("/institutions/list", checkAuth);
+app.get("/institutions/list", async (req, res) => {
+  const result = await institutions.getInstitutions(req.body);
+  res.send(result);
+});
+
+app.use("/institutions/:cik/summary", checkAuth);
+app.get("/institutions/:cik/summary", async (req, res) => {
+  const result = await institutions.getSummary(
+    req.params.cik,
+    req.terminal_app.claims.uid
+  );
+  res.send(result);
 });
 
 // Billionaires
