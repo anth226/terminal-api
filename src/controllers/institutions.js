@@ -15,7 +15,8 @@ export async function getInstitutions({
   // `);
   return await db(`
     SELECT cik, name, json
-    FROM institutions
+    FROM institutions 
+    ORDER BY holdings_updated_at ASC
   `);
 }
 
