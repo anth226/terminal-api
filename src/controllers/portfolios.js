@@ -15,7 +15,7 @@ export async function getPortfolio(cik) {
 
   let path = `holdings/${cik}.json`;
   let params = {
-    Bucket: process.env.BUCKET_INTRINIO_ZAKS,
+    Bucket: process.env.AWS_BUCKET_INTRINIO_ZAKS,
     Key: path
   };
 
@@ -53,7 +53,7 @@ export async function cachePortfolio_Holdings(cik) {
 
   let path = `holdings/${cik}.json`;
   let params = {
-    Bucket: process.env.BUCKET_INTRINIO_ZAKS,
+    Bucket: process.env.AWS_BUCKET_INTRINIO_ZAKS,
     Key: path
   };
 
