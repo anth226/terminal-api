@@ -34,20 +34,26 @@ export async function getTitans({ sort = [], page = 0, size = 100, ...query }) {
 
 export async function getAllBillionaires() {
   let result = await db(`
-    SELECT b.*, b_c.ciks, i.json, c.json_calculations, c.ticker, c.json -> 'name' As companyName
+    SELECT b.*, b_c.ciks, i.json, ih.json_holdings, c.json_calculations, c.ticker, c.json -> 'name' AS companyName
     FROM public.billionaires AS b
     LEFT JOIN (
-      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary, 'rank', rank) ORDER BY rank ASC) AS ciks
+      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary, 'rank', rank) ORDER BY RANK ASC) AS ciks
       FROM public.billionaire_ciks
       GROUP BY titan_id
     ) AS b_c ON b.id = b_c.titan_id
-    LEFT JOIN billionaire_ciks bc on bc.titan_id = b.id 
+    LEFT JOIN billionaire_ciks bc ON bc.titan_id = b.id 
     LEFT JOIN institutions i ON bc.cik = i.cik
+ LEFT JOIN institution_holdings ih ON i.id = ih.id
     LEFT JOIN companies c ON bc.cik = c.cik
     WHERE bc.is_primary = true
   `);
 
   const unique = [...result.reduce((a,c)=>{
+    if (c.json_holdings) {
+      c.holdingsCount = c.json_holdings.length;
+    }else {
+      c.holdingsCount = 0;
+    }
     a.set(c.id, c);
     return a;
   }, new Map()).values()];
