@@ -1620,14 +1620,14 @@ app.get("/mutual-funds/:id/follow", async (req, res) => {
 
 // pages
 app.use("/pages/institutions", checkAuth);
-app.post("/pages/institutions", async (req, res) => {
+app.get("/pages/institutions", async (req, res) => {
   const result = await pages.getPages_Institutions();
 
   res.send(result);
 });
 
 app.use("/pages/titans", checkAuth);
-app.post("/pages/titans", async (req, res) => {
+app.get("/pages/titans", async (req, res) => {
   const result = await pages.getPages_Titans();
   res.send(result);
 });
