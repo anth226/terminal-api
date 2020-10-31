@@ -52,18 +52,19 @@ LEFT JOIN (
     WHERE bc.is_primary = true
   `);
 
-  let bigHoldings = ['Large','Mid','Small'];
+  let bigHoldings = ['Mega','Large','Mid','Small'];
 
   const unique = [...result.reduce((a,c)=>{
-    if (c.data_url != null && c.net_worth > 0 && c.json != null && c.json.fund_size != null) {
+    if (c.data_url != null && c.json != null && c.json.fund_size != null) {
       if (bigHoldings.indexOf(c.json.fund_size) != -1) {
-        c.holdingsIsset = c.net_worth*2;
+        c.sortFactor = 10;
       }else {
-        c.holdingsIsset = c.net_worth*0.1;
+        c.sortFactor = 0.1;
       }
     }else {
-      c.holdingsIsset = 0;
+      c.sortFactor = 0;
     }
+
     a.set(c.id, c);
     return a;
   }, new Map()).values()];
