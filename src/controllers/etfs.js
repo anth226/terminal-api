@@ -8,11 +8,19 @@ import redis, {
 import db from "../db";
 
 export function get_holdings(ticker) {
+  // .get(
+  //   `${
+  //     process.env.INTRINIO_BASE_PATH
+  //   }/zacks/etf_holdings?etf_ticker=${ticker.toUpperCase()}&api_key=${
+  //     process.env.INTRINIO_API_KEY
+  //   }`
+  // )
+
   let holdings = axios
     .get(
       `${
         process.env.INTRINIO_BASE_PATH
-      }/zacks/etf_holdings?etf_ticker=${ticker.toUpperCase()}&api_key=${
+      }/etfs/${ticker.toUpperCase()}/holdings?api_key=${
         process.env.INTRINIO_API_KEY
       }`
     )

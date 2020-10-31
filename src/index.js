@@ -33,6 +33,7 @@ import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 import * as dashboard from "./controllers/dashboard";
 import * as securities from "./controllers/securities";
+import * as pages from "./controllers/pages";
 
 import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
@@ -1614,6 +1615,20 @@ app.get("/mutual-funds/:id/follow", async (req, res) => {
     req.terminal_app.claims.uid,
     req.params.id
   );
+  res.send(result);
+});
+
+// pages
+app.use("/pages/institutions", checkAuth);
+app.get("/pages/institutions", async (req, res) => {
+  const result = await pages.getPages_Institutions();
+
+  res.send(result);
+});
+
+app.use("/pages/titans", checkAuth);
+app.get("/pages/titans", async (req, res) => {
+  const result = await pages.getPages_Titans();
   res.send(result);
 });
 
