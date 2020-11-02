@@ -34,20 +34,37 @@ export async function getTitans({ sort = [], page = 0, size = 100, ...query }) {
 
 export async function getAllBillionaires() {
   let result = await db(`
-    SELECT b.*, b_c.ciks, i.json, c.json_calculations, c.ticker, c.json -> 'name' As companyName
+    SELECT holdings.data_url, b.*, b_c.ciks, i.json, c.json_calculations, c.ticker, c.json -> 'name' AS companyName
     FROM public.billionaires AS b
     LEFT JOIN (
-      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary, 'rank', rank) ORDER BY rank ASC) AS ciks
+      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary, 'rank', rank) ORDER BY RANK ASC) AS ciks
       FROM public.billionaire_ciks
       GROUP BY titan_id
     ) AS b_c ON b.id = b_c.titan_id
-    LEFT JOIN billionaire_ciks bc on bc.titan_id = b.id 
+    LEFT JOIN billionaire_ciks bc ON bc.titan_id = b.id 
     LEFT JOIN institutions i ON bc.cik = i.cik
     LEFT JOIN companies c ON bc.cik = c.cik
+LEFT JOIN (
+   SELECT DISTINCT ON (cik) *
+   FROM holdings
+   ORDER BY cik,batch_id DESC
+) holdings ON holdings.cik = i.cik
     WHERE bc.is_primary = true
   `);
 
+  let bigHoldings = ['Mega','Large','Mid','Small'];
+
   const unique = [...result.reduce((a,c)=>{
+    if (c.data_url != null && c.json != null && c.json.fund_size != null) {
+      if (bigHoldings.indexOf(c.json.fund_size) != -1) {
+        c.sortFactor = 10;
+      }else {
+        c.sortFactor = 0.1;
+      }
+    }else {
+      c.sortFactor = 0;
+    }
+
     a.set(c.id, c);
     return a;
   }, new Map()).values()];
