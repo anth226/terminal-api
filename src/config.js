@@ -1,9 +1,11 @@
-import * as prod from "../firebase-production.json";
-import * as staging from "../firebase-staging.json";
+//import * as prod from "../firebase-production.json";
+//import * as staging from "../firebase-staging.json";
+const prod = require("../firebase-production.json");
+const staging = require("../firebase-staging.json");
 
-const config;
+let config;
 
-if (process.env.RELEASE_STAGE == "production"){
+if (process.env.RELEASE_STAGE == "production") {
   config = {
     firebase: {
       type: prod.type,
@@ -14,10 +16,9 @@ if (process.env.RELEASE_STAGE == "production"){
       client_id: prod.client_id,
       auth_uri: prod.auth_uri,
       token_uri: prod.token_uri,
-      auth_provider_x509_cert_url:
-        prod.auth_provider_x509_cert_url,
-      client_x509_cert_url: prod.client_x509_cert_url
-    }
+      auth_provider_x509_cert_url: prod.auth_provider_x509_cert_url,
+      client_x509_cert_url: prod.client_x509_cert_url,
+    },
   };
 } else {
   config = {
@@ -30,13 +31,10 @@ if (process.env.RELEASE_STAGE == "production"){
       client_id: staging.client_id,
       auth_uri: staging.auth_uri,
       token_uri: staging.token_uri,
-      auth_provider_x509_cert_url:
-      staging.auth_provider_x509_cert_url,
-      client_x509_cert_url: staging.client_x509_cert_url
-    }
+      auth_provider_x509_cert_url: staging.auth_provider_x509_cert_url,
+      client_x509_cert_url: staging.client_x509_cert_url,
+    },
   };
 }
-
-
 
 export default config;
