@@ -1,17 +1,40 @@
-const config = {
-  firebase: {
-    type: process.env.FIREBASE_TYPE,
-    project_id: process.env.FIREBASE_PROJECT_ID,
-    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-    private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    client_email: process.env.FIREBASE_CLIENT_EMAIL,
-    client_id: process.env.FIREBASE_CLIENT_ID,
-    auth_uri: process.env.FIREBASE_AUTH_URI,
-    token_uri: process.env.FIREBASE_TOKEN_URI,
-    auth_provider_x509_cert_url:
-      process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-    client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
-  }
-};
+//import * as prod from "../firebase-production.json";
+//import * as staging from "../firebase-staging.json";
+const prod = require("../firebase-production.json");
+const staging = require("../firebase-staging.json");
+
+let config;
+
+if (process.env.RELEASE_STAGE == "production") {
+  config = {
+    firebase: {
+      type: prod.type,
+      project_id: prod.project_id,
+      private_key_id: prod.private_key_id,
+      private_key: prod.private_key.replace(/\\n/g, "\n"),
+      client_email: prod.client_email,
+      client_id: prod.client_id,
+      auth_uri: prod.auth_uri,
+      token_uri: prod.token_uri,
+      auth_provider_x509_cert_url: prod.auth_provider_x509_cert_url,
+      client_x509_cert_url: prod.client_x509_cert_url,
+    },
+  };
+} else {
+  config = {
+    firebase: {
+      type: staging.type,
+      project_id: staging.project_id,
+      private_key_id: staging.private_key_id,
+      private_key: staging.private_key.replace(/\\n/g, "\n"),
+      client_email: staging.client_email,
+      client_id: staging.client_id,
+      auth_uri: staging.auth_uri,
+      token_uri: staging.token_uri,
+      auth_provider_x509_cert_url: staging.auth_provider_x509_cert_url,
+      client_x509_cert_url: staging.client_x509_cert_url,
+    },
+  };
+}
 
 export default config;

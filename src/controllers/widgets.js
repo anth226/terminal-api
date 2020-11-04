@@ -83,7 +83,8 @@ export const create = async (userId, widgetType, input) => {
 
       if (!widgetDataId) {
         let query = {
-          text: "INSERT INTO widget_data (input) VALUES ($1) RETURNING *",
+          text:
+            "INSERT INTO widget_data (input, updated_at) VALUES ($1, now()) RETURNING *",
           values: [input],
         };
 
