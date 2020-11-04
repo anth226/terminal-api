@@ -1,7 +1,8 @@
 import axios from "axios";
+import "dotenv/config";
 
 export async function processBillionaireSummary(billionaireId) {
-  const url = `http://terminal-bot-staging.us-east-1.elasticbeanstalk.com/billionaires/${billionaireId}/generate_summary?token=XXX`;
+  const url = `${process.env.AWS_EB_ENDPOINT_BOT}/billionaires/${billionaireId}/generate_summary?token=XXX`;
 
   try {
     const response = await axios.get(url);
@@ -13,7 +14,7 @@ export async function processBillionaireSummary(billionaireId) {
 }
 
 export async function processWidgetInput(widgetInstanceId) {
-  const url = `http://terminal-bot-staging.us-east-1.elasticbeanstalk.com/widgets/${widgetInstanceId}/process_input?token=XXX`;
+  const url = `${process.env.AWS_EB_ENDPOINT_BOT}/widgets/${widgetInstanceId}/process_input?token=XXX`;
 
   try {
     const response = await axios.get(url);
