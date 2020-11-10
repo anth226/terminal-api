@@ -365,16 +365,16 @@ app.post("/checkout", async (req, res) => {
 
     // get utm parameters
     let customerMetadata = {};
-    if (req.body.utm_source && req.body.utm_source !== 'null') {
+    if (req.body.utm_source && req.body.utm_source !== "null") {
       customerMetadata.utm_source = req.body.utm_source;
     }
-    if (req.body.utm_campaign && req.body.utm_campaign !== 'null') {
+    if (req.body.utm_campaign && req.body.utm_campaign !== "null") {
       customerMetadata.utm_campaign = req.body.utm_campaign;
     }
-    if (req.body.utm_term && req.body.utm_term !== 'null') {
+    if (req.body.utm_term && req.body.utm_term !== "null") {
       customerMetadata.utm_term = req.body.utm_term;
     }
-    if (req.body.utm_content && req.body.utm_content !== 'null') {
+    if (req.body.utm_content && req.body.utm_content !== "null") {
       customerMetadata.utm_content = req.body.utm_content;
     }
 
@@ -1388,6 +1388,15 @@ app.use("/institutions/:cik/summary", checkAuth);
 app.get("/institutions/:cik/summary", async (req, res) => {
   const result = await institutions.getSummary(
     req.params.cik,
+    req.terminal_app.claims.uid
+  );
+  res.send(result);
+});
+
+app.use("/institutions/:id", checkAuth);
+app.get("/institutions/:id", async (req, res) => {
+  const result = await institutions.getInstitution(
+    req.params.id,
     req.terminal_app.claims.uid
   );
   res.send(result);
