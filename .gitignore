@@ -15,3 +15,6 @@ combined.log
 !.elasticbeanstalk/*.global.yml
 
 _/
+
+firebase-production.json
+firebase-staging.json
