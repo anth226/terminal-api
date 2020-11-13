@@ -117,3 +117,16 @@ export async function prefetchTitans() {
   }
   return [];
 }
+
+export async function prefetchPortfolios() {
+  let result = await db(`
+    SELECT id, name
+    FROM institutions
+    WHERE is_institution = true
+  `);
+
+  if (result.length > 0) {
+    return result;
+  }
+  return [];
+}
