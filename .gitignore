@@ -14,6 +14,7 @@ combined.log
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
 
+
 _/
 
 firebase-production.json
