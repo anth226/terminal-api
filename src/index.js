@@ -1393,6 +1393,15 @@ app.get("/institutions/:cik/summary", async (req, res) => {
   res.send(result);
 });
 
+
+app.use("/institutions/:id", checkAuth);
+app.get("/institutions/:id", async (req, res) => {
+  const result = await institutions.getInstitution(
+    req.params.id,
+    req.terminal_app.claims.uid
+  );
+
+  
 app.use("/institutions/:id/holdings", checkAuth);
 app.get("/institutions/:id/holdings", async (req, res) => {
   const result = await institutions.getHoldings(req.params.id);
