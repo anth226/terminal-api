@@ -1509,6 +1509,11 @@ app.get("/titans", async (req, res) => {
   res.send(result);
 });
 
+app.get("/portfolios/search/typeahead", async (req, res) => {
+  const results = await search.prefetchPortfolios();
+  res.send(results);
+});
+
 app.use("/portfolios/performance", checkAuth);
 app.get("/portfolios/performance", async (req, res) => {
   const result = await performance.getPortfolios(req.body);
