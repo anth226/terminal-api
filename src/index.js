@@ -60,7 +60,7 @@ var bugsnagExpress = require("@bugsnag/plugin-express");
 
 var bugsnagClient = bugsnag({
   apiKey: process.env.BUGSNAG_KEY,
-  otherOption: process.env.RELEASE_STAGE
+  otherOption: process.env.RELEASE_STAGE,
 });
 
 bugsnagClient.use(bugsnagExpress);
@@ -75,11 +75,11 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({
       level: "info",
-      format: winston.format.simple()
-    })
+      format: winston.format.simple(),
+    }),
     //new winston.transports.File({ filename: 'combined.log' })
     //new winston.transports.File({ filename: 'error.log', level: 'error' }),
-  ]
+  ],
 });
 
 // init intrinio
@@ -97,7 +97,7 @@ const expiresIn = 60 * 60 * 24 * 5 * 1000;
 const cookieParams = {
   maxAge: expiresIn,
   httpOnly: true, // dont let browser javascript access cookie ever
-  ephemeral: true // delete this cookie while browser close
+  ephemeral: true, // delete this cookie while browser close
 };
 //secure: true, // only use cookie over https
 
@@ -121,7 +121,7 @@ const app = express();
 var corsOptions = {
   origin: [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`],
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-  credentials: true
+  credentials: true,
 };
 app.use(cors(corsOptions));
 
@@ -237,7 +237,7 @@ app.post("/hooks", async (req, res) => {
             userId: userId,
             customerId: customerId,
             subscriptionId: subscriptionId,
-            email: email
+            email: email,
           },
           { merge: true }
         );
@@ -245,7 +245,7 @@ app.post("/hooks", async (req, res) => {
         // Set custom auth claims with Firebase
         await admin.auth().setCustomUserClaims(userId, {
           customer_id: customerId,
-          subscription_id: subscriptionId
+          subscription_id: subscriptionId,
         });
 
         sendEmail.sendSignupEmail(email);
@@ -275,12 +275,12 @@ app.post("/hooks", async (req, res) => {
 
         //Set a default payment method for future invoices
         const customer = await stripe.customers.update(customerId, {
-          invoice_settings: { default_payment_method: paymentMethodId }
+          invoice_settings: { default_payment_method: paymentMethodId },
         });
 
         //Set default_payment_method on the Subscription
         const subscription = await stripe.subscriptions.update(subscriptionId, {
-          default_payment_method: paymentMethodId
+          default_payment_method: paymentMethodId,
         });
       } catch (err) {
         logger.error("Stripe Checkout SetupIntent Webhook Error: ", err);
@@ -297,7 +297,7 @@ app.post("/hooks", async (req, res) => {
       let { customer } = evt.data.object.source;
 
       let response = await stripe.subscriptions.list({
-        customer
+        customer,
       });
 
       let { data } = response;
@@ -316,7 +316,7 @@ app.post("/hooks", async (req, res) => {
       console.log(subscriptionId);
 
       response = await stripe.subscriptions.update(subscriptionId, {
-        trial_end: Math.floor(new Date().getTime() / 1000) + trial_seconds
+        trial_end: Math.floor(new Date().getTime() / 1000) + trial_seconds,
       });
 
       console.log("-- subscription update --");
@@ -341,7 +341,7 @@ app.post("/checkout", async (req, res) => {
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
-      message: "please enter your email"
+      message: "please enter your email",
     });
     return;
   }
@@ -383,7 +383,7 @@ app.post("/checkout", async (req, res) => {
       phone: phone,
       name: firstName + " " + lastName,
       description: firstName + " " + lastName,
-      metadata: customerMetadata
+      metadata: customerMetadata,
     });
 
     const session = await stripe.checkout.sessions.create({
@@ -393,15 +393,15 @@ app.post("/checkout", async (req, res) => {
       subscription_data: {
         items: [
           {
-            plan: planId
-          }
+            plan: planId,
+          },
         ],
         trial_from_plan: true,
-        coupon: plan
+        coupon: plan,
       },
       success_url:
         apiProtocol + apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
-      cancel_url: apiProtocol + apiURL
+      cancel_url: apiProtocol + apiURL,
     });
     res.json({ session: session });
   } else {
@@ -415,11 +415,11 @@ app.post("/checkout", async (req, res) => {
       setup_intent_data: {
         metadata: {
           customer_id: req.body.customer_id,
-          subscription_id: req.body.subscription_id
-        }
+          subscription_id: req.body.subscription_id,
+        },
       },
       success_url: apiProtocol + apiURL + "/account?s=1",
-      cancel_url: apiProtocol + apiURL
+      cancel_url: apiProtocol + apiURL,
     });
     res.json({ session: session });
   }
@@ -468,7 +468,7 @@ app.post("/authenticate", async (req, res) => {
       throw {
         terminal_error: true,
         error_code: "SESSION_EXPIRED",
-        message: "Your login session has expired, please try logging in again."
+        message: "Your login session has expired, please try logging in again.",
       };
     }
 
@@ -489,7 +489,7 @@ app.post("/authenticate", async (req, res) => {
       if (userData.isAdmin) {
         await admin.auth().setCustomUserClaims(decodedToken.uid, {
           isAdmin: true,
-          customer_id: customerId
+          customer_id: customerId,
         });
       }
     } else {
@@ -503,7 +503,7 @@ app.post("/authenticate", async (req, res) => {
         throw {
           terminal_error: true,
           error_code: "USER_NOT_FOUND",
-          message: "Unable to verify your user record."
+          message: "Unable to verify your user record.",
         };
       }
       // found user in db, get data
@@ -512,7 +512,7 @@ app.post("/authenticate", async (req, res) => {
       customerId = userData.customerId;
       // set claim in firestore auth
       await admin.auth().setCustomUserClaims(decodedToken.uid, {
-        customer_id: customerId
+        customer_id: customerId,
       });
     }
     if (!customerId) {
@@ -521,7 +521,7 @@ app.post("/authenticate", async (req, res) => {
       throw {
         terminal_error: true,
         error_code: "PAYMENT_INCOMPLETE",
-        message: "Please complete your payment"
+        message: "Please complete your payment",
       };
     }
 
@@ -534,7 +534,7 @@ app.post("/authenticate", async (req, res) => {
     console.log("\nEND\n");
 
     const response = await stripe.subscriptions.list({
-      customer: customerId
+      customer: customerId,
     });
 
     let { data } = response;
@@ -548,7 +548,7 @@ app.post("/authenticate", async (req, res) => {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)"
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)",
       };
     }
 
@@ -570,14 +570,14 @@ app.post("/authenticate", async (req, res) => {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)"
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)",
       };
     }
 
     let subStatus = subscriptions[0].status;
     if (userData.subscriptionStatus !== subStatus) {
       db.collection("users").doc(decodedToken.uid).update({
-        subscriptionStatus: subscriptions[0].status
+        subscriptionStatus: subscriptions[0].status,
       });
     }
 
@@ -616,7 +616,7 @@ app.post("/payment", async (req, res) => {
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
-      message: "please enter your email"
+      message: "please enter your email",
     });
     return;
   }
@@ -630,8 +630,8 @@ app.post("/payment", async (req, res) => {
       payment_method: req.body.payment_method,
       email: req.body.email,
       invoice_settings: {
-        default_payment_method: req.body.payment_method
-      }
+        default_payment_method: req.body.payment_method,
+      },
     });
 
     console.log("THE CUSTOMER");
@@ -642,7 +642,7 @@ app.post("/payment", async (req, res) => {
       customer: customer.id,
       items: [{ plan: planId }],
       expand: ["latest_invoice.payment_intent"],
-      coupon: couponId
+      coupon: couponId,
     });
     console.log("THE SUBSCRIPTION");
     console.log(subscription);
@@ -661,13 +661,13 @@ app.post("/payment", async (req, res) => {
       userId: userId,
       customerId: customer.id,
       subscriptionId: subscription.id,
-      email: email
+      email: email,
     });
 
     // Set custom auth claims with Firebase
     await admin.auth().setCustomUserClaims(userId, {
       customer_id: customer.id,
-      subscription_id: subscription.id
+      subscription_id: subscription.id,
     });
 
     res.json({ success: true });
@@ -676,7 +676,7 @@ app.post("/payment", async (req, res) => {
     console.log("/Payment Error: ", err);
     res.json({
       error_code: "USER_PAYMENT_AUTH_ERROR",
-      message: "Unable to validate your payment."
+      message: "Unable to validate your payment.",
     });
   }
 });
@@ -703,7 +703,7 @@ app.post("/upgrade-subscription", async (req, res) => {
   } else {
     res.json({
       status: "error",
-      message: "Invalid subscription type"
+      message: "Invalid subscription type",
     });
     return;
   }
@@ -714,9 +714,9 @@ app.post("/upgrade-subscription", async (req, res) => {
     items: [
       {
         id: subProductID,
-        price: price
-      }
-    ]
+        price: price,
+      },
+    ],
   });
 
   console.log(updatedSubscription);
@@ -747,12 +747,12 @@ app.get("/user", async (req, res) => {
     res.json({
       success: true,
       user,
-      dashboards
+      dashboards,
     });
   } catch (error) {
     res.json({
       success: false,
-      error
+      error,
     });
   }
 });
@@ -771,13 +771,13 @@ app.get("/profile", async (req, res) => {
     {
       expand: [
         "subscriptions.data.default_payment_method",
-        "invoice_settings.default_payment_method"
-      ]
+        "invoice_settings.default_payment_method",
+      ],
     }
   );
 
   const charges = await stripe.charges.list({
-    customer: customer.id
+    customer: customer.id,
   });
 
   const chargesAmount = [];
@@ -802,7 +802,7 @@ app.get("/profile", async (req, res) => {
     trial_end: customer.subscriptions.data[0].trial_end,
     next_payment: customer.subscriptions.data[0].current_period_end,
     ...user,
-    charges: chargesAmount
+    charges: chargesAmount,
   });
 });
 
@@ -815,14 +815,14 @@ app.post("/profile", async (req, res) => {
 
     await docRef.update({
       firstName,
-      lastName
+      lastName,
     });
 
     res.send({ success: true });
   } catch (error) {
     res.json({
       success: false,
-      error
+      error,
     });
   }
 });
@@ -839,12 +839,12 @@ app.post("/complete-signup", async (req, res) => {
 
     const customers = await stripe.customers.list({
       email: email,
-      limit: 1
+      limit: 1,
     });
 
     if (customers.data.length < 1) {
       return res.json({
-        error: "We could not find a customer with that email address."
+        error: "We could not find a customer with that email address.",
       });
     }
 
@@ -852,7 +852,7 @@ app.post("/complete-signup", async (req, res) => {
     const firstName = customers.data[0].metadata.first_name;
 
     const response = await stripe.subscriptions.list({
-      customer: customerId
+      customer: customerId,
     });
 
     const { data } = response;
@@ -861,7 +861,7 @@ app.post("/complete-signup", async (req, res) => {
     const subscriptionId = subscriptions[0].id;
 
     const charges = await stripe.charges.list({
-      customer: customerId
+      customer: customerId,
     });
 
     const chargesAmount = [];
@@ -874,7 +874,7 @@ app.post("/complete-signup", async (req, res) => {
       email,
       emailVerified: false,
       password,
-      disabled: false
+      disabled: false,
     });
 
     const docRef = db.collection("users").doc(authUser.uid);
@@ -886,26 +886,26 @@ app.post("/complete-signup", async (req, res) => {
         email: email,
         firstName,
         lastName: "",
-        phoneNumber: customers.data[0].phone
+        phoneNumber: customers.data[0].phone,
       },
       { merge: true }
     );
 
     await admin.auth().setCustomUserClaims(authUser.uid, {
       customer_id: customerId,
-      subscription_id: subscriptionId
+      subscription_id: subscriptionId,
     });
 
     const userMeta = {
       firstName,
-      charges: chargesAmount
+      charges: chargesAmount,
     };
 
     res.json({ success: true, userMeta });
   } catch (error) {
     res.json({
       error:
-        "We were unable to complete your account setup at this time, please contact support."
+        "We were unable to complete your account setup at this time, please contact support.",
     });
   }
 });
@@ -920,14 +920,14 @@ app.post("/signup", async (req, res) => {
       email,
       firstName,
       lastName,
-      phoneNumber
+      phoneNumber,
     });
 
     res.send({ success: true });
   } catch (error) {
     res.json({
       success: false,
-      error
+      error,
     });
   }
 });
@@ -1393,12 +1393,18 @@ app.get("/institutions/:cik/summary", async (req, res) => {
   res.send(result);
 });
 
+
 app.use("/institutions/:id", checkAuth);
 app.get("/institutions/:id", async (req, res) => {
   const result = await institutions.getInstitution(
     req.params.id,
     req.terminal_app.claims.uid
   );
+
+  
+app.use("/institutions/:id/holdings", checkAuth);
+app.get("/institutions/:id/holdings", async (req, res) => {
+  const result = await institutions.getHoldings(req.params.id);
   res.send(result);
 });
 
