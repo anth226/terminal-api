@@ -23,7 +23,7 @@ export async function getInstitutions({
 export const getSummary = async (cik, userId) => {
   let data = {
     summary: null,
-    company: null
+    company: null,
   };
 
   let result = await db(`
@@ -37,12 +37,48 @@ export const getSummary = async (cik, userId) => {
   if (result.length > 0) {
     data = {
       summary: result[0],
+      company,
+    };
+  }
+
+  return data;
+};
+
+
+export const getInstitution = async (id) => {
+  let data = {
+    summary: null,
+    company: null
+  };
+
+  let result = await db(`
+    SELECT *
+    FROM institutions AS i
+    WHERE id = '${id}'
+  `);
+
+  let company;
+
+  if (result.length > 0) {
+    data = {
+      summary: result[0],
       company
     };
   }
 
   return data;
 };
+
+export async function getHoldings(id) {
+  return await db(`
+  SELECT i_h.json_holdings
+  FROM institutions AS i
+  LEFT JOIN institution_holdings AS i_h
+  ON i.id = i_h.institution_id
+  WHERE i.id = '${id}'
+  `);
+}
+
 
 export const getInstitutionByCIK = async (cik) =>
   db(`
