@@ -22,6 +22,12 @@ export let KEY_ETF_STATS = "KEY_ETF_STATS";
 export let KEY_ETF_ANALYTICS = "KEY_ETF_ANALYTICS";
 export let KEY_ETF_INFO = "KEY_ETF_INFO";
 
+export let AWS_POSTGRES_DB_DATABASE = "AWS_POSTGRES_DB_DATABASE";
+export let AWS_POSTGRES_DB_HOST = "AWS_POSTGRES_DB_HOST";
+export let AWS_POSTGRES_DB_PORT = "AWS_POSTGRES_DB_PORT";
+export let AWS_POSTGRES_DB_USER = "AWS_POSTGRES_DB_USER";
+export let AWS_POSTGRES_DB_PASSWORD = "AWS_POSTGRES_DB_PASSWORD";
+
 function connectDatabase() {
   let credentials = {
     host: process.env.REDIS_HOST,
