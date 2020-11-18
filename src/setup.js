@@ -16,6 +16,6 @@ export const setup = async () => {
   } catch (error) {}
 };
 
-if (isDev) {
+if (isDev == "true") {
   setup();
 }
