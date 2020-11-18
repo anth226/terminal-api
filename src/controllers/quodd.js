@@ -41,7 +41,7 @@ export async function getAllForTicker(ticker) {
   let result = await db(`
     SELECT *
     FROM equities_current
-    WHERE ticker = 'e${ticker}'
+    WHERE symbol = 'e${ticker}'
   `);
 
   return result
