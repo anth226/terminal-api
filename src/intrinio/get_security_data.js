@@ -9,7 +9,7 @@ export function getIntradayPrices(intrinioApi, identifier) {
     endDate: new Date("2019-12-28"), // Date | Return intraday prices stopping at the specified date
     endTime: Date.now(), // String | Return intraday prices stopping at the specified time on the `end_date` (timezone is UTC)
     pageSize: 100, // Number | The number of results to return
-    nextPage: null // String | Gets the next page of data from a previous API call
+    nextPage: null, // String | Gets the next page of data from a previous API call
   };
 
   let res = intrinioApi
@@ -79,7 +79,7 @@ export function getHistoricalData(intrinioApi, identifier, days, freq) {
     endDate: null, // Date | Get historical date on or before this date
     sortOrder: "desc", // String | Sort by date `asc` or `desc`
     pageSize: 100, // Number | The number of results to return
-    nextPage: null // String | Gets the next page of data from a previous API call
+    nextPage: null, // String | Gets the next page of data from a previous API call
   };
 
   return historicalPages(intrinioApi, identifier, opts, []);
@@ -91,7 +91,7 @@ export async function getChartData(intrinioApi, identifier) {
   if (!cache) {
     const [daily, weekly] = await Promise.all([
       getHistoricalData(intrinioApi, identifier, 365, "daily"),
-      getHistoricalData(intrinioApi, identifier, 1825, "weekly")
+      getHistoricalData(intrinioApi, identifier, 1825, "weekly"),
     ]);
     let data = { daily: daily, weekly: weekly };
 
@@ -107,7 +107,7 @@ export async function getChartData(intrinioApi, identifier) {
   }
 }
 
-export function getSecurityLastPrice(symbol) {
+export async function getSecurityLastPrice(symbol) {
   let lastPrice = axios
     .get(
       `${process.env.INTRINIO_BASE_PATH}/securities/${symbol}/prices/realtime?source=iex&api_key=${process.env.INTRINIO_API_KEY}`
@@ -118,8 +118,25 @@ export function getSecurityLastPrice(symbol) {
     .catch(function (err) {
       return err;
     });
-  //
-  return lastPrice.then((data) => data.data);
+
+  let price = await lastPrice.then((data) => data.data);
+
+  if (price) {
+    return price;
+  } else {
+    let backupLastPrice = axios
+      .get(
+        `${process.env.INTRINIO_BASE_PATH}/securities/${symbol}/prices/realtime?source=bats_delayed&api_key=${process.env.INTRINIO_API_KEY}`
+      )
+      .then(function (res) {
+        return res;
+      })
+      .catch(function (err) {
+        return err;
+      });
+
+    return backupLastPrice.then((data) => data.data);
+  }
 }
 
 export async function lookupSecurity(intrinioApi, ticker) {
