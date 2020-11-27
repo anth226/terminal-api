@@ -52,7 +52,6 @@ import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
 
-import setup from "./setup";
 import { isAuthorized } from "./middleware/authorized";
 import { db, admin } from "./services/firebase";
 import { stripe, endpointSecret, couponId, planId } from "./services/stripe";
