@@ -10,7 +10,7 @@ import {
   AWS_POSTGRES_DB_HOST,
   AWS_POSTGRES_DB_PORT,
   AWS_POSTGRES_DB_USER,
-  AWS_POSTGRES_DB_PASSWORD
+  AWS_POSTGRES_DB_PASSWORD,
 } from "../redis";
 
 let dbs = {};
@@ -30,31 +30,31 @@ const connectDatabase = (credentials) => {
 };
 
 export const setup = async () => {
-  if (!isDev == "true") {
+  let host = await sharedCache.get(AWS_POSTGRES_DB_HOST);
+
+  if (!isDev == "true" || host) {
     return;
   }
 
-  console.log("yes dev", sharedCache);
-
   try {
     await sharedCache.set(
-      "AWS_POSTGRES_DB_DATABASE",
+      AWS_POSTGRES_DB_DATABASE,
       process.env.AWS_POSTGRES_DB_1_NAME
     );
     await sharedCache.set(
-      "AWS_POSTGRES_DB_HOST",
+      AWS_POSTGRES_DB_HOST,
       process.env.AWS_POSTGRES_DB_1_HOST
     );
     await sharedCache.set(
-      "AWS_POSTGRES_DB_PORT",
+      AWS_POSTGRES_DB_PORT,
       process.env.AWS_POSTGRES_DB_1_PORT
     );
     await sharedCache.set(
-      "AWS_POSTGRES_DB_USER",
+      AWS_POSTGRES_DB_USER,
       process.env.AWS_POSTGRES_DB_1_USER
     );
     await sharedCache.set(
-      "AWS_POSTGRES_DB_PASSWORD",
+      AWS_POSTGRES_DB_PASSWORD,
       process.env.AWS_POSTGRES_DB_1_PASSWORD
     );
   } catch (error) {
@@ -65,7 +65,7 @@ export const setup = async () => {
 const connectSharedCache = () => {
   let credentials = {
     host: process.env.REDIS_HOST_SHARED_CACHE,
-    port: process.env.REDIS_PORT_SHARED_CACHE
+    port: process.env.REDIS_PORT_SHARED_CACHE,
   };
 
   if (!sharedCache) {
@@ -95,7 +95,7 @@ export const getCredentials = async () => {
     port,
     database,
     user,
-    password
+    password,
   };
 };
 
