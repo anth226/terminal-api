@@ -124,7 +124,7 @@ export async function getAllForTicker(ticker) {
 
   let result = await db(`
     SELECT 
-    date_trunc('second', timestamp) as timestamp, 
+    date_trunc('minute', timestamp) as timestamp, 
     MAX(price) as price,
     count(1)
     from equities_current
@@ -132,8 +132,6 @@ export async function getAllForTicker(ticker) {
     group by 1
     ORDER by 1 DESC
   `);
-
-  console.log({ result }, "result quodd");
 
   let series = [];
 
