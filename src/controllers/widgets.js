@@ -28,6 +28,39 @@ export async function getWidgetsByType(widgetType) {
   }
 }
 
+export async function getWidgetById(id) {
+  let result = await db(`
+    SELECT widget_instances.*, widget_data.*, widgets.*
+    FROM widget_instances
+    JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+    JOIN widgets ON widgets.id = widget_instances.widget_id
+    WHERE widget_instances.id = ${id}
+    `);
+  if (result.length > 0) {
+    return result[0];
+  }
+}
+
+export async function getPortfolioIDByDashboardID(dashbardId) {
+  let result = await db(`
+    SELECT id
+    FROM portfolios
+    WHERE dashboard_id = ${dashbardId}
+  `);
+
+  return result;
+}
+
+export async function getPortfolioHistory(portfolioId) {
+  let result = await db(`
+    SELECT *
+    FROM portfolio_histories
+    WHERE portfolio_id = ${portfolioId}
+  `);
+
+  return result;
+}
+
 export async function getGlobalInsidersNMovers() {
   let widget = await getGlobalWidgetByType("InsidersNMovers");
   if (widget && widget.output) {
@@ -100,9 +133,47 @@ export const create = async (userId, widgetType, input) => {
 
       await bots.processWidgetInput(widgetInstanceId);
 
+      if (
+        widgetType == "CompanyPrice" ||
+        widgetType == "ETFPrice" ||
+        widgetType == "MutualFundPrice"
+      ) {
+        await processStockBuy(widgetInstanceId);
+      }
+
       return result;
     }
   }
+};
+
+export const processStockBuy = async (widgetId) => {
+  let widget = await getWidgetById(widgetId);
+  let ticker = widget.output.ticker;
+  let type = widget.output.type;
+  let open_price = widget.output.price;
+  let portfolioId = await getPortfolioIDByDashboardID(dashboardId);
+
+  let query = {
+    text:
+      "INSERT INTO portfolio_histories (portfolio_id, ticker, type, open_price, open_date) VALUES ($1, $2, $3, $4, now()) RETURNING *",
+    values: [portfolioId, ticker, type, open_price],
+  };
+
+  return await db(query);
+};
+
+export const processStockSell = async (widgetId) => {
+  let widget = await getWidgetById(widgetId);
+  let ticker = widget.output.ticker;
+  let close_price = widget.output.price;
+  let portfolioId = await getPortfolioIDByDashboardID(dashboardId);
+
+  let query = {
+    text: `UPDATE portfolio_histories SET close_price = $3, close_date = now() WHERE portfolio_id = $1 AND ticker = $2 AND open_price IS NOT NULL AND close_price IS NULL`,
+    values: [portfolioId, ticker, close_price],
+  };
+
+  return await db(query);
 };
 
 export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
@@ -118,6 +189,17 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
 export const unpin = async (userId, widgetInstanceId) => {
   let widgetDataId;
   let dataResult;
+
+  let widget = await getWidgetById(widgetInstanceId);
+
+  if (
+    widget.type == "CompanyPrice" ||
+    widget.type == "ETFPrice" ||
+    widget.type == "MutualFundPrice"
+  ) {
+    await processStockSell(widgetInstanceId);
+  }
+
   let query = {
     text: "DELETE FROM widget_instances WHERE id=($1) RETURNING *",
     values: [widgetInstanceId],
