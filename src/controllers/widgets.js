@@ -1,6 +1,7 @@
 import db from "../db";
 import * as dashboard from "./dashboard";
 import * as bots from "./bots";
+import * as getSecurityData from "./intrinio/get_security_data";
 
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
@@ -147,10 +148,14 @@ export const create = async (userId, widgetType, input) => {
 };
 
 export const processStockBuy = async (widgetId) => {
+  let open_price;
   let widget = await getWidgetById(widgetId);
-  let ticker = widget.output.ticker;
-  let type = widget.output.type;
-  let open_price = widget.output.price;
+  let ticker = widget.input.ticker;
+  let type = await securities.getTypeByTicker(ticker);
+  let price = await getSecurityData.getSecurityLastPrice(ticker);
+  if (price) {
+    open_price = price.last_price;
+  }
   let portfolioId = await getPortfolioIDByDashboardID(dashboardId);
 
   let query = {
@@ -163,9 +168,13 @@ export const processStockBuy = async (widgetId) => {
 };
 
 export const processStockSell = async (widgetId) => {
+  let close_price;
   let widget = await getWidgetById(widgetId);
   let ticker = widget.output.ticker;
-  let close_price = widget.output.price;
+  let price = await getSecurityData.getSecurityLastPrice(ticker);
+  if (price) {
+    close_price = price.last_price;
+  }
   let portfolioId = await getPortfolioIDByDashboardID(dashboardId);
 
   let query = {
