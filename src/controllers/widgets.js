@@ -1,5 +1,6 @@
 import db from "../db";
 import * as dashboard from "./dashboard";
+import * as securities from "./securities";
 import * as bots from "./bots";
 import * as getSecurityData from "../intrinio/get_security_data";
 
@@ -49,7 +50,7 @@ export async function getPortfolioIDByDashboardID(dashbardId) {
     WHERE dashboard_id = ${dashbardId}
   `);
 
-  return result;
+  return result[0];
 }
 
 export async function getPortfolioHistory(portfolioId) {
@@ -139,7 +140,11 @@ export const create = async (userId, widgetType, input) => {
         widgetType == "ETFPrice" ||
         widgetType == "MutualFundPrice"
       ) {
-        await processStockBuy(widgetInstanceId);
+        let { ticker } = input;
+        if (!ticker) {
+          return;
+        }
+        let res = await processStockBuy(widgetInstanceId, dashboardId, ticker);
       }
 
       return result;
@@ -147,17 +152,17 @@ export const create = async (userId, widgetType, input) => {
   }
 };
 
-export const processStockBuy = async (widgetId) => {
+export const processStockBuy = async (widgetId, dashboardId, ticker) => {
   let open_price;
-  let widget = await getWidgetById(widgetId);
-  console.log(widget);
-  let ticker = widget.input.ticker;
-  let type = await securities.getTypeByTicker(ticker);
+  let stockType = await securities.getTypeByTicker(ticker);
+  let type = stockType[0].type;
   let price = await getSecurityData.getSecurityLastPrice(ticker);
   if (price) {
     open_price = price.last_price;
   }
-  let portfolioId = await getPortfolioIDByDashboardID(dashboardId);
+
+  let portId = await getPortfolioIDByDashboardID(dashboardId);
+  let portfolioId = portId.id;
 
   let query = {
     text:
@@ -168,7 +173,7 @@ export const processStockBuy = async (widgetId) => {
   return await db(query);
 };
 
-export const processStockSell = async (widgetId) => {
+export const processStockSell = async (widgetId, dashboardId) => {
   let close_price;
   let widget = await getWidgetById(widgetId);
   let ticker = widget.output.ticker;
@@ -202,12 +207,14 @@ export const unpin = async (userId, widgetInstanceId) => {
 
   let widget = await getWidgetById(widgetInstanceId);
 
+  let dashboardId = widget.dashbard_id;
+
   if (
     widget.type == "CompanyPrice" ||
     widget.type == "ETFPrice" ||
     widget.type == "MutualFundPrice"
   ) {
-    await processStockSell(widgetInstanceId);
+    let res = await processStockSell(widgetInstanceId, dashboardId);
   }
 
   let query = {
