@@ -1,7 +1,7 @@
 import db from "../db";
 import * as dashboard from "./dashboard";
 import * as bots from "./bots";
-import * as getSecurityData from "./intrinio/get_security_data";
+import * as getSecurityData from "../intrinio/get_security_data";
 
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
