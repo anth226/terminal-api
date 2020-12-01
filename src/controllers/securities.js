@@ -50,4 +50,5 @@ export const getTypeByTicker = async (ticker) => {
     WHERE ticker = '${ticker}'
     LIMIT 1
   `);
+  return type;
 };
