@@ -37,8 +37,17 @@ export const lookup = async (companyAPI, identifier, userID) => {
     company: companyResult.length > 0 ? companyResult[0] : null,
     mutual_fund: mutualFundResult.length > 0 ? mutualFundResult[0] : null,
     etf: etfResult.length > 0 ? etfResult[0] : null,
-    security: null
+    security: null,
   };
 
   return response;
+};
+
+export const getTypeByTicker = async (ticker) => {
+  let type = await db(`
+    SELECT type
+    FROM securities
+    WHERE ticker = '${ticker}'
+    LIMIT 1
+  `);
 };
