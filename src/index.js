@@ -802,6 +802,10 @@ app.get("/profile", async (req, res) => {
     amount: customer.subscriptions.data[0].plan.amount / 100.0,
     trial_end: customer.subscriptions.data[0].trial_end,
     next_payment: customer.subscriptions.data[0].current_period_end,
+    firstName: user.firstName ? user.firstName : "",
+    lastName: user.lastName ? user.lastName : "",
+    city: user.city ? user.city : "",
+    profileImage: user.profileImage ? user.profileImage : "",
     ...user,
     charges: chargesAmount
   });
@@ -809,14 +813,15 @@ app.get("/profile", async (req, res) => {
 
 // upadte profile
 app.post("/profile", async (req, res) => {
-  const { firstName, lastName } = req.body;
-
+  const { firstName, lastName , city, profileImage} = req.body;
   try {
     const docRef = db.collection("users").doc(req.terminal_app.claims.uid);
 
     await docRef.update({
       firstName,
-      lastName
+      lastName,
+      city:city ? city : null,
+      profileImage: profileImage ? profileImage : null
     });
 
     res.send({ success: true });
