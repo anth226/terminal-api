@@ -43,11 +43,12 @@ export async function getWidgetById(id) {
   }
 }
 
-export async function getPortfolioIDByDashboardID(dashbardId) {
+export async function getPortfolioByDashboardID(dashbardId) {
+  let dashbard_id = parseInt(dashbardId);
   let result = await db(`
-    SELECT id
+    SELECT *
     FROM portfolios
-    WHERE dashboard_id = ${dashbardId}
+    WHERE dashboard_id = ${dashbard_id}
   `);
 
   return result[0];
@@ -161,7 +162,7 @@ export const processStockBuy = async (widgetId, dashboardId, ticker) => {
     open_price = price.last_price;
   }
 
-  let portId = await getPortfolioIDByDashboardID(dashboardId);
+  let portId = await getPortfolioByDashboardID(dashboardId);
   let portfolioId = portId.id;
 
   let query = {
@@ -182,7 +183,7 @@ export const processStockSell = async (widgetId, dashboardId) => {
   if (price) {
     close_price = price.last_price;
   }
-  let portId = await getPortfolioIDByDashboardID(dashboardId);
+  let portId = await getPortfolioByDashboardID(dashboardId);
   if (portId) {
     portfolioId = portId.id;
   }
