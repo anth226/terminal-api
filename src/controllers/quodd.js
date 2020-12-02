@@ -114,11 +114,7 @@ export const getCredentials = async () => {
 // }
 
 export async function getAllForTicker(ticker) {
-  console.log({ ticker });
-
   let credentials = await getCredentials();
-
-  console.log({ credentials });
 
   let db = connectDatabase(credentials);
 
@@ -128,7 +124,7 @@ export async function getAllForTicker(ticker) {
     MAX(price) as price,
     count(1)
     from equities_current
-    WHERE symbol='e${ticker}' AND timestamp > now() - INTERVAL '1 day' AND timestamp < now() + INTERVAL '1 day'
+    WHERE symbol='e${ticker}' AND timestamp > now()::date + interval '9h' + interval '30min'
     group by 1
     ORDER by 1 DESC
   `);
@@ -137,7 +133,11 @@ export async function getAllForTicker(ticker) {
 
   if (result) {
     result.forEach((item) => {
-      const seriesItem = [item.timestamp, item.price / 100];
+      const seriesItem = [
+        item.timestamp,
+        item.price / 100
+        // Date.parse(item.timestamp)
+      ];
       series.push(seriesItem);
     });
   }
