@@ -128,7 +128,7 @@ export async function getAllForTicker(ticker) {
     MAX(price) as price,
     count(1)
     from equities_current
-    WHERE symbol='e${ticker}' AND timestamp > now() - INTERVAL '2 day' AND timestamp < now()
+    WHERE symbol='e${ticker}' AND timestamp > now() - INTERVAL '1 day' AND timestamp < now() + INTERVAL '1 day'
     group by 1
     ORDER by 1 DESC
   `);
