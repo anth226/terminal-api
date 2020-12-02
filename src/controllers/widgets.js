@@ -175,14 +175,17 @@ export const processStockBuy = async (widgetId, dashboardId, ticker) => {
 
 export const processStockSell = async (widgetId, dashboardId) => {
   let close_price;
+  let portfolioId;
   let widget = await getWidgetById(widgetId);
   let ticker = widget.output.ticker;
   let price = await getSecurityData.getSecurityLastPrice(ticker);
   if (price) {
     close_price = price.last_price;
   }
-  let portfolioId = await getPortfolioIDByDashboardID(dashboardId);
-
+  let portId = await getPortfolioIDByDashboardID(dashboardId);
+  if (portId) {
+    portfolioId = portId.id;
+  }
   let query = {
     text: `UPDATE portfolio_histories SET close_price = $3, close_date = now() WHERE portfolio_id = $1 AND ticker = $2 AND open_price IS NOT NULL AND close_price IS NULL`,
     values: [portfolioId, ticker, close_price],
@@ -207,14 +210,14 @@ export const unpin = async (userId, widgetInstanceId) => {
 
   let widget = await getWidgetById(widgetInstanceId);
 
-  let dashboardId = widget.dashbard_id;
+  let dashboardId = widget.dashboard_id;
 
   if (
     widget.type == "CompanyPrice" ||
     widget.type == "ETFPrice" ||
     widget.type == "MutualFundPrice"
   ) {
-    let res = await processStockSell(widgetInstanceId, dashboardId);
+    await processStockSell(widgetInstanceId, dashboardId);
   }
 
   let query = {
