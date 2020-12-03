@@ -10,7 +10,7 @@ import {
   AWS_POSTGRES_DB_HOST,
   AWS_POSTGRES_DB_PORT,
   AWS_POSTGRES_DB_USER,
-  AWS_POSTGRES_DB_PASSWORD
+  AWS_POSTGRES_DB_PASSWORD,
 } from "../redis";
 
 let dbs = {};
@@ -65,7 +65,7 @@ export const setup = async () => {
 const connectSharedCache = () => {
   let credentials = {
     host: process.env.REDIS_HOST_SHARED_CACHE,
-    port: process.env.REDIS_PORT_SHARED_CACHE
+    port: process.env.REDIS_PORT_SHARED_CACHE,
   };
 
   if (!sharedCache) {
@@ -95,7 +95,7 @@ export const getCredentials = async () => {
     port,
     database,
     user,
-    password
+    password,
   };
 };
 
@@ -124,7 +124,7 @@ export async function getAllForTicker(ticker) {
     MAX(price) as price,
     count(1)
     from equities_current
-    WHERE symbol='e${ticker}' AND timestamp > now()::date + interval '9h' + interval '30min'
+    WHERE symbol='e${ticker}' AND timestamp > (now() - interval '5h')::date
     group by 1
     ORDER by 1 DESC
   `);
@@ -135,7 +135,7 @@ export async function getAllForTicker(ticker) {
     result.forEach((item) => {
       const seriesItem = [
         item.timestamp,
-        item.price / 100
+        item.price / 100,
         // Date.parse(item.timestamp)
       ];
       series.push(seriesItem);
