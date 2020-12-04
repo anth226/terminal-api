@@ -431,6 +431,23 @@ app.get("/", async (req, res) => {
   res.send("hello");
 });
 
+app.post("/product-checkout", async (req, res) => {
+  const body = req.body;
+
+  const options = {
+    ...body,
+    amount: body.amount,
+    currency: body.currency
+  };
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.create(options);
+    res.json(paymentIntent);
+  } catch (err) {
+    res.json(err);
+  }
+});
+
 app.post("/signout", async (req, res) => {
   const sessionCookie = req.cookies.access_token || "";
   res.clearCookie("access_token");
