@@ -813,15 +813,17 @@ app.get("/profile", async (req, res) => {
 
 // upadte profile
 app.post("/profile", async (req, res) => {
-  const { firstName, lastName , city, profileImage} = req.body;
   try {
+    const { firstName, lastName, city, profileImage, imageKey } = req.body;
+
     const docRef = db.collection("users").doc(req.terminal_app.claims.uid);
 
     await docRef.update({
       firstName,
       lastName,
-      city:city ? city : null,
-      profileImage: profileImage ? profileImage : null
+      city: city ? city : null,
+      profileImage: profileImage ? profileImage : null,
+      imageKey: imageKey ? imageKey : null
     });
 
     res.send({ success: true });
