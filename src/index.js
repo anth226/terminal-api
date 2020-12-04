@@ -51,6 +51,9 @@ import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
+const multer = require("multer");
+const AWS = require("aws-sdk");
+import { v4 as uuidv4 } from "uuid";
 
 import { isAuthorized } from "./middleware/authorized";
 import { db, admin } from "./services/firebase";
@@ -109,12 +112,6 @@ const apiURL =
 
 const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 
-var rawBodySaver = function (req, res, buf, encoding) {
-  if (buf && buf.length) {
-    req.rawBody = buf.toString(encoding || "utf8");
-  }
-};
-
 // set up middlewares
 const app = express();
 
@@ -127,11 +124,18 @@ var corsOptions = {
 app.use(cors(corsOptions));
 
 app.use(cookieParser());
-//app.use(express.json());
-app.use(bodyParser.json({ verify: rawBodySaver }));
-app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
-app.use(bodyParser.raw({ verify: rawBodySaver, type: "*/*" }));
 
+// var rawBodySaver = function (req, res, buf, encoding) {
+//   if (buf && buf.length) {
+//     req.rawBody = buf.toString(encoding || "utf8");
+//   }
+// };
+
+// app.use(bodyParser.json({ verify: rawBodySaver }));
+// app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
+// app.use(bodyParser.raw({ verify: rawBodySaver, type: "*/*" }));
+
+app.use(express.json());
 app.use(middleware.requestHandler);
 /*
 ~~~~~~Utils~~~~~~
@@ -828,10 +832,37 @@ app.get("/profile", async (req, res) => {
   });
 });
 
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
 // upadte profile
-app.post("/profile", async (req, res) => {
+app.post("/profile", upload.single("imageFile"), async (req, res) => {
   try {
-    const { firstName, lastName, city, profileImage, imageKey } = req.body;
+    let { firstName, lastName, city, profileImage, imageKey } = req.body;
+    const file = req.file;
+
+    let imageNewKey = uuidv4();
+
+    if (file) {
+      const s3 = new AWS.S3({
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        region: process.env.AWS_SES_REGION
+      });
+
+      const params = {
+        Bucket: process.env.AWS_BUCKET_USER_PROFILE,
+        Key: imageNewKey,
+        ContentType: file.mimetype,
+        Body: file.buffer,
+        ACL: "public-read"
+      };
+
+      const s3Upload = await s3.upload(params).promise();
+
+      profileImage = s3Upload.Location;
+      imageKey = imageNewKey;
+    }
 
     const docRef = db.collection("users").doc(req.terminal_app.claims.uid);
 
