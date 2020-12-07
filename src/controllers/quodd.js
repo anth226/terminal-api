@@ -120,6 +120,8 @@ export async function getAllForTicker(ticker) {
 
   console.time("getAllForTicker");
 
+  console.timeLog("getAllForTicker");
+
   let result = await db(`
     SELECT 
     date_trunc('minute', timestamp) as timestamp, 
