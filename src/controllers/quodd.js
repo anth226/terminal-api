@@ -122,15 +122,22 @@ export async function getAllForTicker(ticker) {
 
   console.timeLog("getAllForTicker");
 
+  // let result = await db(`
+  //   SELECT
+  //   date_trunc('minute', timestamp) as timestamp,
+  //   MAX(price) / 100 as price,
+  //   count(1)
+  //   from equities_current
+  //   WHERE symbol='e${ticker}' AND timestamp > (now() - interval '5h')::date
+  //   group by 1
+  //   ORDER by 1 DESC
+  // `);
+
   let result = await db(`
-    SELECT 
-    date_trunc('minute', timestamp) as timestamp, 
-    MAX(price) / 100 as price,
-    count(1)
+    SELECT timestamp, 
+    price / 100 as price,
     from equities_current
     WHERE symbol='e${ticker}' AND timestamp > (now() - interval '5h')::date
-    group by 1
-    ORDER by 1 DESC
   `);
 
   let series = [];
