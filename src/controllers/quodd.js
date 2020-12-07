@@ -121,7 +121,7 @@ export async function getAllForTicker(ticker) {
   let result = await db(`
     SELECT 
     date_trunc('minute', timestamp) as timestamp, 
-    MAX(price) as price,
+    MAX(price) / 100 as price,
     count(1)
     from equities_current
     WHERE symbol='e${ticker}' AND timestamp > (now() - interval '5h')::date
@@ -131,13 +131,11 @@ export async function getAllForTicker(ticker) {
 
   let series = [];
 
+  console.log("getAllForTicker", result.length);
+
   if (result) {
     result.forEach((item) => {
-      const seriesItem = [
-        item.timestamp,
-        item.price / 100,
-        // Date.parse(item.timestamp)
-      ];
+      const seriesItem = [item.timestamp, item.price];
       series.push(seriesItem);
     });
   }
