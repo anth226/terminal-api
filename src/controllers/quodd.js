@@ -118,6 +118,8 @@ export async function getAllForTicker(ticker) {
 
   let db = connectDatabase(credentials);
 
+  console.time("getAllForTicker");
+
   let result = await db(`
     SELECT 
     date_trunc('minute', timestamp) as timestamp, 
@@ -131,14 +133,21 @@ export async function getAllForTicker(ticker) {
 
   let series = [];
 
+  console.timeLog("getAllForTicker");
   console.log("getAllForTicker", result.length);
 
   if (result) {
-    result.forEach((item) => {
-      const seriesItem = [item.timestamp, item.price];
-      series.push(seriesItem);
-    });
+    // result.forEach((item) => {
+    //   const seriesItem = [item.timestamp, item.price];
+    //   series.push(seriesItem);
+    // });
+
+    series = result.map((item) => [item.timestamp, item.price]);
   }
+
+  console.timeLog("getAllForTicker");
+
+  console.timeEnd("getAllForTicker");
 
   return series;
 }
