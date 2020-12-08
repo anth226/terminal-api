@@ -157,8 +157,8 @@ export async function getAllForTicker(ticker) {
 
         const range = ["05:00", "14:30"];
 
-        const t1 = moment.utc(range[1], "HH:mm");
-        const t2 = moment.utc(range[2], "HH:mm");
+        const t1 = moment.utc(range[0], "HH:mm");
+        const t2 = moment.utc(range[1], "HH:mm");
 
         const now = moment.utc();
 
