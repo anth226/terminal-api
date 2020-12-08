@@ -472,12 +472,12 @@ app.post("/product-checkout", async (req, res) => {
       "billing_address": {
         "first_name": data.firstName,
         "last_name": data.lastName,
-        "address1": !data.shippingAsBilling ? data.shippingAddress: data.billingAddress,
+        "address1": data.differentBilling ? data.billingAddress : data.shippingAddress,
         "phone": data.phoneNumber,
-        "city": !data.shippingAsBilling ? data.shippingCity: data.billingCity,
-        "province": !data.shippingAsBilling ? data.shippingRegion: data.billingRegion,
+        "city": data.differentBilling ? data.billingCity : data.shippingCity,
+        "province": data.differentBilling ? data.billingRegion : data.shippingRegion,
         "country": "USA",
-        "zip": !data.shippingAsBilling ? data.shippingPostalCode: data.billingPostalCode
+        "zip": data.differentBilling ? data.billingPostalCode : data.shippingPostalCode
       },
       "shipping_address": {
         "first_name": data.firstName,
