@@ -61,9 +61,9 @@ import { stripe, endpointSecret, couponId, planId } from "./services/stripe";
 import Shopify from "shopify-api-node";
 
 const shopify = new Shopify({
-  shopName: 'portfolio-insider',
-  apiKey: '26774218d929d0a2e7ad7d46a4cfde09',
-  password: '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'
+  shopName: "portfolio-insider",
+  apiKey: "26774218d929d0a2e7ad7d46a4cfde09",
+  password: "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",
 });
 
 var bugsnag = require("@bugsnag/js");
@@ -458,38 +458,44 @@ app.post("/product-checkout", async (req, res) => {
     const productVariantId = 37409762508998;
 
     const order = {
-      "line_items": [
+      line_items: [
         {
-          "variant_id": productVariantId,
-          "quantity": 1
-        }
+          variant_id: productVariantId,
+          quantity: 1,
+        },
       ],
-      "customer": {
-        "first_name": data.firstName,
-        "last_name": data.lastName,
-        "email": data.email
+      customer: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
       },
-      "billing_address": {
-        "first_name": data.firstName,
-        "last_name": data.lastName,
-        "address1": data.differentBilling ? data.billingAddress : data.shippingAddress,
-        "phone": data.phoneNumber,
-        "city": data.differentBilling ? data.billingCity : data.shippingCity,
-        "province": data.differentBilling ? data.billingRegion : data.shippingRegion,
-        "country": "USA",
-        "zip": data.differentBilling ? data.billingPostalCode : data.shippingPostalCode
+      billing_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.differentBilling
+          ? data.billingAddress
+          : data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.differentBilling ? data.billingCity : data.shippingCity,
+        province: data.differentBilling
+          ? data.billingRegion
+          : data.shippingRegion,
+        country: "USA",
+        zip: data.differentBilling
+          ? data.billingPostalCode
+          : data.shippingPostalCode,
       },
-      "shipping_address": {
-        "first_name": data.firstName,
-        "last_name": data.lastName,
-        "address1": data.shippingAddress,
-        "phone": data.phoneNumber,
-        "city": data.shippingCity,
-        "province": data.shippingRegion,
-        "country": "USA",
-        "zip": data.shippingPostalCode
+      shipping_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.shippingCity,
+        province: data.shippingRegion,
+        country: "USA",
+        zip: data.shippingPostalCode,
       },
-      "email": data.email
+      email: data.email,
     };
 
     await shopify.order.create(order);
@@ -1813,6 +1819,12 @@ app.get("/widgets/:id/unpin", async (req, res) => {
 // app.use("/widgets/:id", checkAuth);
 app.get("/widgets/:id", async (req, res) => {
   const result = await widgets.get(req.params.id);
+  res.send(result);
+});
+
+// app.use("/widgets/global/:type", checkAuth);
+app.get("/widgets/global/:type", async (req, res) => {
+  const result = await widgets.getGlobalWidgetByType(req.params.type);
   res.send(result);
 });
 
