@@ -184,7 +184,7 @@ export async function getAllForTicker(ticker) {
 
   if (result) {
     if (result.length > 0) {
-      series = result.map((item) => [item.timestamp, item.price]);
+      series = result.map((item) => [item.timestamp, parseFloat(item.price)]);
     } else {
       // evaluate date string for weekends
       let dateString;
