@@ -2,10 +2,11 @@ import db from "../db";
 import axios from "axios";
 
 export async function searchCompanies(intrinioApi, query, secApi) {
-  let [etfs, companyResults, mutualFunds] = await Promise.all([
+  let [etfs, companyResults, mutualFunds, securities] = await Promise.all([
     searchETF(secApi, query),
     searchSec(intrinioApi, query),
-    searchMutualFunds(query)
+    searchMutualFunds(query),
+    searchSecurities(query),
   ]);
 
   etfs.forEach((etf, idx) => {
@@ -29,10 +30,34 @@ export async function searchCompanies(intrinioApi, query, secApi) {
     });
   });
 
+  securities.forEach((sec, i) => {
+    let securityTicker = sec.ticker;
+    companyResults.companies.forEach(function (com, i) {
+      if (securityTicker == com.ticker) {
+        companyResults.companies.splice(i, 1);
+      }
+    });
+  });
+
   return interleaveArray(
-    interleaveArray(companyResults.companies, etfs),
-    mutualFunds
+    interleaveArray(
+      interleaveArray(companyResults.companies, etfs),
+      mutualFunds
+    ),
+    securities
   );
+}
+
+export async function searchSecurities(query) {
+  let data = await db(`
+              SELECT ticker, name
+              FROM securities
+              WHERE ticker LIKE '%${query}%' OR name LIKE '%${query}%'
+            `);
+
+  //console.log(data);
+
+  return data;
 }
 
 export function searchMutualFunds(query) {
@@ -55,7 +80,7 @@ export function searchMutualFunds(query) {
 
 export function searchSec(intrinioApi, query) {
   const opts = {
-    pageSize: 20 // Number | The number of results to return
+    pageSize: 20, // Number | The number of results to return
   };
 
   let res = intrinioApi
@@ -74,7 +99,7 @@ export function searchSec(intrinioApi, query) {
 
 async function searchETF(intrinioApi, query) {
   const opts = {
-    pageSize: 30 // Number | The number of results to return
+    pageSize: 30, // Number | The number of results to return
   };
 
   let res = intrinioApi

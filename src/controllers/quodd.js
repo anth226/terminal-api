@@ -1,181 +1,249 @@
 //import axios from "axios";
 import "dotenv/config";
+const { Client } = require("pg");
 
-const AWS = require("aws-sdk");
+const MTZ = require("moment-timezone");
 
-AWS.config.update({
-  region: process.env.SES_REGION,
-});
+import asyncRedis from "async-redis";
+import redis from "redis";
+import moment from "moment";
 
-var https = require("https");
-var agent = new https.Agent({
-  maxSockets: 5000,
-});
+import {
+  AWS_POSTGRES_DB_DATABASE,
+  AWS_POSTGRES_DB_HOST,
+  AWS_POSTGRES_DB_PORT,
+  AWS_POSTGRES_DB_USER,
+  AWS_POSTGRES_DB_PASSWORD,
+} from "../redis";
 
-// const writeClient = new AWS.TimestreamWrite({
-//   maxRetries: 10,
-//   httpOptions: {
-//     timeout: 20000,
-//     agent: agent,
-//   },
-// });
+let dbs = {};
+let sharedCache;
+const isDev = process.env.IS_DEV;
 
-const queryClient = new AWS.TimestreamQuery();
+const connectDatabase = (credentials) => {
+  if (!dbs[credentials.host]) {
+    const client = new Client(credentials);
 
-const SELECT_ALL_QUERY = `SELECT * FROM "staging-nasdaq-basic"."equities"`;
+    client.connect();
 
-async function getAllRows(query, nextToken) {
-  const params = {
-    QueryString: query,
-  };
+    dbs[credentials.host] = async (sql, cb) =>
+      (await client.query(sql, cb)).rows;
+  }
+  return dbs[credentials.host];
+};
 
-  if (nextToken) {
-    params.NextToken = nextToken;
+export const setup = async () => {
+  let host = await sharedCache.get(AWS_POSTGRES_DB_HOST);
+
+  if (!isDev == "true" || host) {
+    return;
   }
 
-  await queryClient
-    .query(params)
-    .promise()
-    .then(
-      (response) => {
-        parseQueryResult(response);
-        if (response.NextToken) {
-          getAllRows(query, response.NextToken);
-        }
-      },
-      (err) => {
-        console.error("Error while querying:", err);
-      }
+  try {
+    await sharedCache.set(
+      AWS_POSTGRES_DB_DATABASE,
+      process.env.AWS_POSTGRES_DB_1_NAME
     );
-  //return data;
-}
+    await sharedCache.set(
+      AWS_POSTGRES_DB_HOST,
+      process.env.AWS_POSTGRES_DB_1_HOST
+    );
+    await sharedCache.set(
+      AWS_POSTGRES_DB_PORT,
+      process.env.AWS_POSTGRES_DB_1_PORT
+    );
+    await sharedCache.set(
+      AWS_POSTGRES_DB_USER,
+      process.env.AWS_POSTGRES_DB_1_USER
+    );
+    await sharedCache.set(
+      AWS_POSTGRES_DB_PASSWORD,
+      process.env.AWS_POSTGRES_DB_1_PASSWORD
+    );
+  } catch (error) {
+    console.log(error, "---error---");
+  }
+};
 
-async function getRows(query) {
-  const params = {
-    QueryString: query,
+const connectSharedCache = () => {
+  let credentials = {
+    host: process.env.REDIS_HOST_SHARED_CACHE,
+    port: process.env.REDIS_PORT_SHARED_CACHE,
   };
 
-  let data = await queryClient
-    .query(params)
-    .promise()
-    .then(
-      (response) => {
-        return parseQueryResult(response);
-      },
-      (err) => {
-        console.error("Error while querying:", err);
-      }
-    );
-  return data;
-}
+  if (!sharedCache) {
+    const client = redis.createClient(credentials);
+    client.on("error", function (error) {
+      //   reportError(error);
+    });
 
-// async function tryQueryWithMultiplePages(limit) {
-//     const queryWithLimits = SELECT_ALL_QUERY + " LIMIT " + limit;
-//     console.log(`Running query with multiple pages: ${queryWithLimits}`);
-//     await getAllRows(queryWithLimits, null)
+    sharedCache = asyncRedis.decorate(client);
+  }
+  return sharedCache;
+};
+
+export const getCredentials = async () => {
+  connectSharedCache();
+
+  await setup();
+
+  let host = await sharedCache.get(AWS_POSTGRES_DB_HOST);
+  let port = await sharedCache.get(AWS_POSTGRES_DB_PORT);
+  let database = await sharedCache.get(AWS_POSTGRES_DB_DATABASE);
+  let user = await sharedCache.get(AWS_POSTGRES_DB_USER);
+  let password = await sharedCache.get(AWS_POSTGRES_DB_PASSWORD);
+
+  return {
+    host,
+    port,
+    database,
+    user,
+    password,
+  };
+};
+
+// export async function test() {
+//   let dateString;
+//   let today = MTZ().tz("America/New_York");
+
+//   console.log("today", today.day());
+
+//   // let newYork = today;
+
+//   // let year = newYork.format("YYYY");
+//   // let month = newYork.format("M");
+//   // let day = newYork.format("D");
+
+//   // dateString = `${year}-${month}-${day}`;
+
+//   if (today.day() == 6) {
+//     // dateString = `${new Date().getUTCFullYear()}-${
+//     //   new Date().getUTCMonth() + 1
+//     // }-${new Date().getUTCDate() - 1}`;
+
+//     let newYork = today.subtract(1, "days");
+
+//     let year = newYork.format("YYYY");
+//     let month = newYork.format("M");
+//     let day = newYork.format("D");
+
+//     dateString = `${year}-${month}-${day}`;
+//   } else if (today.day() == 0) {
+//     let newYork = today.subtract(2, "days");
+
+//     let year = newYork.format("YYYY");
+//     let month = newYork.format("M");
+//     let day = newYork.format("D");
+
+//     dateString = `${year}-${month}-${day}`;
+//   }
+
+//   let newYork = today.subtract(2, "days");
+
+//   let year = newYork.format("YYYY");
+//   let month = newYork.format("M");
+//   let day = newYork.format("D");
+
+//   dateString = `${year}-${month}-${day}`;
+
+//   console.log(dateString);
 // }
 
-function parseQueryResult(response) {
-  const columnInfo = response.ColumnInfo;
-  const rows = response.Rows;
-  let data = [];
-
-  //console.log("Metadata: " + JSON.stringify(columnInfo));
-  //console.log("Data: ");
-
-  rows.forEach(function (row) {
-    data.push(parseRow(columnInfo, row));
-  });
-  //console.log(data);
-  return data;
-}
-
-function parseRow(columnInfo, row) {
-  const data = row.Data;
-  const rowOutput = [];
-
-  var i;
-  for (i = 0; i < data.length; i++) {
-    let info = columnInfo[i];
-    let datum = data[i];
-    rowOutput.push(parseDatum(info, datum));
-  }
-
-  return `{${rowOutput.join(", ")}}`;
-}
-
-function parseDatum(info, datum) {
-  if (datum.NullValue != null && datum.NullValue === true) {
-    return `${info.Name}=NULL`;
-  }
-
-  const columnType = info.Type;
-
-  // If the column is of TimeSeries Type
-  if (columnType.TimeSeriesMeasureValueColumnInfo != null) {
-    return parseTimeSeries(info, datum);
-  }
-  // If the column is of Array Type
-  else if (columnType.ArrayColumnInfo != null) {
-    const arrayValues = datum.ArrayValue;
-    return `${info.Name}=${parseArray(info.Type.ArrayColumnInfo, arrayValues)}`;
-  }
-  // If the column is of Row Type
-  else if (columnType.RowColumnInfo != null) {
-    const rowColumnInfo = info.Type.RowColumnInfo;
-    const rowValues = datum.RowValue;
-    return parseRow(rowColumnInfo, rowValues);
-  }
-  // If the column is of Scalar Type
-  else {
-    return parseScalarType(info, datum);
-  }
-}
-
-function parseTimeSeries(info, datum) {
-  const timeSeriesOutput = [];
-  datum.TimeSeriesValue.forEach(function (dataPoint) {
-    timeSeriesOutput.push(
-      `{time=${dataPoint.Time}, value=${parseDatum(
-        info.Type.TimeSeriesMeasureValueColumnInfo,
-        dataPoint.Value
-      )}}`
-    );
-  });
-
-  return `[${timeSeriesOutput.join(", ")}]`;
-}
-
-function parseScalarType(info, datum) {
-  return parseColumnName(info) + datum.ScalarValue;
-}
-
-function parseColumnName(info) {
-  return info.Name == null ? "" : `${info.Name}=`;
-}
-
-function parseArray(arrayColumnInfo, arrayValues) {
-  const arrayOutput = [];
-  arrayValues.forEach(function (datum) {
-    arrayOutput.push(parseDatum(arrayColumnInfo, datum));
-  });
-  return `[${arrayOutput.join(", ")}]`;
-}
-
-// Quodd functions
-
-export async function getAll() {
-  let data = await getRows(SELECT_ALL_QUERY);
-  if (data) {
-    return data;
-  }
-}
-
 export async function getAllForTicker(ticker) {
-  let query = `SELECT * FROM "${process.env.AWS_TIMESTREAM_DB}"."${process.env.AWS_TIMESTREAM_DB_TABLE_EQUITIES}" WHERE symbol = 'e${ticker}'`;
-  let data = await getRows(query);
-  //console.log(data);
-  if (data) {
-    return data;
+  let credentials = await getCredentials();
+
+  let db = connectDatabase(credentials);
+
+  console.time("getAllForTicker");
+
+  console.timeLog("getAllForTicker");
+
+  // let result = await db(`
+  //   SELECT
+  //   date_trunc('minute', timestamp) as timestamp,
+  //   MAX(price) / 100 as price,
+  //   count(1)
+  //   from equities_current
+  //   WHERE symbol='e${ticker}' AND timestamp > (now() - interval '5h')::date
+  //   group by 1
+  //   ORDER by 1 DESC
+  // `);
+
+  let result = await db(`
+    SELECT timestamp, 
+    price::decimal / 100 as price
+    FROM equities_current
+    WHERE symbol='e${ticker}' AND timestamp > (now() - interval '5h')::date
+    ORDER BY timestamp ASC
+  `);
+
+  let series = [];
+  let url;
+
+  console.timeLog("getAllForTicker");
+  console.log("getAllForTicker", result.length);
+
+  if (result) {
+    if (result.length > 0) {
+      series = result.map((item) => [item.timestamp, parseFloat(item.price)]);
+    } else {
+      // evaluate date string for weekends
+      let dateString;
+
+      let today = MTZ().tz("America/New_York");
+
+      if (today.day() == 6) {
+        let newYork = today.subtract(1, "days");
+
+        let year = newYork.format("YYYY");
+        let month = newYork.format("M");
+        let day = newYork.format("D");
+
+        dateString = `${year}-${month}-${day}`;
+      } else if (today.day() == 0) {
+        let newYork = today.subtract(2, "days");
+
+        let year = newYork.format("YYYY");
+        let month = newYork.format("M");
+        let day = newYork.format("D");
+
+        dateString = `${year}-${month}-${day}`;
+      } else {
+        const range = ["05:00", "14:30"];
+
+        const t1 = moment.utc(range[0], "HH:mm");
+        const t2 = moment.utc(range[1], "HH:mm");
+
+        const now = moment.utc();
+
+        if (now.isAfter(t1) && now.isBefore(t2)) {
+          console.log("in range");
+          let newYork = today.subtract(1, "days");
+
+          let year = newYork.format("YYYY");
+          let month = newYork.format("M");
+          let day = newYork.format("D");
+
+          dateString = `${year}-${month}-${day}`;
+        }
+      }
+
+      if (dateString) {
+        let key = `e${ticker}/${dateString}.json`;
+
+        url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
+      }
+    }
   }
+
+  let response = {
+    series,
+    url,
+  };
+
+  console.timeLog("getAllForTicker");
+
+  console.timeEnd("getAllForTicker");
+
+  return response;
 }
