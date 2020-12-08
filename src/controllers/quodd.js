@@ -4,6 +4,7 @@ const { Client } = require("pg");
 
 import asyncRedis from "async-redis";
 import redis from "redis";
+import moment from "moment";
 
 import {
   AWS_POSTGRES_DB_DATABASE,
@@ -141,22 +142,63 @@ export async function getAllForTicker(ticker) {
   `);
 
   let series = [];
+  let url;
 
   console.timeLog("getAllForTicker");
   console.log("getAllForTicker", result.length);
 
   if (result) {
-    // result.forEach((item) => {
-    //   const seriesItem = [item.timestamp, item.price];
-    //   series.push(seriesItem);
-    // });
+    if (result.length > 0) {
+      series = result.map((item) => [item.timestamp, item.price]);
+    } else {
+      // evaluate date string for weekends
+      let dateString;
 
-    series = result.map((item) => [item.timestamp, item.price]);
+      let today = new Date();
+      if (today.getDay() == 6) {
+        dateString = `${new Date().getUTCFullYear()}-${
+          new Date().getUTCMonth() + 1
+        }-${new Date().getUTCDate() - 1}`;
+      } else if (today.getDay() == 0) {
+        dateString = `${new Date().getUTCFullYear()}-${
+          new Date().getUTCMonth() + 1
+        }-${new Date().getUTCDate() - 2}`;
+      } else {
+        // evaluate date string for 00:01AM to 9:01A
+
+        // 00:00
+        // 5:00A 2:30P UTC
+
+        const range = ["05:00", "14:30"];
+
+        const t1 = moment.utc(range[1], "HH:mm");
+        const t2 = moment.utc(range[2], "HH:mm");
+
+        const now = moment.utc();
+
+        if (now.isAfter(t1) && now.isBefore(t2)) {
+          dateString = `${new Date().getUTCFullYear()}-${
+            new Date().getUTCMonth() + 1
+          }-${new Date().getUTCDate() - 1}`;
+        }
+      }
+
+      if (dateString) {
+        let key = `e${ticker}/${dateString}.json`;
+
+        url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}}`;
+      }
+    }
   }
+
+  let response = {
+    series,
+    url,
+  };
 
   console.timeLog("getAllForTicker");
 
   console.timeEnd("getAllForTicker");
 
-  return series;
+  return response;
 }
