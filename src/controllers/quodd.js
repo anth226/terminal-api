@@ -100,20 +100,6 @@ export const getCredentials = async () => {
   };
 };
 
-// export async function getAllForTicker(ticker) {
-//   let credentials = await getCredentials();
-
-//   let db = connectDatabase(credentials);
-
-//   let result = await db(`
-//     SELECT *
-//     FROM equities_current
-//     WHERE symbol = 'e${ticker}'
-//   `);
-
-//   return result;
-// }
-
 export async function getAllForTicker(ticker) {
   let credentials = await getCredentials();
 
