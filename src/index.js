@@ -1731,6 +1731,18 @@ app.get("/pin", async (req, res) => {
   res.send(result);
 });
 
+// app.get("/ping", async (req, res) => {
+//   // const result = await widgets.create(
+//   //   req.terminal_app.claims.uid,
+//   //   req.params.type,
+//   //   req.params.inputs
+//   // );
+
+//   await quodd.test();
+
+//   res.send(null);
+// });
+
 app.use("/widgets/pin", checkAuth);
 app.post("/widgets/pin", async (req, res) => {
   const result = await widgets.create(

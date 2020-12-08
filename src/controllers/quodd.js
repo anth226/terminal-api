@@ -2,6 +2,8 @@
 import "dotenv/config";
 const { Client } = require("pg");
 
+const MTZ = require("moment-timezone");
+
 import asyncRedis from "async-redis";
 import redis from "redis";
 import moment from "moment";
@@ -100,6 +102,53 @@ export const getCredentials = async () => {
   };
 };
 
+// export async function test() {
+//   let dateString;
+//   let today = MTZ().tz("America/New_York");
+
+//   console.log("today", today.day());
+
+//   // let newYork = today;
+
+//   // let year = newYork.format("YYYY");
+//   // let month = newYork.format("M");
+//   // let day = newYork.format("D");
+
+//   // dateString = `${year}-${month}-${day}`;
+
+//   if (today.day() == 6) {
+//     // dateString = `${new Date().getUTCFullYear()}-${
+//     //   new Date().getUTCMonth() + 1
+//     // }-${new Date().getUTCDate() - 1}`;
+
+//     let newYork = today.subtract(1, "days");
+
+//     let year = newYork.format("YYYY");
+//     let month = newYork.format("M");
+//     let day = newYork.format("D");
+
+//     dateString = `${year}-${month}-${day}`;
+//   } else if (today.day() == 0) {
+//     let newYork = today.subtract(2, "days");
+
+//     let year = newYork.format("YYYY");
+//     let month = newYork.format("M");
+//     let day = newYork.format("D");
+
+//     dateString = `${year}-${month}-${day}`;
+//   }
+
+//   let newYork = today.subtract(2, "days");
+
+//   let year = newYork.format("YYYY");
+//   let month = newYork.format("M");
+//   let day = newYork.format("D");
+
+//   dateString = `${year}-${month}-${day}`;
+
+//   console.log(dateString);
+// }
+
 export async function getAllForTicker(ticker) {
   let credentials = await getCredentials();
 
@@ -140,21 +189,25 @@ export async function getAllForTicker(ticker) {
       // evaluate date string for weekends
       let dateString;
 
-      let today = new Date();
-      if (today.getDay() == 6) {
-        dateString = `${new Date().getUTCFullYear()}-${
-          new Date().getUTCMonth() + 1
-        }-${new Date().getUTCDate() - 1}`;
-      } else if (today.getDay() == 0) {
-        dateString = `${new Date().getUTCFullYear()}-${
-          new Date().getUTCMonth() + 1
-        }-${new Date().getUTCDate() - 2}`;
+      let today = MTZ().tz("America/New_York");
+
+      if (today.day() == 6) {
+        let newYork = today.subtract(1, "days");
+
+        let year = newYork.format("YYYY");
+        let month = newYork.format("M");
+        let day = newYork.format("D");
+
+        dateString = `${year}-${month}-${day}`;
+      } else if (today.day() == 0) {
+        let newYork = today.subtract(2, "days");
+
+        let year = newYork.format("YYYY");
+        let month = newYork.format("M");
+        let day = newYork.format("D");
+
+        dateString = `${year}-${month}-${day}`;
       } else {
-        // evaluate date string for 00:01AM to 9:01A
-
-        // 00:00
-        // 5:00A 2:30P UTC
-
         const range = ["05:00", "14:30"];
 
         const t1 = moment.utc(range[0], "HH:mm");
@@ -164,9 +217,13 @@ export async function getAllForTicker(ticker) {
 
         if (now.isAfter(t1) && now.isBefore(t2)) {
           console.log("in range");
-          dateString = `${new Date().getUTCFullYear()}-${
-            new Date().getUTCMonth() + 1
-          }-${new Date().getUTCDate() - 1}`;
+          let newYork = today.subtract(1, "days");
+
+          let year = newYork.format("YYYY");
+          let month = newYork.format("M");
+          let day = newYork.format("D");
+
+          dateString = `${year}-${month}-${day}`;
         }
       }
 
