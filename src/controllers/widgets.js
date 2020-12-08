@@ -155,8 +155,12 @@ export const create = async (userId, widgetType, input) => {
 
 export const processStockBuy = async (widgetId, dashboardId, ticker) => {
   let open_price;
+  let type;
   let stockType = await securities.getTypeByTicker(ticker);
-  let type = stockType[0].type;
+  if (stockType[0]) {
+    type = stockType[0].type;
+  }
+
   let price = await getSecurityData.getSecurityLastPrice(ticker);
   if (price) {
     open_price = price.last_price;
