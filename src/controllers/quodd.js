@@ -173,7 +173,7 @@ export async function getAllForTicker(ticker) {
       if (dateString) {
         let key = `e${ticker}/${dateString}.json`;
 
-        url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}}`;
+        url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
       }
     }
   }
