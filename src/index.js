@@ -51,10 +51,20 @@ import * as sendEmail from "./sendEmail";
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
+const multer = require("multer");
+const AWS = require("aws-sdk");
+import { v4 as uuidv4 } from "uuid";
 
 import { isAuthorized } from "./middleware/authorized";
 import { db, admin } from "./services/firebase";
 import { stripe, endpointSecret, couponId, planId } from "./services/stripe";
+import Shopify from "shopify-api-node";
+
+const shopify = new Shopify({
+  shopName: "portfolio-insider",
+  apiKey: "26774218d929d0a2e7ad7d46a4cfde09",
+  password: "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",
+});
 
 var bugsnag = require("@bugsnag/js");
 var bugsnagExpress = require("@bugsnag/plugin-express");
@@ -109,12 +119,6 @@ const apiURL =
 
 const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 
-var rawBodySaver = function (req, res, buf, encoding) {
-  if (buf && buf.length) {
-    req.rawBody = buf.toString(encoding || "utf8");
-  }
-};
-
 // set up middlewares
 const app = express();
 
@@ -127,11 +131,18 @@ var corsOptions = {
 app.use(cors(corsOptions));
 
 app.use(cookieParser());
-//app.use(express.json());
-app.use(bodyParser.json({ verify: rawBodySaver }));
-app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
-app.use(bodyParser.raw({ verify: rawBodySaver, type: "*/*" }));
 
+// var rawBodySaver = function (req, res, buf, encoding) {
+//   if (buf && buf.length) {
+//     req.rawBody = buf.toString(encoding || "utf8");
+//   }
+// };
+
+// app.use(bodyParser.json({ verify: rawBodySaver }));
+// app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
+// app.use(bodyParser.raw({ verify: rawBodySaver, type: "*/*" }));
+
+app.use(express.json());
 app.use(middleware.requestHandler);
 /*
 ~~~~~~Utils~~~~~~
@@ -429,6 +440,70 @@ app.post("/checkout", async (req, res) => {
 // index
 app.get("/", async (req, res) => {
   res.send("hello");
+});
+
+app.post("/product-checkout", async (req, res) => {
+  const body = req.body;
+
+  const { data } = body;
+
+  const intentOptions = {
+    amount: body.amount,
+    currency: body.currency,
+  };
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.create(intentOptions);
+
+    const productVariantId = 37409762508998;
+
+    const order = {
+      line_items: [
+        {
+          variant_id: productVariantId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+      },
+      billing_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.differentBilling
+          ? data.billingAddress
+          : data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.differentBilling ? data.billingCity : data.shippingCity,
+        province: data.differentBilling
+          ? data.billingRegion
+          : data.shippingRegion,
+        country: "USA",
+        zip: data.differentBilling
+          ? data.billingPostalCode
+          : data.shippingPostalCode,
+      },
+      shipping_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.shippingCity,
+        province: data.shippingRegion,
+        country: "USA",
+        zip: data.shippingPostalCode,
+      },
+      email: data.email,
+    };
+
+    await shopify.order.create(order);
+
+    res.json(paymentIntent);
+  } catch (err) {
+    res.json(err);
+  }
 });
 
 app.post("/signout", async (req, res) => {
@@ -802,21 +877,55 @@ app.get("/profile", async (req, res) => {
     amount: customer.subscriptions.data[0].plan.amount / 100.0,
     trial_end: customer.subscriptions.data[0].trial_end,
     next_payment: customer.subscriptions.data[0].current_period_end,
+    firstName: user.firstName ? user.firstName : "",
+    lastName: user.lastName ? user.lastName : "",
+    city: user.city ? user.city : "",
+    profileImage: user.profileImage ? user.profileImage : "",
     ...user,
     charges: chargesAmount,
   });
 });
 
-// upadte profile
-app.post("/profile", async (req, res) => {
-  const { firstName, lastName } = req.body;
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
+// upadte profile
+app.post("/profile", upload.single("imageFile"), async (req, res) => {
   try {
+    let { firstName, lastName, city, profileImage, imageKey } = req.body;
+    const file = req.file;
+
+    let imageNewKey = uuidv4();
+
+    if (file) {
+      const s3 = new AWS.S3({
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        region: process.env.AWS_SES_REGION,
+      });
+
+      const params = {
+        Bucket: process.env.AWS_BUCKET_USER_PROFILE,
+        Key: imageNewKey,
+        ContentType: file.mimetype,
+        Body: file.buffer,
+        ACL: "public-read",
+      };
+
+      const s3Upload = await s3.upload(params).promise();
+
+      profileImage = s3Upload.Location;
+      imageKey = imageNewKey;
+    }
+
     const docRef = db.collection("users").doc(req.terminal_app.claims.uid);
 
     await docRef.update({
       firstName,
       lastName,
+      city: city ? city : null,
+      profileImage: profileImage ? profileImage : null,
+      imageKey: imageKey ? imageKey : null,
     });
 
     res.send({ success: true });
@@ -1676,6 +1785,18 @@ app.get("/pin", async (req, res) => {
   res.send(result);
 });
 
+// app.get("/ping", async (req, res) => {
+//   // const result = await widgets.create(
+//   //   req.terminal_app.claims.uid,
+//   //   req.params.type,
+//   //   req.params.inputs
+//   // );
+
+//   await quodd.test();
+
+//   res.send(null);
+// });
+
 app.use("/widgets/pin", checkAuth);
 app.post("/widgets/pin", async (req, res) => {
   const result = await widgets.create(
@@ -1698,6 +1819,12 @@ app.get("/widgets/:id/unpin", async (req, res) => {
 // app.use("/widgets/:id", checkAuth);
 app.get("/widgets/:id", async (req, res) => {
   const result = await widgets.get(req.params.id);
+  res.send(result);
+});
+
+// app.use("/widgets/global/:type", checkAuth);
+app.get("/widgets/global/:type", async (req, res) => {
+  const result = await widgets.getGlobalWidgetByType(req.params.type);
   res.send(result);
 });
 

@@ -1,6 +1,8 @@
 import db from "../db";
 import * as dashboard from "./dashboard";
+import * as securities from "./securities";
 import * as bots from "./bots";
+import * as getSecurityData from "../intrinio/get_security_data";
 
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
@@ -26,6 +28,40 @@ export async function getWidgetsByType(widgetType) {
   if (result.length > 0) {
     return result;
   }
+}
+
+export async function getWidgetById(id) {
+  let result = await db(`
+    SELECT widget_instances.*, widget_data.*, widgets.*
+    FROM widget_instances
+    JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
+    JOIN widgets ON widgets.id = widget_instances.widget_id
+    WHERE widget_instances.id = ${id}
+    `);
+  if (result.length > 0) {
+    return result[0];
+  }
+}
+
+export async function getPortfolioByDashboardID(dashbardId) {
+  let dashbard_id = parseInt(dashbardId);
+  let result = await db(`
+    SELECT *
+    FROM portfolios
+    WHERE dashboard_id = ${dashbard_id}
+  `);
+
+  return result[0];
+}
+
+export async function getPortfolioHistory(portfolioId) {
+  let result = await db(`
+    SELECT *
+    FROM portfolio_histories
+    WHERE portfolio_id = ${portfolioId}
+  `);
+
+  return result;
 }
 
 export async function getGlobalInsidersNMovers() {
@@ -100,9 +136,63 @@ export const create = async (userId, widgetType, input) => {
 
       await bots.processWidgetInput(widgetInstanceId);
 
+      if (
+        widgetType == "CompanyPrice" ||
+        widgetType == "ETFPrice" ||
+        widgetType == "MutualFundPrice"
+      ) {
+        let { ticker } = input;
+        if (!ticker) {
+          return;
+        }
+        let res = await processStockBuy(widgetInstanceId, dashboardId, ticker);
+      }
+
       return result;
     }
   }
+};
+
+export const processStockBuy = async (widgetId, dashboardId, ticker) => {
+  let open_price;
+  let stockType = await securities.getTypeByTicker(ticker);
+  let type = stockType[0].type;
+  let price = await getSecurityData.getSecurityLastPrice(ticker);
+  if (price) {
+    open_price = price.last_price;
+  }
+
+  let portId = await getPortfolioByDashboardID(dashboardId);
+  let portfolioId = portId.id;
+
+  let query = {
+    text:
+      "INSERT INTO portfolio_histories (portfolio_id, ticker, type, open_price, open_date) VALUES ($1, $2, $3, $4, now()) RETURNING *",
+    values: [portfolioId, ticker, type, open_price],
+  };
+
+  return await db(query);
+};
+
+export const processStockSell = async (widgetId, dashboardId) => {
+  let close_price;
+  let portfolioId;
+  let widget = await getWidgetById(widgetId);
+  let ticker = widget.output.ticker;
+  let price = await getSecurityData.getSecurityLastPrice(ticker);
+  if (price) {
+    close_price = price.last_price;
+  }
+  let portId = await getPortfolioByDashboardID(dashboardId);
+  if (portId) {
+    portfolioId = portId.id;
+  }
+  let query = {
+    text: `UPDATE portfolio_histories SET close_price = $3, close_date = now() WHERE portfolio_id = $1 AND ticker = $2 AND open_price IS NOT NULL AND close_price IS NULL`,
+    values: [portfolioId, ticker, close_price],
+  };
+
+  return await db(query);
 };
 
 export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
@@ -118,6 +208,19 @@ export const pin = async (dashboardId, widgetId, widgetDataId, weight = 0) => {
 export const unpin = async (userId, widgetInstanceId) => {
   let widgetDataId;
   let dataResult;
+
+  let widget = await getWidgetById(widgetInstanceId);
+
+  let dashboardId = widget.dashboard_id;
+
+  if (
+    widget.type == "CompanyPrice" ||
+    widget.type == "ETFPrice" ||
+    widget.type == "MutualFundPrice"
+  ) {
+    await processStockSell(widgetInstanceId, dashboardId);
+  }
+
   let query = {
     text: "DELETE FROM widget_instances WHERE id=($1) RETURNING *",
     values: [widgetInstanceId],

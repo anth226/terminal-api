@@ -27,6 +27,15 @@ export async function get(userId) {
         values: [userId, true, ""],
       };
       result = await db(query);
+
+      let id = dashboards[0].id;
+
+      query = {
+        text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
+        values: [id],
+      };
+
+      await db(query);
     }
     let dashboards = result;
 
