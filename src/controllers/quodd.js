@@ -122,8 +122,8 @@ export async function getAllForTicker(ticker) {
 
   let result = await db(`
     SELECT timestamp, 
-    price / 100 as price,
-    from equities_current
+    price / 100 as price
+    FROM equities_current
     WHERE symbol='e${ticker}' AND timestamp > (now() - interval '5h')::date
   `);
 
@@ -163,6 +163,7 @@ export async function getAllForTicker(ticker) {
         const now = moment.utc();
 
         if (now.isAfter(t1) && now.isBefore(t2)) {
+          console.log("in range");
           dateString = `${new Date().getUTCFullYear()}-${
             new Date().getUTCMonth() + 1
           }-${new Date().getUTCDate() - 1}`;
