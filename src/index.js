@@ -58,6 +58,13 @@ import { v4 as uuidv4 } from "uuid";
 import { isAuthorized } from "./middleware/authorized";
 import { db, admin } from "./services/firebase";
 import { stripe, endpointSecret, couponId, planId } from "./services/stripe";
+import Shopify from "shopify-api-node";
+
+const shopify = new Shopify({
+  shopName: 'portfolio-insider',
+  apiKey: '26774218d929d0a2e7ad7d46a4cfde09',
+  password: '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'
+});
 
 var bugsnag = require("@bugsnag/js");
 var bugsnagExpress = require("@bugsnag/plugin-express");
@@ -438,14 +445,55 @@ app.get("/", async (req, res) => {
 app.post("/product-checkout", async (req, res) => {
   const body = req.body;
 
-  const options = {
-    ...body,
+  const { data } = body;
+
+  const intentOptions = {
     amount: body.amount,
     currency: body.currency,
   };
 
   try {
-    const paymentIntent = await stripe.paymentIntents.create(options);
+    const paymentIntent = await stripe.paymentIntents.create(intentOptions);
+
+    const productVariantId = 37409762508998;
+
+    const order = {
+      "line_items": [
+        {
+          "variant_id": productVariantId,
+          "quantity": 1
+        }
+      ],
+      "customer": {
+        "first_name": data.firstName,
+        "last_name": data.lastName,
+        "email": data.email
+      },
+      "billing_address": {
+        "first_name": data.firstName,
+        "last_name": data.lastName,
+        "address1": !data.shippingAsBilling ? data.shippingAddress: data.billingAddress,
+        "phone": data.phoneNumber,
+        "city": !data.shippingAsBilling ? data.shippingCity: data.billingCity,
+        "province": !data.shippingAsBilling ? data.shippingRegion: data.billingRegion,
+        "country": "USA",
+        "zip": !data.shippingAsBilling ? data.shippingPostalCode: data.billingPostalCode
+      },
+      "shipping_address": {
+        "first_name": data.firstName,
+        "last_name": data.lastName,
+        "address1": data.shippingAddress,
+        "phone": data.phoneNumber,
+        "city": data.shippingCity,
+        "province": data.shippingRegion,
+        "country": "USA",
+        "zip": data.shippingPostalCode
+      },
+      "email": data.email
+    };
+
+    await shopify.order.create(order);
+
     res.json(paymentIntent);
   } catch (err) {
     res.json(err);
