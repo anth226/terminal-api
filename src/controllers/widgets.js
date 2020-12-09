@@ -157,16 +157,21 @@ export const processStockBuy = async (widgetId, dashboardId, ticker) => {
   let open_price;
   let type;
   let stockType = await securities.getTypeByTicker(ticker);
-  if (stockType[0]) {
+  console.log("stockType", stockType);
+  if (stockType && stockType.length > 0) {
     type = stockType[0].type;
   }
 
   let price = await getSecurityData.getSecurityLastPrice(ticker);
+  console.log("price", price);
+
   if (price) {
     open_price = price.last_price;
   }
 
   let portId = await getPortfolioByDashboardID(dashboardId);
+  console.log("portId", portId);
+
   let portfolioId = portId.id;
 
   let query = {
