@@ -74,7 +74,6 @@ export async function companyNews(intrinioApi, ticker, includeImages = false) {
 
     return res ? res : {};
   } catch (error) {
-    console.log(error);
     return {};
   }
 }
