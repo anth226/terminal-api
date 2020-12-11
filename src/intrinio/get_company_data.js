@@ -1,3 +1,5 @@
+import {db} from "./../services/firebase";
+
 export async function lookupCompany(intrinioApi, ticker) {
   try {
     const company = await intrinioApi.getCompany(ticker);
@@ -33,7 +35,7 @@ export function companyFundamentals(intrinioApi, ticker) {
   return res;
 }
 
-export async function companyNews(intrinioApi, ticker) {
+export async function companyNews(intrinioApi, ticker, includeImages = false) {
   const opts = {
     pageSize: 20, // Number | The number of results to return
     nextPage: null // String | Gets the next page of data from a previous API call
@@ -41,8 +43,38 @@ export async function companyNews(intrinioApi, ticker) {
 
   try {
     const res = await intrinioApi.getCompanyNews(ticker, opts);
+
+    if (includeImages) {
+      const urlMetadata = require('url-metadata');
+
+      if (res.news) {
+        for (let item of res.news) {
+          let doc = await db.collection("newsImage").doc(item.id).get();
+          if (doc.exists) {
+            item.image = doc.data().image;
+          } else {
+            item.image = await urlMetadata(item.url).then(
+                function (metadata) {
+                  if (metadata['twitter:image:src']) {
+                    return metadata['twitter:image:src'];
+                  } else if (metadata['og:image']) {
+                    return metadata['og:image'];
+                  } else {
+                    return null;
+                  }
+                });
+
+            await db.collection("newsImage").doc(item.id).set({
+              image: item.image
+            });
+          }
+        }
+      }
+    }
+
     return res ? res : {};
   } catch (error) {
+    console.log(error);
     return {};
   }
 }
