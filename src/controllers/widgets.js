@@ -125,7 +125,6 @@ export const create = async (userId, widgetType, input) => {
         };
 
         result = await db(query);
-
         ({ id } = result[0]);
         widgetDataId = id;
       }
@@ -157,7 +156,7 @@ export const processStockBuy = async (widgetId, dashboardId, ticker) => {
   let open_price;
   let type;
   let stockType = await securities.getTypeByTicker(ticker);
-  if (stockType[0]) {
+  if (stockType && stockType.length > 0) {
     type = stockType[0].type;
   }
 

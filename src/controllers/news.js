@@ -63,18 +63,64 @@ export async function getSources() {
     sources = await newsHelper.getSources(process.env.NEWS_API_KEY);
 
     if (sources) {
-      console.log("DOING THIS")
-      let sourceWhitelist = ['abc-news', 'al-jazeera-english', 'ars-technica', 'associated-press', 'australian-financial-review', 'axios', 'bbc-news', 'bloomberg', 'breitbart-news', 'business-insider', 'business-insider-uk', 'cbs-news', 'cnbc', 'cnn', 'crypto-coins-news', 'financial-post', 'fortune', 'fox-news', 'google-news', 'hacker-news', 'medical-news-today', 'msnbc', 'national-review', 'nbc-news', 'new-scientist', 'news-com-au', 'newsweek', 'new-york-magazine', 'next-big-future', 'politico', 'recode', 'reuters', 'techcrunch', 'techradar', 'the-american-conservative', 'the-hill', 'the-huffington-post', 'the-next-web', 'the-verge', 'the-wall-street-journal', 'the-washington-post', 'the-washington-times', 'time', 'usa-today', 'wired'];
+      console.log("DOING THIS");
+      let sourceWhitelist = [
+        "abc-news",
+        "al-jazeera-english",
+        "ars-technica",
+        "associated-press",
+        "australian-financial-review",
+        "axios",
+        "bbc-news",
+        "bloomberg",
+        "breitbart-news",
+        "business-insider",
+        "business-insider-uk",
+        "cbs-news",
+        "cnbc",
+        "cnn",
+        "crypto-coins-news",
+        "financial-post",
+        "fortune",
+        "fox-news",
+        "google-news",
+        "hacker-news",
+        "medical-news-today",
+        "msnbc",
+        "national-review",
+        "nbc-news",
+        "new-scientist",
+        "news-com-au",
+        "newsweek",
+        "new-york-magazine",
+        "next-big-future",
+        "politico",
+        "recode",
+        "reuters",
+        "techcrunch",
+        "techradar",
+        "the-american-conservative",
+        "the-hill",
+        "the-huffington-post",
+        "the-next-web",
+        "the-verge",
+        "the-wall-street-journal",
+        "the-washington-post",
+        "the-washington-times",
+        "time",
+        "usa-today",
+        "wired",
+      ];
       let newSources = [];
-      sources.sources.forEach(source => {
-        console.log(source.id)
-        if(sourceWhitelist.includes(source.id)) {
-          console.log("PUSHING INTO THIS")
-          newSources.push(source)
+      sources.sources.forEach((source) => {
+        console.log(source.id);
+        if (sourceWhitelist.includes(source.id)) {
+          console.log("PUSHING INTO THIS");
+          newSources.push(source);
         }
-      })
+      });
 
-      console.log(newSources)
+      console.log(newSources);
 
       sources.sources = newSources;
 
@@ -85,14 +131,14 @@ export async function getSources() {
     console.log(chalk.bgGreen("cache =>"), "found");
     sources = JSON.parse(cache);
   }
-  console.log(sources)
+  console.log(sources);
   return sources;
 }
 
 export async function getGeneralMarketNews() {
   let cache = await redis.get(KEY_NEWS_MARKET);
 
-  let news;
+  let news = [];
   if (!cache) {
     news = await stocksNews.generalMarketNews(process.env.STOCKS_NEWS_API_KEY);
 
@@ -103,6 +149,8 @@ export async function getGeneralMarketNews() {
   } else {
     news = JSON.parse(cache);
   }
+
+  console.log("news.length", news.length);
 
   return news;
 }
