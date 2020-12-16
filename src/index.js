@@ -1219,6 +1219,16 @@ app.get("/company-news/:symbol", async (req, res) => {
   res.send(companyNews);
 });
 
+app.use("/company-news/:symbol/images", checkAuth);
+app.get("/company-news/:symbol/images", async (req, res) => {
+  const companyNews = await getCompanyData.companyNews(
+      companyAPI,
+      req.params.symbol,
+      true
+  );
+  res.send(companyNews);
+});
+
 app.use("/company-fundamentals/:symbol", checkAuth);
 app.get("/company-fundamentals/:symbol", async (req, res) => {
   const companyFundamentals = await getCompanyData.companyFundamentals(
