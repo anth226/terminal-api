@@ -6,7 +6,7 @@ export const follow = async (userID, fundID) => {
   let query = {
     text:
       "INSERT INTO mutual_fund_watchlists (user_id, mutual_fund_id, watched_at) VALUES ($1, $2, now())",
-    values: [userID, fundID]
+    values: [userID, fundID],
   };
 
   let result = await db(query);
@@ -24,7 +24,7 @@ export const unfollow = async (userID, fundID) => {
   let query = {
     text:
       "DELETE FROM mutual_fund_watchlists WHERE user_id=($1) AND mutual_fund_id=($2)",
-    values: [userID, fundID]
+    values: [userID, fundID],
   };
 
   let result = await db(query);
@@ -56,6 +56,9 @@ export const getTopFunds = async (topData, topNum) => {
     case "netAssets":
       dataObj = "json_summary";
       break;
+    case "ret1yr":
+    case "ret3mo":
+    case "ret1mo":
     case "mgmtFeeRatio":
     case "mktPrice":
     case "yield":
@@ -105,16 +108,16 @@ export const getTopFunds = async (topData, topNum) => {
   let funds = {
     eFunds: {
       dataTotal: eDataTotal,
-      topFunds: equFunds
+      topFunds: equFunds,
     },
     fFunds: {
       dataTotal: fDataTotal,
-      topFunds: fixFunds
+      topFunds: fixFunds,
     },
     oFunds: {
       dataTotal: oDataTotal,
-      topFunds: othFunds
-    }
+      topFunds: othFunds,
+    },
   };
 
   //console.log(funds);
@@ -145,17 +148,17 @@ export const getTopDiscountsFunds = async (topNum) => {
           if (fundCategory[0] == "E") {
             eFunds.push({
               fund: fund,
-              diff: difference
+              diff: difference,
             });
           } else if (fundCategory[0] == "F") {
             fFunds.push({
               fund: fund,
-              diff: difference
+              diff: difference,
             });
           } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
             oFunds.push({
               fund: fund,
-              diff: difference
+              diff: difference,
             });
           }
         }
@@ -189,7 +192,7 @@ export const getTopDiscountsFunds = async (topNum) => {
   let funds = {
     eFunds: equityFunds,
     fFunds: fixedFunds,
-    oFunds: otherFunds
+    oFunds: otherFunds,
   };
 
   return funds;
