@@ -34,10 +34,13 @@ export const lookup = async (companyAPI, identifier, userID) => {
 
   console.timeLog("lookup");
 
-  const companyFundamentals = await getCompanyData.lookupCompany(
-    companyAPI,
-    identifier
-  );
+  let companyFundamentals;
+  if (companyResult && companyResult.length > 0) {
+    companyFundamentals = await getCompanyData.lookupCompany(
+      companyAPI,
+      identifier
+    );
+  }
 
   console.timeLog("lookup");
 
