@@ -2,11 +2,7 @@ import db from "../db";
 import * as getCompanyData from "../intrinio/get_company_data";
 
 export const lookup = async (companyAPI, identifier, userID) => {
-  console.log("made it into new lookup");
-  const companyFundamentals = await getCompanyData.lookupCompany(
-    companyAPI,
-    identifier
-  );
+  console.time("lookup");
 
   let companyResult = await db(`
     SELECT c.*,
@@ -16,6 +12,8 @@ export const lookup = async (companyAPI, identifier, userID) => {
     LIMIT 1
   `);
 
+  console.timeLog("lookup");
+
   let mutualFundResult = await db(`
     SELECT m.*,
            EXISTS(SELECT mw.id FROM mutual_fund_watchlists mw WHERE mw.mutual_fund_id=m.id AND mw.user_id = '${userID}' LIMIT 1) as following
@@ -24,6 +22,8 @@ export const lookup = async (companyAPI, identifier, userID) => {
     LIMIT 1
   `);
 
+  console.timeLog("lookup");
+
   let etfResult = await db(`
     SELECT e.*,
           EXISTS(SELECT ew.id FROM etf_watchlists ew WHERE ew.etf_id=e.id AND ew.user_id = '${userID}' LIMIT 1) as following
@@ -31,6 +31,17 @@ export const lookup = async (companyAPI, identifier, userID) => {
     WHERE ticker = '${identifier}'
     LIMIT 1
   `);
+
+  console.timeLog("lookup");
+
+  const companyFundamentals = await getCompanyData.lookupCompany(
+    companyAPI,
+    identifier
+  );
+
+  console.timeLog("lookup");
+
+  console.timeEnd("lookup");
 
   let response = {
     meta: { ...companyFundamentals },
