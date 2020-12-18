@@ -57,7 +57,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { isAuthorized } from "./middleware/authorized";
 import { db, admin } from "./services/firebase";
-import { stripe, endpointSecret, couponId, planId } from "./services/stripe";
+import { stripe, endpointSecret, couponId, planId, yearlyPlanId } from "./services/stripe";
 import Shopify from "shopify-api-node";
 
 const shopify = new Shopify({
@@ -444,15 +444,22 @@ app.get("/", async (req, res) => {
 
 app.post("/product-checkout", async (req, res) => {
   const body = req.body;
-
-  const { data } = body;
-
-  const intentOptions = {
-    amount: body.amount,
-    currency: body.currency,
-  };
+  const { data, token } = body;
 
   try {
+    const customerData = {
+      source: token,
+      email: data.email
+    };
+    const customer = await stripe.customers.create(customerData);
+
+    const intentOptions = {
+      amount: body.amount,
+      currency: body.currency,
+      customer: customer.id,
+      setup_future_usage: 'off_session'
+    };
+  
     const paymentIntent = await stripe.paymentIntents.create(intentOptions);
 
     const productVariantId = 37409762508998;
@@ -503,6 +510,36 @@ app.post("/product-checkout", async (req, res) => {
     res.json(paymentIntent);
   } catch (err) {
     res.json(err);
+  }
+});
+
+app.post("/upgrade-order", async (req, res) => {
+  logger.info("/upgrade-order");
+
+  const { customer } = req.body;
+  
+  if (!customer) {
+    res.status(400).send("Invalid customer id");
+    return;
+  }
+
+  try {
+    const subscription = await stripe.subscriptions.create({
+      customer,
+      items: [{ plan: yearlyPlanId }],
+      expand: ["latest_invoice.payment_intent"]
+    });
+
+    res.json({
+      status: subscription['latest_invoice']['payment_intent']['status'],
+      clientSecret: subscription['latest_invoice']['payment_intent']['client_secret']
+    });
+  } catch (err) {
+    const errMsg = handleStripeError(err);
+    res.json({
+      error_code: "UPGRADE_ORDER_ERROR",
+      message: errMsg
+    });
   }
 });
 
