@@ -253,37 +253,34 @@ export async function getAllForTicker(ticker) {
 
 export async function getLastPrice(ticker) {
   let prices;
-  let realtime;
+  //let realtime;
   let delayed;
   let qTicker = "e" + ticker;
 
   connectSharedCache();
 
-  let cachedPrice_R = await sharedCache.get(
-    `${CACHED_PRICE_REALTIME}${qTicker}`
-  );
+  // let cachedPrice_R = await sharedCache.get(
+  //   `${CACHED_PRICE_REALTIME}${qTicker}`
+  // );
 
-  if (cachedPrice_R) {
-    realtime = cachedPrice_R / 100;
-  }
+  // if (cachedPrice_R) {
+  //   realtime = cachedPrice_R / 100;
+  // }
 
   let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
 
   if (cachedPrice_15) {
     delayed = cachedPrice_15 / 100;
-  }
-
-  if (cachedPrice_R && cachedPrice_15) {
     prices = {
-      last_price: realtime,
-      last_price_delayed: delayed,
+      //last_price_realtime: realtime,
+      last_price: delayed,
     };
   } else {
-    let intrinioPrice = await getSecurityData.getSecurityLastPrice(ticker);
-    if (intrinioPrice && intrinioPrice.last_price) {
+    let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
+    if (intrinioResponse && intrinioResponse.last_price) {
       prices = {
-        last_price: intrinioPrice.last_price,
-        last_price_delayed: intrinioPrice.last_price,
+        //last_price_realtime: intrinioPrice.last_price,
+        last_price: intrinioResponse.last_price,
       };
     }
   }
