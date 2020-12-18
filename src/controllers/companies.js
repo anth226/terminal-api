@@ -11,6 +11,16 @@ export const getOwners = async (ticker) => {
   `);
 };
 
+export const getEtfs = async (ticker) => {
+  return await db(`
+    SELECT *
+    FROM etfs_holdings AS b_h
+    JOIN etfs AS b
+    ON b_h.etf = b.id
+    WHERE LOWER(b_h.ticker) = '${ticker.toLowerCase()}'
+  `);
+};
+
 export const lookup = async (companyAPI, identifier) => {
   const companyFundamentals = await getCompanyData.lookupCompany(
     companyAPI,

@@ -1210,6 +1210,12 @@ app.get("/company/:symbol/owners", async (req, res) => {
   res.send(result);
 });
 
+app.use("/company/:symbol/etfs", checkAuth);
+app.get("/company/:symbol/etfs", async (req, res) => {
+  const result = await companies.getEtfs(req.params.symbol);
+  res.send(result);
+});
+
 app.use("/company-news/:symbol", checkAuth);
 app.get("/company-news/:symbol", async (req, res) => {
   const companyNews = await getCompanyData.companyNews(
