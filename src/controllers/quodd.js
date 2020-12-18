@@ -253,6 +253,8 @@ export async function getAllForTicker(ticker) {
 
 export async function getLastPrice(ticker) {
   let prices;
+  let realtime;
+  let delayed;
   let qTicker = "e" + ticker;
 
   connectSharedCache();
@@ -261,12 +263,20 @@ export async function getLastPrice(ticker) {
     `${CACHED_PRICE_REALTIME}${qTicker}`
   );
 
+  if (cachedPrice_R) {
+    realtime = cachedPrice_R / 100;
+  }
+
   let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
+
+  if (cachedPrice_15) {
+    delayed = cachedPrice_15 / 100;
+  }
 
   if (cachedPrice_R && cachedPrice_15) {
     prices = {
-      last_price: cachedPrice_R,
-      last_price_delayed: cachedPrice_15,
+      last_price: realtime,
+      last_price_delayed: delayed,
     };
   } else {
     let intrinioPrice = await getSecurityData.getSecurityLastPrice(ticker);
