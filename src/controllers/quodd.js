@@ -269,11 +269,11 @@ export async function getLastPrice(ticker) {
       last_price_delayed: cachedPrice_15,
     };
   } else {
-    let price = await getSecurityData.getSecurityLastPrice(ticker);
-    if (price) {
+    let intrinioPrice = await getSecurityData.getSecurityLastPrice(ticker);
+    if (intrinioPrice && intrinioPrice.last_price) {
       prices = {
-        last_price: price,
-        last_price_delayed: price,
+        last_price: intrinioPrice.last_price,
+        last_price_delayed: intrinioPrice.last_price,
       };
     }
   }
