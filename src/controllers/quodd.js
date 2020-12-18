@@ -4,6 +4,7 @@ const { Client } = require("pg");
 
 const MTZ = require("moment-timezone");
 
+import * as getSecurityData from "../intrinio/get_security_data";
 import asyncRedis from "async-redis";
 import redis from "redis";
 import moment from "moment";
@@ -14,6 +15,8 @@ import {
   AWS_POSTGRES_DB_PORT,
   AWS_POSTGRES_DB_USER,
   AWS_POSTGRES_DB_PASSWORD,
+  CACHED_PRICE_REALTIME,
+  CACHED_PRICE_15MIN,
 } from "../redis";
 
 let dbs = {};
@@ -246,4 +249,33 @@ export async function getAllForTicker(ticker) {
   console.timeEnd("getAllForTicker");
 
   return response;
+}
+
+export async function getLastPrice(ticker) {
+  let prices;
+  let qTicker = "e" + ticker;
+
+  connectSharedCache();
+
+  let cachedPrice_R = await sharedCache.get(
+    `${CACHED_PRICE_REALTIME}${qTicker}`
+  );
+
+  let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
+
+  if (cachedPrice_R && cachedPrice_15) {
+    prices = {
+      last_price: cachedPrice_R,
+      last_price_delayed: cachedPrice_15,
+    };
+  } else {
+    let price = await getSecurityData.getSecurityLastPrice(ticker);
+    if (price) {
+      prices = {
+        last_price: price,
+        last_price_delayed: price,
+      };
+    }
+  }
+  return prices;
 }
