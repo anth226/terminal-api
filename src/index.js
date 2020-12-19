@@ -336,6 +336,16 @@ app.post("/hooks", async (req, res) => {
     }
   }
 
+  if (evt.type === "customer.subscription.deleted") {
+    console.log(evt.data.object)
+    const user = await db.collection("users").where('customerId', '==', 'cus_IFdUSj7RFyqOV5').get()
+    if (!user.empty) {
+      const data = await db.collection("users").doc(user.id).update({
+        subscriptionStatus: evt.data.object.status,
+      });
+    }
+  }
+
   res.json({ success: true });
 });
 
@@ -665,6 +675,18 @@ app.post("/authenticate", async (req, res) => {
       };
     }
 
+    if (subscriptions[0].cancel_at_period_end === false) {
+      const updatedSubscription = await stripe.subscriptions.update(
+        subscriptions[0].id,
+        {
+          cancel_at_period_end: true
+        }
+      );
+
+      logger.info('---Updated Subscription---')
+      subscriptions[0] = updatedSubscription
+    }
+
     // Check if customer has paid for their subscription
     if (
       subscriptions[0].cancel_at_period_end &&
@@ -755,6 +777,7 @@ app.post("/payment", async (req, res) => {
       customer: customer.id,
       items: [{ plan: planId }],
       expand: ["latest_invoice.payment_intent"],
+      cancel_at_period_end: true,
       coupon: couponId,
     });
     console.log("THE SUBSCRIPTION");
