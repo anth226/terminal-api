@@ -1117,6 +1117,20 @@ app.post("/cancellation-request", async (req, res) => {
     req.terminal_app.claims.customer_id
   );
 
+  const getSubscription = await stripe.subscriptions.retrieve(
+    user.subscriptionId
+  );
+
+  if (getSubscription.status !== 'canceled') {
+    await stripe.subscriptions.del(
+      user.subscriptionId
+    );
+  }
+
+  db.collection("users").doc(req.terminal_app.claims.uid).update({
+    subscriptionStatus: 'canceled',
+  });
+
   let email = customer.email;
 
   sendEmail.sendCancellationRequest(
