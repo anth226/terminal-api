@@ -505,9 +505,9 @@ app.post("/product-checkout", async (req, res) => {
       email: data.email,
     };
 
-    await shopify.order.create(order);
+    const orderData = await shopify.order.create(order);
 
-    res.json(paymentIntent);
+    res.json({ paymentIntent, order: orderData });
   } catch (err) {
     res.json(err);
   }
