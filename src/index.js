@@ -1247,6 +1247,12 @@ app.get("/company/:symbol/owners", async (req, res) => {
   res.send(result);
 });
 
+app.use("/company/:symbol/etfs", checkAuth);
+app.get("/company/:symbol/etfs", async (req, res) => {
+  const result = await companies.getEtfs(req.params.symbol);
+  res.send(result);
+});
+
 app.use("/company-news/:symbol", checkAuth);
 app.get("/company-news/:symbol", async (req, res) => {
   const companyNews = await getCompanyData.companyNews(
@@ -1259,9 +1265,9 @@ app.get("/company-news/:symbol", async (req, res) => {
 app.use("/company-news/:symbol/images", checkAuth);
 app.get("/company-news/:symbol/images", async (req, res) => {
   const companyNews = await getCompanyData.companyNews(
-      companyAPI,
-      req.params.symbol,
-      true
+    companyAPI,
+    req.params.symbol,
+    true
   );
   res.send(companyNews);
 });
@@ -1335,9 +1341,7 @@ app.get("/sec-intraday-prices/:symbol", async (req, res) => {
 
 app.use("/sec-last-price/:symbol", checkAuth);
 app.get("/sec-last-price/:symbol", async (req, res) => {
-  const lastPrice = await getSecurityData.getSecurityLastPrice(
-    req.params.symbol
-  );
+  const lastPrice = await quodd.getLastPrice(req.params.symbol);
   res.send(lastPrice);
 });
 
