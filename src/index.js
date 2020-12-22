@@ -363,7 +363,7 @@ app.post(
         .where("customerId", "==", evt.data.object.customer)
         .get();
       if (!user.empty) {
-        const data = await db.collection("users").doc(user.id).update({
+        await db.collection("users").doc(user.id).update({
           subscriptionStatus: evt.data.object.status
         });
       }
@@ -1146,13 +1146,12 @@ app.post("/cancellation-request", async (req, res) => {
     user.subscriptionId
   );
 
-  if (getSubscription.status !== "canceled") {
-    await stripe.subscriptions.del(user.subscriptionId);
+  if (getSubscription.status !== 'canceled') {
+    await stripe.subscriptions.update(
+      user.subscriptionId,
+      { cancel_at_period_end: true }
+    );
   }
-
-  db.collection("users").doc(req.terminal_app.claims.uid).update({
-    subscriptionStatus: "canceled"
-  });
 
   let email = customer.email;
 
