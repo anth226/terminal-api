@@ -57,13 +57,19 @@ import { v4 as uuidv4 } from "uuid";
 
 import { isAuthorized } from "./middleware/authorized";
 import { db, admin } from "./services/firebase";
-import { stripe, endpointSecret, couponId, planId, yearlyPlanId } from "./services/stripe";
+import {
+  stripe,
+  endpointSecret,
+  couponId,
+  planId,
+  yearlyPlanId
+} from "./services/stripe";
 import Shopify from "shopify-api-node";
 
 const shopify = new Shopify({
   shopName: "portfolio-insider",
   apiKey: "26774218d929d0a2e7ad7d46a4cfde09",
-  password: "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",
+  password: "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"
 });
 
 var bugsnag = require("@bugsnag/js");
@@ -71,7 +77,7 @@ var bugsnagExpress = require("@bugsnag/plugin-express");
 
 var bugsnagClient = bugsnag({
   apiKey: process.env.BUGSNAG_KEY,
-  otherOption: process.env.RELEASE_STAGE,
+  otherOption: process.env.RELEASE_STAGE
 });
 
 bugsnagClient.use(bugsnagExpress);
@@ -86,11 +92,11 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({
       level: "info",
-      format: winston.format.simple(),
-    }),
+      format: winston.format.simple()
+    })
     //new winston.transports.File({ filename: 'combined.log' })
     //new winston.transports.File({ filename: 'error.log', level: 'error' }),
-  ],
+  ]
 });
 
 // init intrinio
@@ -108,7 +114,7 @@ const expiresIn = 60 * 60 * 24 * 5 * 1000;
 const cookieParams = {
   maxAge: expiresIn,
   httpOnly: true, // dont let browser javascript access cookie ever
-  ephemeral: true, // delete this cookie while browser close
+  ephemeral: true // delete this cookie while browser close
 };
 //secure: true, // only use cookie over https
 
@@ -126,7 +132,7 @@ const app = express();
 var corsOptions = {
   origin: [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`],
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
-  credentials: true,
+  credentials: true
 };
 app.use(cors(corsOptions));
 
@@ -141,8 +147,17 @@ app.use(cookieParser());
 // app.use(bodyParser.json({ verify: rawBodySaver }));
 // app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
 // app.use(bodyParser.raw({ verify: rawBodySaver, type: "*/*" }));
+// app.use(express.json());
 
-app.use(express.json());
+app.use((req, res, next) => {
+  if (req.originalUrl === "/hooks") {
+    next();
+  } else {
+    bodyParser.raw({ type: "application/json" });
+    bodyParser.json()(req, res, next);
+  }
+});
+
 app.use(middleware.requestHandler);
 /*
 ~~~~~~Utils~~~~~~
@@ -217,136 +232,146 @@ function checkAuth(req, res, next) {
 
 //Request URL: https://terminal.retirementinsider.com/success?session_id=cs_test_rVIlOBqZ6XvLsDFCCI8MVveNLuFCpJUqsH1vKfIFWLQSl9nPcILCUM85
 
-app.post("/hooks", async (req, res) => {
-  const sig = req.headers["stripe-signature"];
+app.post(
+  "/hooks",
+  bodyParser.raw({ type: "application/json" }),
+  async (req, res) => {
+    const sig = req.headers["stripe-signature"];
 
-  let evt;
+    let evt;
 
-  try {
-    evt = req.body;
-  } catch (err) {
-    logger.error("Stripe Checkout Webhook Error (constructEvent): ", err);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
+    try {
+      evt = req.body;
+    } catch (err) {
+      logger.error("Stripe Checkout Webhook Error (constructEvent): ", err);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
 
-  if (evt.type === "checkout.session.completed") {
-    logger.info("-- checkout session completed --");
+    if (evt.type === "checkout.session.completed") {
+      logger.info("-- checkout session completed --");
 
-    if (evt.data.object.mode == "subscription") {
-      console.log("hit subscription type checkout session");
+      if (evt.data.object.mode == "subscription") {
+        console.log("hit subscription type checkout session");
 
-      const subscriptionId = evt.data.object.subscription;
-      const customerId = evt.data.object.customer;
-      const userId = evt.data.object.client_reference_id;
-      const email = evt.data.object.customer_email;
+        const subscriptionId = evt.data.object.subscription;
+        const customerId = evt.data.object.customer;
+        const userId = evt.data.object.client_reference_id;
+        const email = evt.data.object.customer_email;
 
-      // FIREBASE + FIRESTORE
-      try {
-        // Add user data to db
-        let docRef = db.collection("users").doc(userId);
-        let setUser = await docRef.set(
-          {
-            userId: userId,
-            customerId: customerId,
-            subscriptionId: subscriptionId,
-            email: email,
-          },
-          { merge: true }
-        );
+        // FIREBASE + FIRESTORE
+        try {
+          // Add user data to db
+          let docRef = db.collection("users").doc(userId);
+          let setUser = await docRef.set(
+            {
+              userId: userId,
+              customerId: customerId,
+              subscriptionId: subscriptionId,
+              email: email
+            },
+            { merge: true }
+          );
 
-        // Set custom auth claims with Firebase
-        await admin.auth().setCustomUserClaims(userId, {
-          customer_id: customerId,
-          subscription_id: subscriptionId,
-        });
+          // Set custom auth claims with Firebase
+          await admin.auth().setCustomUserClaims(userId, {
+            customer_id: customerId,
+            subscription_id: subscriptionId
+          });
 
-        sendEmail.sendSignupEmail(email);
-        await klaviyo.subscribeToList(email);
-      } catch (err) {
-        // error with firebase and firestore
-        logger.error("Stripe Checkout Webhook Error: ", err);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
+          sendEmail.sendSignupEmail(email);
+          await klaviyo.subscribeToList(email);
+        } catch (err) {
+          // error with firebase and firestore
+          logger.error("Stripe Checkout Webhook Error: ", err);
+          return res.status(400).send(`Webhook Error: ${err.message}`);
+        }
+      } else if (evt.data.object.mode == "setup") {
+        console.log("hit setup type checkout session");
+        try {
+          const setupIntentId = evt.data.object.setup_intent;
+
+          // Retrieve the SetupIntent
+          const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+
+          const paymentMethodId = setupIntent.payment_method;
+          const customerId = setupIntent.metadata.customer_id;
+          const subscriptionId = setupIntent.metadata.subscription_id;
+
+          // Attach the PaymentMethod to the customer
+          const paymentMethod = await stripe.paymentMethods.attach(
+            paymentMethodId,
+            { customer: customerId }
+          );
+
+          //Set a default payment method for future invoices
+          const customer = await stripe.customers.update(customerId, {
+            invoice_settings: { default_payment_method: paymentMethodId }
+          });
+
+          //Set default_payment_method on the Subscription
+          const subscription = await stripe.subscriptions.update(
+            subscriptionId,
+            {
+              default_payment_method: paymentMethodId
+            }
+          );
+        } catch (err) {
+          logger.error("Stripe Checkout SetupIntent Webhook Error: ", err);
+          return res.status(400).send(`Webhook Error: ${err.message}`);
+        }
       }
-    } else if (evt.data.object.mode == "setup") {
-      console.log("hit setup type checkout session");
-      try {
-        const setupIntentId = evt.data.object.setup_intent;
+    }
 
-        // Retrieve the SetupIntent
-        const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+    if (evt.type === "charge.succeeded") {
+      if (
+        evt.data.object.amount_captured == 49400 ||
+        evt.data.object.amount_captured == 16400
+      ) {
+        let { customer } = evt.data.object.source;
 
-        const paymentMethodId = setupIntent.payment_method;
-        const customerId = setupIntent.metadata.customer_id;
-        const subscriptionId = setupIntent.metadata.subscription_id;
-
-        // Attach the PaymentMethod to the customer
-        const paymentMethod = await stripe.paymentMethods.attach(
-          paymentMethodId,
-          { customer: customerId }
-        );
-
-        //Set a default payment method for future invoices
-        const customer = await stripe.customers.update(customerId, {
-          invoice_settings: { default_payment_method: paymentMethodId },
+        let response = await stripe.subscriptions.list({
+          customer
         });
 
-        //Set default_payment_method on the Subscription
-        const subscription = await stripe.subscriptions.update(subscriptionId, {
-          default_payment_method: paymentMethodId,
+        let { data } = response;
+
+        let subscriptions = data;
+
+        console.log("-- subscriptions --");
+        console.log(subscriptions);
+
+        let trial_seconds =
+          evt.data.object.amount_captured == 49400
+            ? 60 * 60 * 24 * 365
+            : 60 * 60 * 24 * 182;
+        let subscriptionId = subscriptions[0].id;
+
+        console.log(subscriptionId);
+
+        response = await stripe.subscriptions.update(subscriptionId, {
+          trial_end: Math.floor(new Date().getTime() / 1000) + trial_seconds
         });
-      } catch (err) {
-        logger.error("Stripe Checkout SetupIntent Webhook Error: ", err);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
+
+        console.log("-- subscription update --");
+        console.log(response);
       }
     }
-  }
 
-  if (evt.type === "charge.succeeded") {
-    if (
-      evt.data.object.amount_captured == 49400 ||
-      evt.data.object.amount_captured == 16400
-    ) {
-      let { customer } = evt.data.object.source;
-
-      let response = await stripe.subscriptions.list({
-        customer,
-      });
-
-      let { data } = response;
-
-      let subscriptions = data;
-
-      console.log("-- subscriptions --");
-      console.log(subscriptions);
-
-      let trial_seconds =
-        evt.data.object.amount_captured == 49400
-          ? 60 * 60 * 24 * 365
-          : 60 * 60 * 24 * 182;
-      let subscriptionId = subscriptions[0].id;
-
-      console.log(subscriptionId);
-
-      response = await stripe.subscriptions.update(subscriptionId, {
-        trial_end: Math.floor(new Date().getTime() / 1000) + trial_seconds,
-      });
-
-      console.log("-- subscription update --");
-      console.log(response);
+    if (evt.type === "customer.subscription.deleted") {
+      const user = await db
+        .collection("users")
+        .where("customerId", "==", evt.data.object.customer)
+        .get();
+      if (!user.empty) {
+        await db.collection("users").doc(user.id).update({
+          subscriptionStatus: evt.data.object.status
+        });
+      }
     }
-  }
 
-  if (evt.type === "customer.subscription.deleted") {
-    const user = await db.collection("users").where('customerId', '==', evt.data.object.customer).get()
-    if (!user.empty) {
-      await db.collection("users").doc(user.id).update({
-        subscriptionStatus: evt.data.object.status,
-      });
-    }
+    res.json({ success: true });
   }
-
-  res.json({ success: true });
-});
+);
 
 app.post("/checkout", async (req, res) => {
   let plan = req.body.plan;
@@ -362,7 +387,7 @@ app.post("/checkout", async (req, res) => {
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
-      message: "please enter your email",
+      message: "please enter your email"
     });
     return;
   }
@@ -404,7 +429,7 @@ app.post("/checkout", async (req, res) => {
       phone: phone,
       name: firstName + " " + lastName,
       description: firstName + " " + lastName,
-      metadata: customerMetadata,
+      metadata: customerMetadata
     });
 
     const session = await stripe.checkout.sessions.create({
@@ -414,15 +439,15 @@ app.post("/checkout", async (req, res) => {
       subscription_data: {
         items: [
           {
-            plan: planId,
-          },
+            plan: planId
+          }
         ],
         trial_from_plan: true,
-        coupon: plan,
+        coupon: plan
       },
       success_url:
         apiProtocol + apiURL + "/success?session_id={CHECKOUT_SESSION_ID}",
-      cancel_url: apiProtocol + apiURL,
+      cancel_url: apiProtocol + apiURL
     });
     res.json({ session: session });
   } else {
@@ -436,11 +461,11 @@ app.post("/checkout", async (req, res) => {
       setup_intent_data: {
         metadata: {
           customer_id: req.body.customer_id,
-          subscription_id: req.body.subscription_id,
-        },
+          subscription_id: req.body.subscription_id
+        }
       },
       success_url: apiProtocol + apiURL + "/account?s=1",
-      cancel_url: apiProtocol + apiURL,
+      cancel_url: apiProtocol + apiURL
     });
     res.json({ session: session });
   }
@@ -466,9 +491,9 @@ app.post("/product-checkout", async (req, res) => {
       amount: body.amount,
       currency: body.currency,
       customer: customer.id,
-      setup_future_usage: 'off_session'
+      setup_future_usage: "off_session"
     };
-  
+
     const paymentIntent = await stripe.paymentIntents.create(intentOptions);
 
     const productVariantId = 37409762508998;
@@ -477,13 +502,13 @@ app.post("/product-checkout", async (req, res) => {
       line_items: [
         {
           variant_id: productVariantId,
-          quantity: 1,
-        },
+          quantity: 1
+        }
       ],
       customer: {
         first_name: data.firstName,
         last_name: data.lastName,
-        email: data.email,
+        email: data.email
       },
       billing_address: {
         first_name: data.firstName,
@@ -499,7 +524,7 @@ app.post("/product-checkout", async (req, res) => {
         country: "USA",
         zip: data.differentBilling
           ? data.billingPostalCode
-          : data.shippingPostalCode,
+          : data.shippingPostalCode
       },
       shipping_address: {
         first_name: data.firstName,
@@ -509,9 +534,9 @@ app.post("/product-checkout", async (req, res) => {
         city: data.shippingCity,
         province: data.shippingRegion,
         country: "USA",
-        zip: data.shippingPostalCode,
+        zip: data.shippingPostalCode
       },
-      email: data.email,
+      email: data.email
     };
 
     const orderData = await shopify.order.create(order);
@@ -526,7 +551,7 @@ app.post("/upgrade-order", async (req, res) => {
   logger.info("/upgrade-order");
 
   const { customer } = req.body;
-  
+
   if (!customer) {
     res.status(400).send("Invalid customer id");
     return;
@@ -540,8 +565,9 @@ app.post("/upgrade-order", async (req, res) => {
     });
 
     res.json({
-      status: subscription['latest_invoice']['payment_intent']['status'],
-      clientSecret: subscription['latest_invoice']['payment_intent']['client_secret']
+      status: subscription["latest_invoice"]["payment_intent"]["status"],
+      clientSecret:
+        subscription["latest_invoice"]["payment_intent"]["client_secret"]
     });
   } catch (err) {
     const errMsg = handleStripeError(err);
@@ -581,7 +607,7 @@ app.post("/authenticate", async (req, res) => {
     // get idtoken from req body
     const idToken = req.body.token.toString();
 
-    console.log('idToken---', idToken);
+    console.log("idToken---", idToken);
 
     // verify id token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -590,7 +616,7 @@ app.post("/authenticate", async (req, res) => {
       throw {
         terminal_error: true,
         error_code: "SESSION_EXPIRED",
-        message: "Your login session has expired, please try logging in again.",
+        message: "Your login session has expired, please try logging in again."
       };
     }
 
@@ -611,7 +637,7 @@ app.post("/authenticate", async (req, res) => {
       if (userData.isAdmin) {
         await admin.auth().setCustomUserClaims(decodedToken.uid, {
           isAdmin: true,
-          customer_id: customerId,
+          customer_id: customerId
         });
       }
     } else {
@@ -625,7 +651,7 @@ app.post("/authenticate", async (req, res) => {
         throw {
           terminal_error: true,
           error_code: "USER_NOT_FOUND",
-          message: "Unable to verify your user record.",
+          message: "Unable to verify your user record."
         };
       }
       // found user in db, get data
@@ -634,7 +660,7 @@ app.post("/authenticate", async (req, res) => {
       customerId = userData.customerId;
       // set claim in firestore auth
       await admin.auth().setCustomUserClaims(decodedToken.uid, {
-        customer_id: customerId,
+        customer_id: customerId
       });
     }
     if (!customerId) {
@@ -643,7 +669,7 @@ app.post("/authenticate", async (req, res) => {
       throw {
         terminal_error: true,
         error_code: "PAYMENT_INCOMPLETE",
-        message: "Please complete your payment",
+        message: "Please complete your payment"
       };
     }
 
@@ -656,7 +682,7 @@ app.post("/authenticate", async (req, res) => {
     console.log("\nEND\n");
 
     const response = await stripe.subscriptions.list({
-      customer: customerId,
+      customer: customerId
     });
 
     let { data } = response;
@@ -670,7 +696,7 @@ app.post("/authenticate", async (req, res) => {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)",
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)"
       };
     }
 
@@ -682,8 +708,8 @@ app.post("/authenticate", async (req, res) => {
         }
       );
 
-      logger.info('---Updated Subscription---')
-      subscriptions[0] = updatedSubscription
+      logger.info("---Updated Subscription---");
+      subscriptions[0] = updatedSubscription;
     }
 
     // Check if customer has paid for their subscription
@@ -704,14 +730,14 @@ app.post("/authenticate", async (req, res) => {
         terminal_error: true,
         error_code: "SUBSCRIPTION_CANCELED",
         message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)",
+          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)"
       };
     }
 
     let subStatus = subscriptions[0].status;
     if (userData.subscriptionStatus !== subStatus) {
       db.collection("users").doc(decodedToken.uid).update({
-        subscriptionStatus: subscriptions[0].status,
+        subscriptionStatus: subscriptions[0].status
       });
     }
 
@@ -750,7 +776,7 @@ app.post("/payment", async (req, res) => {
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
-      message: "please enter your email",
+      message: "please enter your email"
     });
     return;
   }
@@ -764,8 +790,8 @@ app.post("/payment", async (req, res) => {
       payment_method: req.body.payment_method,
       email: req.body.email,
       invoice_settings: {
-        default_payment_method: req.body.payment_method,
-      },
+        default_payment_method: req.body.payment_method
+      }
     });
 
     console.log("THE CUSTOMER");
@@ -777,7 +803,7 @@ app.post("/payment", async (req, res) => {
       items: [{ plan: planId }],
       expand: ["latest_invoice.payment_intent"],
       cancel_at_period_end: true,
-      coupon: couponId,
+      coupon: couponId
     });
     console.log("THE SUBSCRIPTION");
     console.log(subscription);
@@ -796,13 +822,13 @@ app.post("/payment", async (req, res) => {
       userId: userId,
       customerId: customer.id,
       subscriptionId: subscription.id,
-      email: email,
+      email: email
     });
 
     // Set custom auth claims with Firebase
     await admin.auth().setCustomUserClaims(userId, {
       customer_id: customer.id,
-      subscription_id: subscription.id,
+      subscription_id: subscription.id
     });
 
     res.json({ success: true });
@@ -811,7 +837,7 @@ app.post("/payment", async (req, res) => {
     console.log("/Payment Error: ", err);
     res.json({
       error_code: "USER_PAYMENT_AUTH_ERROR",
-      message: "Unable to validate your payment.",
+      message: "Unable to validate your payment."
     });
   }
 });
@@ -838,7 +864,7 @@ app.post("/upgrade-subscription", async (req, res) => {
   } else {
     res.json({
       status: "error",
-      message: "Invalid subscription type",
+      message: "Invalid subscription type"
     });
     return;
   }
@@ -849,9 +875,9 @@ app.post("/upgrade-subscription", async (req, res) => {
     items: [
       {
         id: subProductID,
-        price: price,
-      },
-    ],
+        price: price
+      }
+    ]
   });
 
   console.log(updatedSubscription);
@@ -882,12 +908,12 @@ app.get("/user", async (req, res) => {
     res.json({
       success: true,
       user,
-      dashboards,
+      dashboards
     });
   } catch (error) {
     res.json({
       success: false,
-      error,
+      error
     });
   }
 });
@@ -906,13 +932,13 @@ app.get("/profile", async (req, res) => {
     {
       expand: [
         "subscriptions.data.default_payment_method",
-        "invoice_settings.default_payment_method",
-      ],
+        "invoice_settings.default_payment_method"
+      ]
     }
   );
 
   const charges = await stripe.charges.list({
-    customer: customer.id,
+    customer: customer.id
   });
 
   const chargesAmount = [];
@@ -941,7 +967,7 @@ app.get("/profile", async (req, res) => {
     city: user.city ? user.city : "",
     profileImage: user.profileImage ? user.profileImage : "",
     ...user,
-    charges: chargesAmount,
+    charges: chargesAmount
   });
 });
 
@@ -960,7 +986,7 @@ app.post("/profile", upload.single("imageFile"), async (req, res) => {
       const s3 = new AWS.S3({
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        region: process.env.AWS_SES_REGION,
+        region: process.env.AWS_SES_REGION
       });
 
       const params = {
@@ -968,7 +994,7 @@ app.post("/profile", upload.single("imageFile"), async (req, res) => {
         Key: imageNewKey,
         ContentType: file.mimetype,
         Body: file.buffer,
-        ACL: "public-read",
+        ACL: "public-read"
       };
 
       const s3Upload = await s3.upload(params).promise();
@@ -984,14 +1010,14 @@ app.post("/profile", upload.single("imageFile"), async (req, res) => {
       lastName,
       city: city ? city : null,
       profileImage: profileImage ? profileImage : null,
-      imageKey: imageKey ? imageKey : null,
+      imageKey: imageKey ? imageKey : null
     });
 
     res.send({ success: true });
   } catch (error) {
     res.json({
       success: false,
-      error,
+      error
     });
   }
 });
@@ -1008,12 +1034,12 @@ app.post("/complete-signup", async (req, res) => {
 
     const customers = await stripe.customers.list({
       email: email,
-      limit: 1,
+      limit: 1
     });
 
     if (customers.data.length < 1) {
       return res.json({
-        error: "We could not find a customer with that email address.",
+        error: "We could not find a customer with that email address."
       });
     }
 
@@ -1021,7 +1047,7 @@ app.post("/complete-signup", async (req, res) => {
     const firstName = customers.data[0].metadata.first_name;
 
     const response = await stripe.subscriptions.list({
-      customer: customerId,
+      customer: customerId
     });
 
     const { data } = response;
@@ -1030,7 +1056,7 @@ app.post("/complete-signup", async (req, res) => {
     const subscriptionId = subscriptions[0].id;
 
     const charges = await stripe.charges.list({
-      customer: customerId,
+      customer: customerId
     });
 
     const chargesAmount = [];
@@ -1043,7 +1069,7 @@ app.post("/complete-signup", async (req, res) => {
       email,
       emailVerified: false,
       password,
-      disabled: false,
+      disabled: false
     });
 
     const docRef = db.collection("users").doc(authUser.uid);
@@ -1055,26 +1081,26 @@ app.post("/complete-signup", async (req, res) => {
         email: email,
         firstName,
         lastName: "",
-        phoneNumber: customers.data[0].phone,
+        phoneNumber: customers.data[0].phone
       },
       { merge: true }
     );
 
     await admin.auth().setCustomUserClaims(authUser.uid, {
       customer_id: customerId,
-      subscription_id: subscriptionId,
+      subscription_id: subscriptionId
     });
 
     const userMeta = {
       firstName,
-      charges: chargesAmount,
+      charges: chargesAmount
     };
 
     res.json({ success: true, userMeta });
   } catch (error) {
     res.json({
       error:
-        "We were unable to complete your account setup at this time, please contact support.",
+        "We were unable to complete your account setup at this time, please contact support."
     });
   }
 });
@@ -1089,14 +1115,14 @@ app.post("/signup", async (req, res) => {
       email,
       firstName,
       lastName,
-      phoneNumber,
+      phoneNumber
     });
 
     res.send({ success: true });
   } catch (error) {
     res.json({
       success: false,
-      error,
+      error
     });
   }
 });
