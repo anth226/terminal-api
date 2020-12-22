@@ -223,7 +223,7 @@ app.post("/hooks", async (req, res) => {
   let evt;
 
   try {
-    evt = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+    evt = req.body;
   } catch (err) {
     logger.error("Stripe Checkout Webhook Error (constructEvent): ", err);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -337,8 +337,7 @@ app.post("/hooks", async (req, res) => {
   }
 
   if (evt.type === "customer.subscription.deleted") {
-    console.log(evt.data.object)
-    const user = await db.collection("users").where('customerId', '==', 'cus_IFdUSj7RFyqOV5').get()
+    const user = await db.collection("users").where('customerId', '==', evt.data.object.customer).get()
     if (!user.empty) {
       const data = await db.collection("users").doc(user.id).update({
         subscriptionStatus: evt.data.object.status,
@@ -582,7 +581,7 @@ app.post("/authenticate", async (req, res) => {
     // get idtoken from req body
     const idToken = req.body.token.toString();
 
-    console.log(idToken);
+    console.log('idToken---', idToken);
 
     // verify id token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
