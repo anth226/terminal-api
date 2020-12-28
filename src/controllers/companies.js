@@ -11,14 +11,34 @@ export const getOwners = async (ticker) => {
   `);
 };
 
-export const getEtfs = async (ticker) => {
-  return await db(`
+export const getEtfs = async (ticker,sort) => {
+  if (sort == 'volume') {
+    return await db(`
     SELECT *
     FROM etfs_holdings AS b_h
     JOIN etfs AS b
     ON b_h.etf = b.id
     WHERE LOWER(b_h.ticker) = '${ticker.toLowerCase()}'
-  `);
+    ORDER BY b_h.market_value_held DESC
+    `);
+  }else if (sort == 'roi') {
+    return await db(`
+    SELECT *
+    FROM etfs_holdings AS b_h
+    JOIN etfs AS b
+    ON b_h.etf = b.id
+    WHERE LOWER(b_h.ticker) = '${ticker.toLowerCase()}'
+    ORDER BY (b.json_stats->>'trailing_one_year_return_split_and_dividend')::float DESC
+    `);
+  }else {
+    return await db(`
+    SELECT *
+    FROM etfs_holdings AS b_h
+    JOIN etfs AS b
+    ON b_h.etf = b.id
+    WHERE LOWER(b_h.ticker) = '${ticker.toLowerCase()}'
+    `);
+  }
 };
 
 export const lookup = async (companyAPI, identifier) => {

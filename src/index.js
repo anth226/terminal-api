@@ -1210,9 +1210,9 @@ app.get("/company/:symbol/owners", async (req, res) => {
   res.send(result);
 });
 
-app.use("/company/:symbol/etfs", checkAuth);
-app.get("/company/:symbol/etfs", async (req, res) => {
-  const result = await companies.getEtfs(req.params.symbol);
+app.use("/company/:symbol/etfs/:sort?", checkAuth);
+app.get("/company/:symbol/etfs/:sort?", async (req, res) => {
+  const result = await companies.getEtfs(req.params.symbol,req.params.sort);
   res.send(result);
 });
 
