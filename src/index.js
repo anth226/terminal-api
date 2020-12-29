@@ -241,22 +241,23 @@ app.post(
     let evt;
 
     try {
-      evt = req.body;
+      evt = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+      // evt = req.body;
     } catch (err) {
       logger.error("Stripe Checkout Webhook Error (constructEvent): ", err);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
     if (evt.type === "checkout.session.completed") {
-      logger.info("-- checkout session completed --");
+      logger.info("-- checkout session completed --", evt.data);
 
       if (evt.data.object.mode == "subscription") {
-        console.log("hit subscription type checkout session");
+        console.log("hit subscription type checkout session", evt.data.object);
 
         const subscriptionId = evt.data.object.subscription;
         const customerId = evt.data.object.customer;
         const userId = evt.data.object.client_reference_id;
-        const email = evt.data.object.customer_email;
+        // const email = evt.data.object.customer_email;
 
         // FIREBASE + FIRESTORE
         try {
@@ -266,8 +267,8 @@ app.post(
             {
               userId: userId,
               customerId: customerId,
-              subscriptionId: subscriptionId,
-              email: email
+              subscriptionId: subscriptionId
+              // email: email
             },
             { merge: true }
           );
@@ -358,13 +359,21 @@ app.post(
     }
 
     if (evt.type === "customer.subscription.deleted") {
-      const user = await db
+      const userRef = await db
         .collection("users")
         .where("customerId", "==", evt.data.object.customer)
         .get();
-      if (!user.empty) {
-        await db.collection("users").doc(user.id).update({
-          subscriptionStatus: evt.data.object.status
+
+      if (!userRef.empty) {
+        userRef.forEach(async (doc) => {
+          const docRef = db.collection("users").doc(doc.id);
+
+          await docRef.update(
+            {
+              subscriptionStatus: evt.data.object.status
+            },
+            { merge: true }
+          );
         });
       }
     }
@@ -1146,11 +1155,10 @@ app.post("/cancellation-request", async (req, res) => {
     user.subscriptionId
   );
 
-  if (getSubscription.status !== 'canceled') {
-    await stripe.subscriptions.update(
-      user.subscriptionId,
-      { cancel_at_period_end: true }
-    );
+  if (getSubscription.status !== "canceled") {
+    await stripe.subscriptions.update(user.subscriptionId, {
+      cancel_at_period_end: true
+    });
   }
 
   let email = customer.email;
