@@ -1734,6 +1734,12 @@ app.get("/billionaire/:id", async (req, res) => {
   res.send(result);
 });
 
+app.use("/titan-news/:uri", checkAuth);
+app.get("/titan-news/:uri", async (req, res) => {
+  const titanNews = await titans.getTitanNews(req.params.uri);
+  res.send(titanNews);
+});
+
 app.use("/titans/:portfolio", checkAuth);
 app.get("/titans/:portfolio", async (req, res) => {
   const portfolio = await titans
