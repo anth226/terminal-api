@@ -286,3 +286,51 @@ export async function getLastPrice(ticker) {
   }
   return prices;
 }
+
+export async function getLastPriceChange(ticker) {
+  let prices;
+  let openPrice;
+  let change;
+  //let realtime;
+  let delayed;
+  let qTicker = "e" + ticker;
+
+  connectSharedCache();
+
+  // let cachedPrice_R = await sharedCache.get(
+  //   `${CACHED_PRICE_REALTIME}${qTicker}`
+  // );
+
+  // if (cachedPrice_R) {
+  //   realtime = cachedPrice_R / 100;
+  // }
+
+  let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
+
+  // intrinioResponse now out here because we're calculating change
+  //  based on open_price from intrinio
+  let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
+  if (intrinioResponse) {
+    openPrice = intrinioResponse.open_price;
+    if (cachedPrice_15) {
+      delayed = cachedPrice_15 / 100;
+      let percentChange = (delayed / openPrice - 1) * 100;
+      prices = {
+        //last_price_realtime: realtime,
+        last_price: delayed,
+        performance: percentChange,
+      };
+    } else {
+      if (intrinioResponse.last_price) {
+        let lastPrice = intrinioResponse.last_price;
+        let percentChange = (lastPrice / openPrice - 1) * 100;
+        prices = {
+          //last_price_realtime: intrinioPrice.last_price,
+          last_price: lastPrice,
+          performance: percentChange,
+        };
+      }
+    }
+    return prices;
+  }
+}
