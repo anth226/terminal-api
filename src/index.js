@@ -1414,7 +1414,6 @@ app.get("/sec-last-price/:symbol", async (req, res) => {
 
 app.use("/sec-price-change/:symbol", checkAuth);
 app.get("/sec-price-change/:symbol", async (req, res) => {
-  console.log("here");
   const lastPrice = await quodd.getLastPriceChange(req.params.symbol);
   res.send(lastPrice);
 });
