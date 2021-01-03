@@ -290,7 +290,6 @@ export async function getLastPrice(ticker) {
 export async function getLastPriceChange(ticker) {
   let prices;
   let openPrice;
-  let change;
   //let realtime;
   let delayed;
   let qTicker = "e" + ticker;
@@ -310,6 +309,7 @@ export async function getLastPriceChange(ticker) {
   // intrinioResponse now out here because we're calculating change
   //  based on open_price from intrinio
   let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
+  console.log("intrinioResponse", intrinioResponse);
   if (intrinioResponse) {
     openPrice = intrinioResponse.open_price;
     if (cachedPrice_15) {
