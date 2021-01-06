@@ -314,8 +314,8 @@ export async function getLastPriceChange(ticker) {
   if (intrinioResponse && perf) {
     let jsonPerf = JSON.parse(perf);
     let vals = jsonPerf.values;
-    let openVal = vals[0].today.value;
-    let openDate = vals[0].today.date;
+    let openVal = vals.today.value;
+    let openDate = vals.today.date;
     vals.shift();
     vals.unshift({
       open: {
