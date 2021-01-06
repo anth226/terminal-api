@@ -316,13 +316,11 @@ export async function getLastPriceChange(ticker) {
     let vals = jsonPerf.values;
     let openVal = vals.today.value;
     let openDate = vals.today.date;
-    vals.shift();
-    vals.unshift({
-      open: {
-        date: openDate,
-        value: openVal,
-      },
-    });
+    delete vals[today];
+    vals[openPrice] = {
+      date: openDate,
+      value: openVal,
+    };
     openPrice = intrinioResponse.open_price;
     if (cachedPrice_15) {
       delayed = cachedPrice_15 / 100;
