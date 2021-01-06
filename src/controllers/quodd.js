@@ -17,6 +17,7 @@ import {
   AWS_POSTGRES_DB_PASSWORD,
   CACHED_PRICE_REALTIME,
   CACHED_PRICE_15MIN,
+  KEY_SECURITY_PERFORMANCE,
 } from "../redis";
 
 let dbs = {};
@@ -288,7 +289,7 @@ export async function getLastPrice(ticker) {
 }
 
 export async function getLastPriceChange(ticker) {
-  let prices;
+  let response;
   let openPrice;
   //let realtime;
   let delayed;
@@ -305,32 +306,34 @@ export async function getLastPriceChange(ticker) {
   // }
 
   let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
+  let perf = await sharedCache.get(`${KEY_SECURITY_PERFORMANCE}-${ticker}`);
 
   // intrinioResponse now out here because we're calculating change
   //  based on open_price from intrinio
   let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
-  console.log("intrinioResponse", intrinioResponse);
-  if (intrinioResponse) {
+  if (intrinioResponse && perf) {
     openPrice = intrinioResponse.open_price;
     if (cachedPrice_15) {
       delayed = cachedPrice_15 / 100;
       let percentChange = (delayed / openPrice - 1) * 100;
-      prices = {
+      response = {
         //last_price_realtime: realtime,
         last_price: delayed,
         performance: percentChange,
+        perf: perf,
       };
     } else {
       if (intrinioResponse.last_price) {
         let lastPrice = intrinioResponse.last_price;
         let percentChange = (lastPrice / openPrice - 1) * 100;
-        prices = {
+        response = {
           //last_price_realtime: intrinioPrice.last_price,
           last_price: lastPrice,
           performance: percentChange,
+          perf: perf,
         };
       }
     }
-    return prices;
+    return response;
   }
 }
