@@ -320,6 +320,7 @@ export async function getLastPriceChange(ticker) {
       response = {
         //last_price_realtime: realtime,
         last_price: delayed,
+        open_price: openPrice,
         performance: percentChange,
         perf: jsonPerf,
       };
@@ -330,6 +331,7 @@ export async function getLastPriceChange(ticker) {
         response = {
           //last_price_realtime: intrinioPrice.last_price,
           last_price: lastPrice,
+          open_price: openPrice,
           performance: percentChange,
           perf: jsonPerf,
         };
