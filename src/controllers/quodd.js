@@ -313,7 +313,7 @@ export async function getLastPriceChange(ticker) {
   let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
   if (intrinioResponse && perf) {
     let jsonPerf = JSON.parse(perf);
-    let values;
+    let values = [];
     let vals = jsonPerf.values;
     for (let i in vals) {
       if ((i = 0)) {
@@ -323,9 +323,9 @@ export async function getLastPriceChange(ticker) {
             value: vals[i].today.value,
           },
         });
-        continue;
+      } else {
+        values.push(vals[i]);
       }
-      values.push(vals[i]);
     }
     openPrice = intrinioResponse.open_price;
     if (cachedPrice_15) {
