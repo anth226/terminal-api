@@ -35,6 +35,7 @@ import * as dashboard from "./controllers/dashboard";
 import * as securities from "./controllers/securities";
 import * as pages from "./controllers/pages";
 
+import * as darkpool from "./controllers/darkpool";
 import * as quodd from "./controllers/quodd";
 import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
@@ -1955,6 +1956,22 @@ app.get("/widgets/:id", async (req, res) => {
 // app.use("/widgets/global/:type", checkAuth);
 app.get("/widgets/global/:type", async (req, res) => {
   const result = await widgets.getGlobalWidgetByType(req.params.type);
+  res.send(result);
+});
+
+/* Dark Pool */
+app.get("/darkpool/snapshot", async (req, res) => {
+  const result = await darkpool.getSnapshot();
+  res.send(result);
+});
+
+app.get("/darkpool/sidebar", async (req, res) => {
+  const result = await darkpool.getSidebar();
+  res.send(result);
+});
+
+app.get("/darkpool/table", async (req, res) => {
+  const result = await darkpool.getTable();
   res.send(result);
 });
 
