@@ -316,8 +316,8 @@ export async function getLastPriceChange(ticker) {
     let vals = jsonPerf.values;
     let openVal = vals.today.value;
     let openDate = vals.today.date;
-    delete vals[today];
-    vals[openPrice] = {
+    delete vals["today"];
+    vals["open"] = {
       date: openDate,
       value: openVal,
     };
