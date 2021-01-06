@@ -313,20 +313,20 @@ export async function getLastPriceChange(ticker) {
   let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
   if (intrinioResponse && perf) {
     let jsonPerf = JSON.parse(perf);
-    let values = [];
+    //let values = [];
     let vals = jsonPerf.values;
-    for (let i in vals) {
-      if ((i = 0)) {
-        values.push({
-          open: {
-            date: vals[i].today.date,
-            value: vals[i].today.value,
-          },
-        });
-      } else {
-        values.push(vals[i]);
-      }
-    }
+    // for (let i in vals) {
+    //   if ((i = 0)) {
+    //     values.push({
+    //       open: {
+    //         date: vals[i].today.date,
+    //         value: vals[i].today.value,
+    //       },
+    //     });
+    //   } else {
+    //     values.push(vals[i]);
+    //   }
+    // }
     openPrice = intrinioResponse.open_price;
     if (cachedPrice_15) {
       delayed = cachedPrice_15 / 100;
@@ -336,7 +336,7 @@ export async function getLastPriceChange(ticker) {
         last_price: delayed,
         open_price: openPrice,
         performance: percentChange,
-        values: values,
+        values: vals,
       };
     } else {
       if (intrinioResponse.last_price) {
@@ -347,7 +347,7 @@ export async function getLastPriceChange(ticker) {
           last_price: lastPrice,
           open_price: openPrice,
           performance: percentChange,
-          values: values,
+          values: vals,
         };
       }
     }
