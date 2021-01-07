@@ -1906,6 +1906,12 @@ app.get("/dashboards", async (req, res) => {
   res.send(result);
 });
 
+app.use("/stockwall", checkAuth);
+app.get("/stockwall", async (req, res) => {
+  const result = await dashboard.getStockWall(req.terminal_app.claims.uid);
+  res.send(result);
+});
+
 app.use("/pin", checkAuth);
 app.get("/pin", async (req, res) => {
   const result = await widgets.create(
