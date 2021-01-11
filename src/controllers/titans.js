@@ -4,18 +4,8 @@ import * as finbox from "../finbox/titans";
 import * as performance from "./performance";
 import * as watchlist from "./watchlist";
 import * as companies from "./companies";
-import intrinioSDK from "intrinio-sdk";
-import * as getCompanyData from "../intrinio/get_company_data";
 
 import redis, { KEY_TITAN_SUMMARY } from "../redis";
-
-// init intrinio
-intrinioSDK.ApiClient.instance.authentications["ApiKeyAuth"].apiKey =
-  process.env.INTRINIO_API_KEY;
-
-intrinioSDK.ApiClient.instance.basePath = `${process.env.INTRINIO_BASE_PATH}`;
-
-const companyAPI = new intrinioSDK.CompanyApi();
 
 export async function getAll() {
   return await finbox.getAll();
@@ -62,26 +52,22 @@ LEFT JOIN (
     WHERE bc.is_primary = true
   `);
 
-  let bigHoldings = ["Mega", "Large", "Mid", "Small"];
+  let bigHoldings = ['Mega','Large','Mid','Small'];
 
-  const unique = [
-    ...result
-      .reduce((a, c) => {
-        if (c.data_url != null && c.json != null && c.json.fund_size != null) {
-          if (bigHoldings.indexOf(c.json.fund_size) != -1) {
-            c.sortFactor = 10;
-          } else {
-            c.sortFactor = 0.1;
-          }
-        } else {
-          c.sortFactor = 0;
-        }
+  const unique = [...result.reduce((a,c)=>{
+    if (c.data_url != null && c.json != null && c.json.fund_size != null) {
+      if (bigHoldings.indexOf(c.json.fund_size) != -1) {
+        c.sortFactor = 10;
+      }else {
+        c.sortFactor = 0.1;
+      }
+    }else {
+      c.sortFactor = 0;
+    }
 
-        a.set(c.id, c);
-        return a;
-      }, new Map())
-      .values(),
-  ];
+    a.set(c.id, c);
+    return a;
+  }, new Map()).values()];
 
   return unique;
   // var unique = data.filter(
@@ -120,7 +106,7 @@ export const followTitan = async (userID, titanID) => {
   let query = {
     text:
       "INSERT INTO billionaire_watchlists (user_id, titan_id, watched_at) VALUES ($1, $2, now())",
-    values: [userID, titanID],
+    values: [userID, titanID]
   };
 
   let result = await db(query);
@@ -138,7 +124,7 @@ export const unfollowTitan = async (userID, titanID) => {
   let query = {
     text:
       "DELETE FROM billionaire_watchlists WHERE user_id=($1) AND titan_id=($2)",
-    values: [userID, titanID],
+    values: [userID, titanID]
   };
 
   let result = await db(query);
@@ -188,7 +174,7 @@ export const getHoldings = async (uri) => {
 
     let response = {
       ...result[0],
-      url: `https://${process.env.AWS_BUCKET_INTRINIO_ZAKS}.s3.amazonaws.com/holdings/${cik}/`,
+      url: `https://${process.env.AWS_BUCKET_INTRINIO_ZAKS}.s3.amazonaws.com/holdings/${cik}/`
     };
 
     result = await db(`
@@ -201,7 +187,7 @@ export const getHoldings = async (uri) => {
 
     response = {
       ...response,
-      batched_holding: result.length > 0 ? result[0] : null,
+      batched_holding: result.length > 0 ? result[0] : null
     };
 
     return response;
@@ -213,7 +199,7 @@ export const getHoldings = async (uri) => {
 export const getSummary = async (uri, userId) => {
   let data = {
     profile: null,
-    summary: null,
+    summary: null
   };
   let item;
 
@@ -266,12 +252,12 @@ export const getSummary = async (uri, userId) => {
     data = {
       profile: result[0],
       summary: item,
-      company,
+      company
     };
 
     data = {
       ...data,
-      watching: await watchlist.isWatching_Billionaire(id, userId),
+      watching: await watchlist.isWatching_Billionaire(id, userId)
     };
   }
 
@@ -322,7 +308,7 @@ export const getFilledPage = async ({ sort = [], page = 0, size = 100 }) => {
 export const updateBillionaire = async (id, cik) => {
   let query = {
     text: "UPDATE billionaires SET cik=($1) WHERE id=($2)",
-    values: [cik, id],
+    values: [cik, id]
   };
 
   return await db(query);
@@ -335,7 +321,7 @@ export const updateBillionaire_CompanyPerformanceFallback = async (
   let query = {
     text:
       "UPDATE billionaires SET use_company_performance_fallback=($1) WHERE id=($2)",
-    values: [toggle, id],
+    values: [toggle, id]
   };
 
   return await db(query);
@@ -344,7 +330,7 @@ export const updateBillionaire_CompanyPerformanceFallback = async (
 export const updateBillionaireNote = async (id, note) => {
   let query = {
     text: "UPDATE billionaires SET note=($1) WHERE id=($2)",
-    values: [note, id],
+    values: [note, id]
   };
 
   return await db(query);
@@ -354,7 +340,7 @@ export const setCik = async (identifier, rank, cik) => {
   let query = {
     text:
       "UPDATE billionaire_ciks SET cik=($1), updated_at=now() WHERE titan_id=($2) AND rank=($3)",
-    values: [cik, identifier, rank],
+    values: [cik, identifier, rank]
   };
 
   return await db(query);
@@ -364,7 +350,7 @@ export const setEntityName = async (identifier, rank, name) => {
   let query = {
     text:
       "UPDATE billionaire_ciks SET name=($1), updated_at=now() WHERE titan_id=($2) AND rank=($3)",
-    values: [name, identifier, rank],
+    values: [name, identifier, rank]
   };
 
   return await db(query);
@@ -375,7 +361,7 @@ export const promoteCik = async (identifier, rank) => {
   let query = {
     text:
       "UPDATE billionaire_ciks SET is_primary=false, updated_at=now() WHERE titan_id=($1)",
-    values: [identifier],
+    values: [identifier]
   };
 
   await db(query);
@@ -383,57 +369,8 @@ export const promoteCik = async (identifier, rank) => {
   query = {
     text:
       "UPDATE billionaire_ciks SET is_primary=true, updated_at=now() WHERE titan_id=($1) and rank=($2)",
-    values: [identifier, rank],
+    values: [identifier, rank]
   };
 
   return await db(query);
-};
-
-export const getTitanNews = async (uri) => {
-  let news;
-  // query for ciks for titan
-  let result = await db(`
-    SELECT b.*, b_c.ciks
-    FROM public.billionaires AS b
-    LEFT JOIN (
-      SELECT titan_id, json_agg(json_build_object('cik', cik, 'name', name, 'is_primary', is_primary) ORDER BY rank ASC) AS ciks
-      FROM public.billionaire_ciks
-      GROUP BY titan_id
-    ) AS b_c ON b.id = b_c.titan_id
-    WHERE uri = '${uri}'
-  `);
-  // grab institutions from primary cik
-  if (result.length > 0) {
-    let ciks = result[0].ciks;
-    let id = result[0].id;
-    if (ciks && ciks.length > 0) {
-      for (let j = 0; j < ciks.length; j += 1) {
-        let cik = ciks[j];
-        if (cik.cik != "0000000000" && cik.is_primary == true) {
-          let item = await performance.getInstitution(cik.cik);
-          let holdings = item.json_top_10_holdings;
-          if (holdings.length > 0) {
-            let newsList = [];
-            for (let k = 0; k < 3; k++) {
-              let ticker = holdings[k].company.ticker;
-              let newsResult = await getCompanyData.companyNews(
-                companyAPI,
-                ticker
-              );
-              if (newsResult && newsResult.news) {
-                newsList.push(newsResult.news);
-              }
-            }
-            let flatNews = newsList.flat();
-            flatNews.sort((a, b) => {
-              if (a.publication_date > b.publication_date) return -1;
-              return a.publication_date > b.publication_date ? 1 : 0;
-            });
-            news = flatNews;
-          }
-        }
-      }
-    }
-  }
-  return news;
 };
