@@ -29,6 +29,7 @@ import * as nerdwalletSavings from "./scrape/nerdwallet_savings";
 import * as portfolios from "./controllers/portfolios";
 import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
+import * as naviga from "./controllers/naviga";
 import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 import * as dashboard from "./controllers/dashboard";
@@ -57,13 +58,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { isAuthorized } from "./middleware/authorized";
 import { db, admin } from "./services/firebase";
-import {
-  stripe,
-  endpointSecret,
-  couponId,
-  planId,
-  yearlyPlanId,
-} from "./services/stripe";
+import { stripe, endpointSecret, couponId, planId } from "./services/stripe";
 import Shopify from "shopify-api-node";
 
 const shopify = new Shopify({
@@ -147,17 +142,8 @@ app.use(cookieParser());
 // app.use(bodyParser.json({ verify: rawBodySaver }));
 // app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
 // app.use(bodyParser.raw({ verify: rawBodySaver, type: "*/*" }));
-// app.use(express.json());
 
-app.use((req, res, next) => {
-  if (req.originalUrl === "/hooks") {
-    next();
-  } else {
-    bodyParser.raw({ type: "application/json" });
-    bodyParser.json()(req, res, next);
-  }
-});
-
+app.use(express.json());
 app.use(middleware.requestHandler);
 /*
 ~~~~~~Utils~~~~~~
@@ -232,155 +218,127 @@ function checkAuth(req, res, next) {
 
 //Request URL: https://terminal.retirementinsider.com/success?session_id=cs_test_rVIlOBqZ6XvLsDFCCI8MVveNLuFCpJUqsH1vKfIFWLQSl9nPcILCUM85
 
-app.post(
-  "/hooks",
-  bodyParser.raw({ type: "application/json" }),
-  async (req, res) => {
-    const sig = req.headers["stripe-signature"];
+app.post("/hooks", async (req, res) => {
+  const sig = req.headers["stripe-signature"];
 
-    let evt;
+  let evt;
 
-    try {
-      evt = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-      // evt = req.body;
-    } catch (err) {
-      logger.error("Stripe Checkout Webhook Error (constructEvent): ", err);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    if (evt.type === "checkout.session.completed") {
-      logger.info("-- checkout session completed --", evt.data);
-
-      if (evt.data.object.mode == "subscription") {
-        console.log("hit subscription type checkout session", evt.data.object);
-
-        const subscriptionId = evt.data.object.subscription;
-        const customerId = evt.data.object.customer;
-        const userId = evt.data.object.client_reference_id;
-        // const email = evt.data.object.customer_email;
-
-        // FIREBASE + FIRESTORE
-        try {
-          // Add user data to db
-          let docRef = db.collection("users").doc(userId);
-          let setUser = await docRef.set(
-            {
-              userId: userId,
-              customerId: customerId,
-              subscriptionId: subscriptionId,
-              // email: email
-            },
-            { merge: true }
-          );
-
-          // Set custom auth claims with Firebase
-          await admin.auth().setCustomUserClaims(userId, {
-            customer_id: customerId,
-            subscription_id: subscriptionId,
-          });
-
-          sendEmail.sendSignupEmail(email);
-          await klaviyo.subscribeToList(email);
-        } catch (err) {
-          // error with firebase and firestore
-          logger.error("Stripe Checkout Webhook Error: ", err);
-          return res.status(400).send(`Webhook Error: ${err.message}`);
-        }
-      } else if (evt.data.object.mode == "setup") {
-        console.log("hit setup type checkout session");
-        try {
-          const setupIntentId = evt.data.object.setup_intent;
-
-          // Retrieve the SetupIntent
-          const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
-
-          const paymentMethodId = setupIntent.payment_method;
-          const customerId = setupIntent.metadata.customer_id;
-          const subscriptionId = setupIntent.metadata.subscription_id;
-
-          // Attach the PaymentMethod to the customer
-          const paymentMethod = await stripe.paymentMethods.attach(
-            paymentMethodId,
-            { customer: customerId }
-          );
-
-          //Set a default payment method for future invoices
-          const customer = await stripe.customers.update(customerId, {
-            invoice_settings: { default_payment_method: paymentMethodId },
-          });
-
-          //Set default_payment_method on the Subscription
-          const subscription = await stripe.subscriptions.update(
-            subscriptionId,
-            {
-              default_payment_method: paymentMethodId,
-            }
-          );
-        } catch (err) {
-          logger.error("Stripe Checkout SetupIntent Webhook Error: ", err);
-          return res.status(400).send(`Webhook Error: ${err.message}`);
-        }
-      }
-    }
-
-    if (evt.type === "charge.succeeded") {
-      if (
-        evt.data.object.amount_captured == 49400 ||
-        evt.data.object.amount_captured == 16400
-      ) {
-        let { customer } = evt.data.object.source;
-
-        let response = await stripe.subscriptions.list({
-          customer,
-        });
-
-        let { data } = response;
-
-        let subscriptions = data;
-
-        console.log("-- subscriptions --");
-        console.log(subscriptions);
-
-        let trial_seconds =
-          evt.data.object.amount_captured == 49400
-            ? 60 * 60 * 24 * 365
-            : 60 * 60 * 24 * 182;
-        let subscriptionId = subscriptions[0].id;
-
-        console.log(subscriptionId);
-
-        response = await stripe.subscriptions.update(subscriptionId, {
-          trial_end: Math.floor(new Date().getTime() / 1000) + trial_seconds,
-        });
-
-        console.log("-- subscription update --");
-        console.log(response);
-      }
-    }
-
-    if (evt.type === "customer.subscription.deleted") {
-      const userRef = await db
-        .collection("users")
-        .where("customerId", "==", evt.data.object.customer)
-        .get();
-
-      if (!userRef.empty) {
-        userRef.forEach(async (doc) => {
-          const docRef = db.collection("users").doc(doc.id);
-
-          await docRef.update(
-            {
-              subscriptionStatus: evt.data.object.status,
-            },
-            { merge: true }
-          );
-        });
-      }
-    }
-
-    res.json({ success: true });
+  try {
+    evt = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+  } catch (err) {
+    logger.error("Stripe Checkout Webhook Error (constructEvent): ", err);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-);
+
+  if (evt.type === "checkout.session.completed") {
+    logger.info("-- checkout session completed --");
+
+    if (evt.data.object.mode == "subscription") {
+      console.log("hit subscription type checkout session");
+
+      const subscriptionId = evt.data.object.subscription;
+      const customerId = evt.data.object.customer;
+      const userId = evt.data.object.client_reference_id;
+      const email = evt.data.object.customer_email;
+
+      // FIREBASE + FIRESTORE
+      try {
+        // Add user data to db
+        let docRef = db.collection("users").doc(userId);
+        let setUser = await docRef.set(
+          {
+            userId: userId,
+            customerId: customerId,
+            subscriptionId: subscriptionId,
+            email: email,
+          },
+          { merge: true }
+        );
+
+        // Set custom auth claims with Firebase
+        await admin.auth().setCustomUserClaims(userId, {
+          customer_id: customerId,
+          subscription_id: subscriptionId,
+        });
+
+        sendEmail.sendSignupEmail(email);
+        await klaviyo.subscribeToList(email);
+      } catch (err) {
+        // error with firebase and firestore
+        logger.error("Stripe Checkout Webhook Error: ", err);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+    } else if (evt.data.object.mode == "setup") {
+      console.log("hit setup type checkout session");
+      try {
+        const setupIntentId = evt.data.object.setup_intent;
+
+        // Retrieve the SetupIntent
+        const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+
+        const paymentMethodId = setupIntent.payment_method;
+        const customerId = setupIntent.metadata.customer_id;
+        const subscriptionId = setupIntent.metadata.subscription_id;
+
+        // Attach the PaymentMethod to the customer
+        const paymentMethod = await stripe.paymentMethods.attach(
+          paymentMethodId,
+          { customer: customerId }
+        );
+
+        //Set a default payment method for future invoices
+        const customer = await stripe.customers.update(customerId, {
+          invoice_settings: { default_payment_method: paymentMethodId },
+        });
+
+        //Set default_payment_method on the Subscription
+        const subscription = await stripe.subscriptions.update(subscriptionId, {
+          default_payment_method: paymentMethodId,
+        });
+      } catch (err) {
+        logger.error("Stripe Checkout SetupIntent Webhook Error: ", err);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+    }
+  }
+
+  if (evt.type === "charge.succeeded") {
+    if (
+      evt.data.object.amount_captured == 49400 ||
+      evt.data.object.amount_captured == 16400
+    ) {
+      let { customer } = evt.data.object.source;
+
+      let response = await stripe.subscriptions.list({
+        customer,
+      });
+
+      let { data } = response;
+
+      let subscriptions = data;
+
+      console.log("-- subscriptions --");
+      console.log(subscriptions);
+
+      let trial_seconds =
+        evt.data.object.amount_captured == 49400
+          ? 60 * 60 * 24 * 365
+          : 60 * 60 * 24 * 182;
+      let subscriptionId = subscriptions[0].id;
+
+      console.log(subscriptionId);
+
+      response = await stripe.subscriptions.update(subscriptionId, {
+        trial_end: Math.floor(new Date().getTime() / 1000) + trial_seconds,
+      });
+
+      console.log("-- subscription update --");
+      console.log(response);
+    }
+  }
+
+  res.json({ success: true });
+});
 
 app.post("/checkout", async (req, res) => {
   let plan = req.body.plan;
@@ -487,22 +445,15 @@ app.get("/", async (req, res) => {
 
 app.post("/product-checkout", async (req, res) => {
   const body = req.body;
-  const { data, token } = body;
+
+  const { data } = body;
+
+  const intentOptions = {
+    amount: body.amount,
+    currency: body.currency,
+  };
 
   try {
-    const customerData = {
-      source: token,
-      email: data.email,
-    };
-    const customer = await stripe.customers.create(customerData);
-
-    const intentOptions = {
-      amount: body.amount,
-      currency: body.currency,
-      customer: customer.id,
-      setup_future_usage: "off_session",
-    };
-
     const paymentIntent = await stripe.paymentIntents.create(intentOptions);
 
     const productVariantId = 37409762508998;
@@ -548,42 +499,11 @@ app.post("/product-checkout", async (req, res) => {
       email: data.email,
     };
 
-    const orderData = await shopify.order.create(order);
+    await shopify.order.create(order);
 
-    res.json({ paymentIntent, order: orderData });
+    res.json(paymentIntent);
   } catch (err) {
     res.json(err);
-  }
-});
-
-app.post("/upgrade-order", async (req, res) => {
-  logger.info("/upgrade-order");
-
-  const { customer } = req.body;
-
-  if (!customer) {
-    res.status(400).send("Invalid customer id");
-    return;
-  }
-
-  try {
-    const subscription = await stripe.subscriptions.create({
-      customer,
-      items: [{ plan: yearlyPlanId }],
-      expand: ["latest_invoice.payment_intent"],
-    });
-
-    res.json({
-      status: subscription["latest_invoice"]["payment_intent"]["status"],
-      clientSecret:
-        subscription["latest_invoice"]["payment_intent"]["client_secret"],
-    });
-  } catch (err) {
-    const errMsg = handleStripeError(err);
-    res.json({
-      error_code: "UPGRADE_ORDER_ERROR",
-      message: errMsg,
-    });
   }
 });
 
@@ -616,7 +536,7 @@ app.post("/authenticate", async (req, res) => {
     // get idtoken from req body
     const idToken = req.body.token.toString();
 
-    console.log("idToken---", idToken);
+    console.log(idToken);
 
     // verify id token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -709,18 +629,6 @@ app.post("/authenticate", async (req, res) => {
       };
     }
 
-    if (subscriptions[0].cancel_at_period_end === false) {
-      const updatedSubscription = await stripe.subscriptions.update(
-        subscriptions[0].id,
-        {
-          cancel_at_period_end: true,
-        }
-      );
-
-      logger.info("---Updated Subscription---");
-      subscriptions[0] = updatedSubscription;
-    }
-
     // Check if customer has paid for their subscription
     if (
       subscriptions[0].cancel_at_period_end &&
@@ -811,7 +719,6 @@ app.post("/payment", async (req, res) => {
       customer: customer.id,
       items: [{ plan: planId }],
       expand: ["latest_invoice.payment_intent"],
-      cancel_at_period_end: true,
       coupon: couponId,
     });
     console.log("THE SUBSCRIPTION");
@@ -1151,16 +1058,6 @@ app.post("/cancellation-request", async (req, res) => {
     req.terminal_app.claims.customer_id
   );
 
-  const getSubscription = await stripe.subscriptions.retrieve(
-    user.subscriptionId
-  );
-
-  if (getSubscription.status !== "canceled") {
-    await stripe.subscriptions.update(user.subscriptionId, {
-      cancel_at_period_end: true,
-    });
-  }
-
   let email = customer.email;
 
   sendEmail.sendCancellationRequest(
@@ -1314,12 +1211,6 @@ app.get("/company/:symbol/owners", async (req, res) => {
   res.send(result);
 });
 
-app.use("/company/:symbol/etfs/:sort?", checkAuth);
-app.get("/company/:symbol/etfs/:sort?", async (req, res) => {
-  const result = await companies.getEtfs(req.params.symbol, req.params.sort);
-  res.send(result);
-});
-
 app.use("/company-news/:symbol", checkAuth);
 app.get("/company-news/:symbol", async (req, res) => {
   const companyNews = await getCompanyData.companyNews(
@@ -1332,9 +1223,9 @@ app.get("/company-news/:symbol", async (req, res) => {
 app.use("/company-news/:symbol/images", checkAuth);
 app.get("/company-news/:symbol/images", async (req, res) => {
   const companyNews = await getCompanyData.companyNews(
-    companyAPI,
-    req.params.symbol,
-    true
+      companyAPI,
+      req.params.symbol,
+      true
   );
   res.send(companyNews);
 });
@@ -1408,13 +1299,9 @@ app.get("/sec-intraday-prices/:symbol", async (req, res) => {
 
 app.use("/sec-last-price/:symbol", checkAuth);
 app.get("/sec-last-price/:symbol", async (req, res) => {
-  const lastPrice = await quodd.getLastPrice(req.params.symbol);
-  res.send(lastPrice);
-});
-
-app.use("/sec-price-change/:symbol", checkAuth);
-app.get("/sec-price-change/:symbol", async (req, res) => {
-  const lastPrice = await quodd.getLastPriceChange(req.params.symbol);
+  const lastPrice = await getSecurityData.getSecurityLastPrice(
+    req.params.symbol
+  );
   res.send(lastPrice);
 });
 
@@ -1498,6 +1385,9 @@ app.get("/all-news", async (req, res) => {
   const news = await getNews.getAllNews(companyAPI);
   res.send(news);
 });
+
+app.get("/naviga-news", checkAuth, naviga.getAllNews);
+app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
 
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
@@ -1732,12 +1622,6 @@ app.get("/billionaire/:id", async (req, res) => {
     req.query.note
   );
   res.send(result);
-});
-
-app.use("/titan-news/:uri", checkAuth);
-app.get("/titan-news/:uri", async (req, res) => {
-  const titanNews = await titans.getTitanNews(req.params.uri);
-  res.send(titanNews);
 });
 
 app.use("/titans/:portfolio", checkAuth);
