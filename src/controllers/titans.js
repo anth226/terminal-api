@@ -1,4 +1,5 @@
 import db from "../db";
+import db1 from "../db1";
 
 import * as finbox from "../finbox/titans";
 import * as performance from "./performance";
@@ -52,16 +53,16 @@ LEFT JOIN (
     WHERE bc.is_primary = true
   `);
 
-  let bigHoldings = ['Mega','Large','Mid','Small'];
+  let bigHoldings = ['Mega', 'Large', 'Mid', 'Small'];
 
-  const unique = [...result.reduce((a,c)=>{
+  const unique = [...result.reduce((a, c) => {
     if (c.data_url != null && c.json != null && c.json.fund_size != null) {
       if (bigHoldings.indexOf(c.json.fund_size) != -1) {
         c.sortFactor = 10;
-      }else {
+      } else {
         c.sortFactor = 0.1;
       }
-    }else {
+    } else {
       c.sortFactor = 0;
     }
 
@@ -213,6 +214,14 @@ export const getSummary = async (uri, userId) => {
   //   ) AS b_c ON b.id = b_c.titan_id
   //   WHERE uri = '${uri}'
   // `);
+
+  const query = {
+    text:
+      "INSERT INTO titans (user_id, titan_uri, created_at) VALUES ($1, $2, now())",
+    values: [userId, uri],
+  };
+
+  await db1(query);
 
   let result = await db(`
     SELECT b.*, b_c.ciks
