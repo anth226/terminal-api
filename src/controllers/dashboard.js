@@ -80,3 +80,24 @@ export async function getDashboardId(userId) {
     }
   }
 }
+
+export async function getStockWall(userId) {
+  let result = await db(`
+    SELECT *
+    FROM dashboards
+    WHERE user_id = '${userId}'
+  `);
+
+  if (result && result.length > 0) {
+    let { id } = result[0];
+    result = await db(`
+      SELECT *
+      FROM portfolios 
+      WHERE id = '${id}'
+    `);
+    if (result && result.length > 0) {
+      let port = result[0];
+      return port;
+    }
+  }
+}

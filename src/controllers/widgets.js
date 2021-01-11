@@ -145,6 +145,7 @@ export const create = async (userId, widgetType, input) => {
           return;
         }
         let res = await processStockBuy(widgetInstanceId, dashboardId, ticker);
+        await bots.processUserPortfolio(dashboardId);
       }
 
       return result;
@@ -253,7 +254,7 @@ export const unpin = async (userId, widgetInstanceId) => {
       result = await db(query);
     }
   }
-
+  await bots.processUserPortfolio(dashboardId);
   return result;
 };
 
