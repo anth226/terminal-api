@@ -4,6 +4,7 @@ const { Client } = require("pg");
 
 const MTZ = require("moment-timezone");
 
+import * as getSecurityData from "../intrinio/get_security_data";
 import asyncRedis from "async-redis";
 import redis from "redis";
 import moment from "moment";
@@ -14,6 +15,9 @@ import {
   AWS_POSTGRES_DB_PORT,
   AWS_POSTGRES_DB_USER,
   AWS_POSTGRES_DB_PASSWORD,
+  CACHED_PRICE_REALTIME,
+  CACHED_PRICE_15MIN,
+  KEY_SECURITY_PERFORMANCE,
 } from "../redis";
 
 let dbs = {};
@@ -246,4 +250,101 @@ export async function getAllForTicker(ticker) {
   console.timeEnd("getAllForTicker");
 
   return response;
+}
+
+export async function getLastPrice(ticker) {
+  let prices;
+  //let realtime;
+  let delayed;
+  let qTicker = "e" + ticker;
+
+  connectSharedCache();
+
+  // let cachedPrice_R = await sharedCache.get(
+  //   `${CACHED_PRICE_REALTIME}${qTicker}`
+  // );
+
+  // if (cachedPrice_R) {
+  //   realtime = cachedPrice_R / 100;
+  // }
+
+  let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
+
+  if (cachedPrice_15) {
+    delayed = cachedPrice_15 / 100;
+    prices = {
+      //last_price_realtime: realtime,
+      last_price: delayed,
+    };
+  } else {
+    let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
+    if (intrinioResponse && intrinioResponse.last_price) {
+      prices = {
+        //last_price_realtime: intrinioPrice.last_price,
+        last_price: intrinioResponse.last_price,
+      };
+    }
+  }
+  return prices;
+}
+
+export async function getLastPriceChange(ticker) {
+  let response;
+  let openPrice;
+  //let realtime;
+  let delayed;
+  let qTicker = "e" + ticker;
+
+  connectSharedCache();
+
+  // let cachedPrice_R = await sharedCache.get(
+  //   `${CACHED_PRICE_REALTIME}${qTicker}`
+  // );
+
+  // if (cachedPrice_R) {
+  //   realtime = cachedPrice_R / 100;
+  // }
+
+  let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
+  let perf = await sharedCache.get(`${KEY_SECURITY_PERFORMANCE}-${ticker}`);
+
+  // intrinioResponse now out here because we're calculating change
+  //  based on open_price from intrinio
+  let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
+  if (intrinioResponse && perf) {
+    let jsonPerf = JSON.parse(perf);
+    let vals = jsonPerf.values;
+    let openVal = vals.today.value;
+    let openDate = vals.today.date;
+    delete vals["today"];
+    vals["open"] = {
+      date: openDate,
+      value: openVal,
+    };
+    openPrice = intrinioResponse.open_price;
+    if (cachedPrice_15) {
+      delayed = cachedPrice_15 / 100;
+      let percentChange = (delayed / openPrice - 1) * 100;
+      response = {
+        //last_price_realtime: realtime,
+        last_price: delayed,
+        open_price: openPrice,
+        performance: percentChange,
+        values: vals,
+      };
+    } else {
+      if (intrinioResponse.last_price) {
+        let lastPrice = intrinioResponse.last_price;
+        let percentChange = (lastPrice / openPrice - 1) * 100;
+        response = {
+          //last_price_realtime: intrinioPrice.last_price,
+          last_price: lastPrice,
+          open_price: openPrice,
+          performance: percentChange,
+          values: vals,
+        };
+      }
+    }
+    return response;
+  }
 }
