@@ -29,6 +29,7 @@ import * as nerdwalletSavings from "./scrape/nerdwallet_savings";
 import * as portfolios from "./controllers/portfolios";
 import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
+import * as naviga from "./controllers/naviga";
 import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 import * as dashboard from "./controllers/dashboard";
@@ -1499,6 +1500,9 @@ app.get("/all-news", async (req, res) => {
   const news = await getNews.getAllNews(companyAPI);
   res.send(news);
 });
+
+app.get("/naviga-news", checkAuth, naviga.getAllNews);
+app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
 
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
