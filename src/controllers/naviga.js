@@ -71,6 +71,7 @@ export async function getCompanyNews(req, res, next) {
     const news = await db(`
         SELECT 
             pi_naviga_news.id,
+            pi_naviga_news.title,
             pi_naviga_news.resource_id,
             pi_naviga_news.description,
             pi_naviga_news.timestamp,
