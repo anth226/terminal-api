@@ -646,8 +646,7 @@ app.post("/product-checkout-paypal", async (req, res) => {
 });
 
 app.post("/upgrade-order-paypal", async (req, res) => {
-  const body = req.body;
-  const { data } = body;
+  const customer = req.body.customer;
 
   try {
     const productVariantId = 37926110363846;
@@ -660,37 +659,8 @@ app.post("/upgrade-order-paypal", async (req, res) => {
         },
       ],
       customer: {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-      },
-      billing_address: {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        address1: data.differentBilling
-            ? data.billingAddress
-            : data.shippingAddress,
-        phone: data.phoneNumber,
-        city: data.differentBilling ? data.billingCity : data.shippingCity,
-        province: data.differentBilling
-            ? data.billingRegion
-            : data.shippingRegion,
-        country: "USA",
-        zip: data.differentBilling
-            ? data.billingPostalCode
-            : data.shippingPostalCode,
-      },
-      shipping_address: {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        address1: data.shippingAddress,
-        phone: data.phoneNumber,
-        city: data.shippingCity,
-        province: data.shippingRegion,
-        country: "USA",
-        zip: data.shippingPostalCode,
-      },
-      email: data.email,
+        id: customer
+      }
     };
 
     const orderData = await shopify.order.create(order);
