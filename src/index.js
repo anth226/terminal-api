@@ -646,16 +646,59 @@ app.post("/product-checkout-paypal", async (req, res) => {
 });
 
 app.post("/upgrade-order-paypal", async (req, res) => {
-  logger.info("/upgrade-order");
+  const body = req.body;
+  const { data } = body;
 
-  const { customer } = req.body;
+  try {
+    const productVariantId = 37926110363846;
 
-  if (!customer) {
-    res.status(400).send("Invalid customer id");
-    return;
+    const order = {
+      line_items: [
+        {
+          variant_id: productVariantId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+      },
+      billing_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.differentBilling
+            ? data.billingAddress
+            : data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.differentBilling ? data.billingCity : data.shippingCity,
+        province: data.differentBilling
+            ? data.billingRegion
+            : data.shippingRegion,
+        country: "USA",
+        zip: data.differentBilling
+            ? data.billingPostalCode
+            : data.shippingPostalCode,
+      },
+      shipping_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.shippingCity,
+        province: data.shippingRegion,
+        country: "USA",
+        zip: data.shippingPostalCode,
+      },
+      email: data.email,
+    };
+
+    const orderData = await shopify.order.create(order);
+
+    res.json({ order: orderData });
+  } catch (err) {
+    res.json(err);
   }
-
-
 });
 
 app.post("/signout", async (req, res) => {
