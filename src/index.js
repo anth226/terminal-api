@@ -1504,6 +1504,9 @@ app.get("/all-news", async (req, res) => {
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
 app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
 
+// app.use("/news/trending-ticker", checkAuth);
+app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
+
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
 app.get("/news/market-headlines", async (req, res) => {
