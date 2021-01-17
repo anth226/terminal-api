@@ -561,7 +561,7 @@ app.post("/product-checkout", async (req, res) => {
 app.post("/upgrade-order", async (req, res) => {
   logger.info("/upgrade-order");
 
-  const { customer } = req.body;
+  const { customer, orderCustomer } = req.body;
 
   if (!customer) {
     res.status(400).send("Invalid customer id");
@@ -574,6 +574,22 @@ app.post("/upgrade-order", async (req, res) => {
       items: [{ plan: yearlyPlanId }],
       expand: ["latest_invoice.payment_intent"],
     });
+
+    const productVariantId = 37926110363846;
+
+    const order = {
+      line_items: [
+        {
+          variant_id: productVariantId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        id: orderCustomer
+      }
+    };
+
+    const orderData = await shopify.order.create(order);
 
     res.json({
       status: subscription["latest_invoice"]["payment_intent"]["status"],
