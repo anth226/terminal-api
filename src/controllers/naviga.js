@@ -51,6 +51,16 @@ export async function getCompanyNews(req, res, next) {
         ticker = [ticker];
     }
 
+    let tickers = ''
+
+    for await (const tick of ticker) {
+        if (tickers.length !== 0) {
+            tickers += `,'${tick}'`
+        } else {
+            tickers = `'${tick}'`
+        }
+    }
+
     page = parseInt(page);
     limit = parseInt(limit);
 
@@ -64,7 +74,7 @@ export async function getCompanyNews(req, res, next) {
         FROM pi_naviga_news
         INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
         WHERE 
-            pi_naviga_tickers.ticker = '${ticker.join(',')}'
+            pi_naviga_tickers.ticker IN (${tickers})
             AND timestamp < NOW()
     `);
 
@@ -83,11 +93,11 @@ export async function getCompanyNews(req, res, next) {
         FROM pi_naviga_news
         INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
         WHERE 
-            pi_naviga_tickers.ticker = '${ticker.join(',')}'
+            pi_naviga_tickers.ticker IN (${tickers})
             AND timestamp < NOW()
         ORDER BY timestamp DESC
         LIMIT ${limit} OFFSET ${offset}
-        `);
+    `);
 
     return res.json({
         news,
