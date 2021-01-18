@@ -3,9 +3,14 @@ import redis, {
   KEY_NEWS_MARKET,
   KEY_NEWS_SOURCES,
 } from "../redis";
+import db from "../db";
+import db1 from "../db1";
+import moment from "moment";
+import { union } from "lodash";
 
 import * as stocksNews from "../newsApi/stocksApi";
 import * as newsHelper from "../newsApi/newsHelper";
+import { getCompanyNews } from "./naviga";
 
 const chalk = require("chalk");
 
@@ -153,4 +158,38 @@ export async function getGeneralMarketNews() {
   console.log("news.length", news.length);
 
   return news;
+}
+
+export const getMostViewedPinnedCompanyNews = async (req, res, next) => {
+  const start = moment().startOf('day').format()
+  const end = moment().endOf('day').format()
+
+  let tickerArray = []
+
+  const groupByTickers = await db1(`
+    SELECT ticker FROM company WHERE created_at BETWEEN '${start}' AND '${end}' group by ticker
+  `);
+
+  for (const data of groupByTickers) {
+    const { ticker } = data
+    tickerArray.push(ticker)
+  }
+
+  const pinedTickers = await db(`
+    SELECT wd.input
+    FROM widget_instances wi
+    LEFT JOIN widget_data wd ON wd.id = wi.widget_data_id 
+    WHERE wi.dashboard_id = 53 
+    AND (wi.widget_id = 4 OR wi.widget_id = 7) 
+    AND wd.input is not NULL
+  `);
+
+  for (const data of pinedTickers) {
+    const { input: { ticker } } = data
+    tickerArray.push(ticker)
+  }
+
+  tickerArray = union(tickerArray)
+  req = { ...req, params: { ticker: tickerArray } }
+  await getCompanyNews(req, res)
 }
