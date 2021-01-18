@@ -35,6 +35,7 @@ import * as widgets from "./controllers/widgets";
 import * as dashboard from "./controllers/dashboard";
 import * as securities from "./controllers/securities";
 import * as pages from "./controllers/pages";
+import { questionnaireSubmission } from "./controllers/questionnaire";
 
 import * as darkpool from "./controllers/darkpool";
 import * as quodd from "./controllers/quodd";
@@ -2082,6 +2083,9 @@ app.get(
     res.send(result);
   }
 );
+
+// Questionnaire Submission
+app.post("/questionnaire-submission", checkAuth, questionnaireSubmission);
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
