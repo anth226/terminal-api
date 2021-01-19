@@ -15,22 +15,22 @@ export async function getAllNews(req, res, next) {
 	}
 
 	const total = await db(`
-        SELECT COUNT(*) as total 
-        FROM pi_naviga_news
-        WHERE timestamp < NOW()
-    `);
+		SELECT COUNT(*) as total 
+		FROM pi_naviga_news
+		WHERE timestamp < NOW()
+	`);
 
 	const totalResults = parseInt(total[0].total);
 	const totalPages = Math.ceil(totalResults / limit);
 	const offset = (page - 1) * limit;
 
 	const news = await db(`
-        SELECT * 
-        FROM pi_naviga_news
-        WHERE timestamp < NOW()
-        ORDER BY timestamp::timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-    `);
+		SELECT * 
+		FROM pi_naviga_news
+		WHERE timestamp < NOW()
+		ORDER BY timestamp::timestamp DESC
+		LIMIT ${limit} OFFSET ${offset}
+	`);
 
 	return res.json({
 		news,
@@ -70,35 +70,35 @@ export async function getCompanyNews(req, res, next) {
 	}
 
 	const total = await db(`
-			SELECT 
-				count(*) as total
-			FROM pi_naviga_news
-			INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
-			WHERE 
-				pi_naviga_tickers.ticker IN (${tickers})
-				AND timestamp < NOW()
-    `);
+		SELECT 
+			count(*) as total
+		FROM pi_naviga_news
+		INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
+		WHERE 
+			pi_naviga_tickers.ticker IN (${tickers})
+			AND timestamp < NOW()
+	`);
 
 	const totalResults = parseInt(total[0].total);
 	const totalPages = Math.ceil(totalResults / limit);
 	const offset = (page - 1) * limit;
 
 	const news = await db(`
-			SELECT 
-				pi_naviga_news.id,
-				pi_naviga_news.title,
-				pi_naviga_news.resource_id,
-				pi_naviga_news.description,
-				pi_naviga_news.timestamp,
-				pi_naviga_tickers.ticker
-			FROM pi_naviga_news
-			INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
-			WHERE 
-				pi_naviga_tickers.ticker IN (${tickers})
-				AND timestamp < NOW()
-			ORDER BY timestamp DESC
-			LIMIT ${limit} OFFSET ${offset}
-		`);
+		SELECT 
+			pi_naviga_news.id,
+			pi_naviga_news.title,
+			pi_naviga_news.resource_id,
+			pi_naviga_news.description,
+			pi_naviga_news.timestamp,
+			pi_naviga_tickers.ticker
+		FROM pi_naviga_news
+		INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
+		WHERE 
+			pi_naviga_tickers.ticker IN (${tickers})
+			AND timestamp < NOW()
+		ORDER BY timestamp DESC
+		LIMIT ${limit} OFFSET ${offset}
+	`);
 
 	return res.json({
 		news,
