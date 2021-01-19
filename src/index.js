@@ -569,11 +569,14 @@ app.post("/upgrade-order", async (req, res) => {
   }
 
   try {
-    const subscription = await stripe.subscriptions.create({
+    const intentOptions = {
+      amount: 5700,
+      currency: "USD",
       customer,
-      items: [{ plan: yearlyPlanId }],
-      expand: ["latest_invoice.payment_intent"],
-    });
+      setup_future_usage: "off_session",
+    };
+
+    const paymentIntent = await stripe.paymentIntents.create(intentOptions);
 
     const productVariantId = 37926110363846;
 
@@ -592,9 +595,7 @@ app.post("/upgrade-order", async (req, res) => {
     const orderData = await shopify.order.create(order);
 
     res.json({
-      status: subscription["latest_invoice"]["payment_intent"]["status"],
-      clientSecret:
-        subscription["latest_invoice"]["payment_intent"]["client_secret"],
+      status: 'succeeded'
     });
   } catch (err) {
     const errMsg = handleStripeError(err);
