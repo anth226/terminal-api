@@ -561,7 +561,7 @@ app.post("/product-checkout", async (req, res) => {
 app.post("/upgrade-order", async (req, res) => {
   logger.info("/upgrade-order");
 
-  const { customer } = req.body;
+  const { customer, orderCustomer } = req.body;
 
   if (!customer) {
     res.status(400).send("Invalid customer id");
@@ -569,16 +569,33 @@ app.post("/upgrade-order", async (req, res) => {
   }
 
   try {
-    const subscription = await stripe.subscriptions.create({
+    const intentOptions = {
+      amount: 5700,
+      currency: "USD",
       customer,
-      items: [{ plan: yearlyPlanId }],
-      expand: ["latest_invoice.payment_intent"],
-    });
+      setup_future_usage: "off_session",
+    };
+
+    const paymentIntent = await stripe.paymentIntents.create(intentOptions);
+
+    const productVariantId = 37926110363846;
+
+    const order = {
+      line_items: [
+        {
+          variant_id: productVariantId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        id: orderCustomer
+      }
+    };
+
+    const orderData = await shopify.order.create(order);
 
     res.json({
-      status: subscription["latest_invoice"]["payment_intent"]["status"],
-      clientSecret:
-        subscription["latest_invoice"]["payment_intent"]["client_secret"],
+      status: 'succeeded'
     });
   } catch (err) {
     const errMsg = handleStripeError(err);
@@ -586,6 +603,88 @@ app.post("/upgrade-order", async (req, res) => {
       error_code: "UPGRADE_ORDER_ERROR",
       message: errMsg,
     });
+  }
+});
+
+app.post("/product-checkout-paypal", async (req, res) => {
+  const body = req.body;
+  const { data } = body;
+
+  try {
+    const productVariantId = 37409762508998;
+
+    const order = {
+      line_items: [
+        {
+          variant_id: productVariantId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+      },
+      billing_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.differentBilling
+            ? data.billingAddress
+            : data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.differentBilling ? data.billingCity : data.shippingCity,
+        province: data.differentBilling
+            ? data.billingRegion
+            : data.shippingRegion,
+        country: "USA",
+        zip: data.differentBilling
+            ? data.billingPostalCode
+            : data.shippingPostalCode,
+      },
+      shipping_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.shippingCity,
+        province: data.shippingRegion,
+        country: "USA",
+        zip: data.shippingPostalCode,
+      },
+      email: data.email,
+    };
+
+    const orderData = await shopify.order.create(order);
+
+    res.json({ order: orderData });
+  } catch (err) {
+    res.json(err);
+  }
+});
+
+app.post("/upgrade-order-paypal", async (req, res) => {
+  const customer = req.body.customer;
+
+  try {
+    const productVariantId = 37926110363846;
+
+    const order = {
+      line_items: [
+        {
+          variant_id: productVariantId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        id: customer
+      }
+    };
+
+    const orderData = await shopify.order.create(order);
+
+    res.json({ order: orderData });
+  } catch (err) {
+    res.json(err);
   }
 });
 
