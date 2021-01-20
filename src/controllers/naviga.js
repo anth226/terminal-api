@@ -51,15 +51,7 @@ export async function getCompanyNews(req, res, next) {
         ticker = [ticker];
     }
 
-    let tickers = ''
-
-    for await (const tick of ticker) {
-        if (tickers.length !== 0) {
-            tickers += `,'${tick}'`
-        } else {
-            tickers = `'${tick}'`
-        }
-    }
+    const tickers = ticker.map(tick => `'${tick}'`).join(',');
 
     page = parseInt(page);
     limit = parseInt(limit);
@@ -68,36 +60,157 @@ export async function getCompanyNews(req, res, next) {
         page = 1;
     }
 
-    const total = await db(`
-        SELECT 
-            count(*) as total
-        FROM pi_naviga_news
-        INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
-        WHERE 
-            pi_naviga_tickers.ticker IN (${tickers})
-            AND timestamp < NOW()
-    `);
+    const offset = (page - 1) * limit;
+
+    const [total, news] = await Promise.all([
+        db(`
+            SELECT 
+                count(*) as total
+            FROM pi_naviga_news
+            INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
+            WHERE 
+                pi_naviga_tickers.ticker IN (${tickers})
+                AND timestamp < NOW()
+        `),
+        db(`
+            SELECT 
+                pi_naviga_news.id,
+                pi_naviga_news.title,
+                pi_naviga_news.resource_id,
+                pi_naviga_news.description,
+                pi_naviga_news.timestamp,
+                pi_naviga_tickers.ticker
+            FROM pi_naviga_news
+            INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
+            WHERE 
+                pi_naviga_tickers.ticker IN (${tickers})
+                AND timestamp < NOW()
+            ORDER BY timestamp DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `)
+    ]);
 
     const totalResults = parseInt(total[0].total);
     const totalPages = Math.ceil(totalResults / limit);
+
+    return res.json({
+        news,
+        totalPages: totalPages,
+        currentPage: page,
+        nextPage: page + 1,
+        previousPage: page === 1 ? null : (page - 1)
+    });
+}
+
+export async function getEarningNews(req, res, next) {
+    let {
+        limit = 10,
+        page = 1,
+        tickers
+    } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    if (page < 1) {
+        page = 1;
+    }
+
+    if (tickers && typeof tickers === 'string') {
+        tickers = tickers.split(',').map(t => t.toUpperCase().trim()).filter(Boolean).map(t => `'${t}'`);
+    }
+
+    let tickersQuery = {
+        select: ``,
+        join: ``,
+        condition: ``
+    };
+
+    if (tickers && Array.isArray(tickers) && tickers.length) {
+        tickersQuery.select = `, pi_naviga_tickers.ticker`;
+        tickersQuery.join = `INNER JOIN pi_naviga_tickers ON pi_naviga_earning_news.news_id = pi_naviga_tickers.news_id`;
+        tickersQuery.condition = `AND ticker IN (${tickers.join(',')})`;
+    }
+
     const offset = (page - 1) * limit;
 
-    const news = await db(`
-        SELECT 
-            pi_naviga_news.id,
-            pi_naviga_news.title,
-            pi_naviga_news.resource_id,
-            pi_naviga_news.description,
-            pi_naviga_news.timestamp,
-            pi_naviga_tickers.ticker
-        FROM pi_naviga_news
-        INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
-        WHERE 
-            pi_naviga_tickers.ticker IN (${tickers})
-            AND timestamp < NOW()
-        ORDER BY timestamp DESC
-        LIMIT ${limit} OFFSET ${offset}
-    `);
+    const [total, news] = await Promise.all([
+        db(`
+            SELECT count(DISTINCT pi_naviga_earning_news.news_id) as total
+            FROM pi_naviga_earning_news
+            ${tickersQuery.join}
+            WHERE timestamp < NOW()
+            ${tickersQuery.condition}
+        `),
+        db(`
+            SELECT DISTINCT pi_naviga_earning_news.news_id, pi_naviga_earning_news.* ${tickersQuery.select}
+            FROM pi_naviga_earning_news
+            ${tickersQuery.join}
+            WHERE timestamp < NOW()
+            ${tickersQuery.condition}
+            ORDER BY timestamp DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `)
+    ]);
+
+    const totalResults = parseInt(total[0].total);
+    const totalPages = Math.ceil(totalResults / limit);
+
+    return res.json({
+        news,
+        totalPages: totalPages,
+        currentPage: page,
+        nextPage: page + 1,
+        previousPage: page === 1 ? null : (page - 1) 
+    });
+}
+
+export async function getSectorNews(req, res, next) {
+    let {
+        limit = 10,
+        page = 1
+    } = req.query;
+    let { sector_code } = req.params;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    if (page < 1) {
+        page = 1;
+    }
+
+    const offset = (page - 1) * limit;
+   
+    const [total, news] = await Promise.all([
+        db(`
+            SELECT COUNT(DISTINCT pi_naviga_industries.news_id) as total
+            FROM pi_naviga_news
+            INNER JOIN pi_naviga_industries ON pi_naviga_news.id = pi_naviga_industries.news_id
+            WHERE 
+                pi_naviga_industries.sector = '${sector_code}'
+                AND timestamp < NOW()
+        `),
+        db(`
+            SELECT 
+                DISTINCT pi_naviga_industries.news_id,
+                pi_naviga_news.id,
+                pi_naviga_news.title,
+                pi_naviga_news.resource_id,
+                pi_naviga_news.description,
+                pi_naviga_news.timestamp
+            FROM pi_naviga_news
+            INNER JOIN pi_naviga_industries ON pi_naviga_news.id = pi_naviga_industries.news_id
+            WHERE 
+                pi_naviga_industries.sector = '${sector_code}'
+                AND timestamp < NOW()
+            ORDER BY timestamp DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `)
+    ]);
+
+    
+    const totalResults = parseInt(total[0].total);
+    const totalPages = Math.ceil(totalResults / limit);
 
     return res.json({
         news,
