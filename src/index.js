@@ -1256,7 +1256,7 @@ app.post("/cancellation-request", async (req, res) => {
     user.subscriptionId
   );
 
-  if (getSubscription.status !== "canceled") {
+  if (getSubscription.status !== "canceled" && user && user.isPrime !== true) {
     await stripe.subscriptions.update(user.subscriptionId, {
       cancel_at_period_end: true,
     });
