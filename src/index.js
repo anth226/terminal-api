@@ -574,6 +574,7 @@ app.post("/upgrade-order", async (req, res) => {
       currency: "USD",
       customer,
       setup_future_usage: "off_session",
+      confirm: true
     };
 
     const paymentIntent = await stripe.paymentIntents.create(intentOptions);
