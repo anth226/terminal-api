@@ -810,7 +810,7 @@ app.post("/authenticate", async (req, res) => {
       };
     }
 
-    if (subscriptions[0].cancel_at_period_end === false) {
+    if (subscriptions[0].cancel_at_period_end === false && userData.isPrime === false) {
       const updatedSubscription = await stripe.subscriptions.update(
         subscriptions[0].id,
         {
@@ -825,7 +825,8 @@ app.post("/authenticate", async (req, res) => {
     // Check if customer has paid for their subscription
     if (
       subscriptions[0].cancel_at_period_end &&
-      Math.round(new Date().getTime() / 1000) > subscriptions[0].cancel_at
+      Math.round(new Date().getTime() / 1000) > subscriptions[0].cancel_at &&
+      userData.isPrime === false
     ) {
       // Bounce to payment page for now
       // we may need to handle this diferently because the customer actually exists
