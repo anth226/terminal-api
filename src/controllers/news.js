@@ -161,7 +161,7 @@ export async function getGeneralMarketNews() {
   return news;
 }
 
-export const getMostViewedPinnedCompanyNews = async (req, res) => {
+export const getMostViewedPinnedCompanyNews = async (req, res, next) => {
   const start = moment().startOf('day').format()
   const end = moment().endOf('day').format()
 
@@ -179,9 +179,9 @@ export const getMostViewedPinnedCompanyNews = async (req, res) => {
   const pinedTickers = await db(`
     SELECT wd.input
     FROM widget_instances wi
-    LEFT JOIN widget_data wd ON wd.id = wi.widget_data_id 
-    WHERE wi.dashboard_id = 53 
-    AND (wi.widget_id = 4 OR wi.widget_id = 7) 
+    LEFT JOIN widget_data wd ON wd.id = wi.widget_data_id
+    WHERE wi.dashboard_id = 53
+    AND (wi.widget_id = 4 OR wi.widget_id = 7)
     AND wd.input is not NULL
   `);
 
