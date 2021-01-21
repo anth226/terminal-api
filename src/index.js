@@ -1607,6 +1607,8 @@ app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
 // app.use("/news/trending-ticker", checkAuth);
 app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
 
+app.get("/news/personal-trending-ticker", checkAuth, news.getUserSpecificNews);
+
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
 app.get("/news/market-headlines", async (req, res) => {
