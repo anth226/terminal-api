@@ -3,6 +3,7 @@ import { concat, orderBy } from "lodash";
 
 export async function getAllNews(req, res, next) {
     let {
+        language = 'en',
         limit = 10,
         page = 1
     } = req.query;
@@ -18,6 +19,7 @@ export async function getAllNews(req, res, next) {
         SELECT COUNT(*) as total
         FROM pi_naviga_news
         WHERE timestamp < NOW()
+        AND language = '${language}'
     `);
 
     const totalResults = parseInt(total[0].total);
@@ -28,6 +30,7 @@ export async function getAllNews(req, res, next) {
         SELECT *
         FROM pi_naviga_news
         WHERE timestamp < NOW()
+        AND language = '${language}'
         ORDER BY timestamp::timestamp DESC
         LIMIT ${limit} OFFSET ${offset}
     `);
@@ -43,6 +46,7 @@ export async function getAllNews(req, res, next) {
 
 export async function getCompanyNews(req, res, next) {
     let {
+        language = 'en',
         limit = 10,
         page = 1
     } = req.query;
@@ -71,6 +75,7 @@ export async function getCompanyNews(req, res, next) {
             INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
             WHERE
                 pi_naviga_tickers.ticker IN (${tickers})
+                AND language = '${language}'
                 AND timestamp < NOW()
         `),
         db(`
@@ -79,12 +84,14 @@ export async function getCompanyNews(req, res, next) {
                 pi_naviga_news.title,
                 pi_naviga_news.resource_id,
                 pi_naviga_news.description,
+                pi_naviga_news.language,
                 pi_naviga_news.timestamp,
                 pi_naviga_tickers.ticker
             FROM pi_naviga_news
             INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
             WHERE
                 pi_naviga_tickers.ticker IN (${tickers})
+                AND language = '${language}'
                 AND timestamp < NOW()
             ORDER BY timestamp DESC
             LIMIT ${limit} OFFSET ${offset}
@@ -105,6 +112,7 @@ export async function getCompanyNews(req, res, next) {
 
 export async function getSectorNews(req, res, next) {
     let {
+        language = 'en',   
         limit = 10,
         page = 1
     } = req.query;
@@ -126,21 +134,27 @@ export async function getSectorNews(req, res, next) {
             INNER JOIN pi_naviga_industries ON pi_naviga_news.id = pi_naviga_industries.news_id
             WHERE
                 pi_naviga_industries.sector = '${sector_code}'
+                AND language = '${language}'
                 AND timestamp < NOW()
         `),
         db(`
             SELECT
-                DISTINCT pi_naviga_industries.news_id,
                 pi_naviga_news.id,
                 pi_naviga_news.title,
                 pi_naviga_news.resource_id,
                 pi_naviga_news.description,
-                pi_naviga_news.timestamp
+                pi_naviga_news.timestamp,
+                array_agg(
+                    DISTINCT pi_naviga_tickers.ticker
+                ) as tickers
             FROM pi_naviga_news
             INNER JOIN pi_naviga_industries ON pi_naviga_news.id = pi_naviga_industries.news_id
+            INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
             WHERE
                 pi_naviga_industries.sector = '${sector_code}'
+                AND language = '${language}'
                 AND timestamp < NOW()
+            GROUP BY pi_naviga_news.id
             ORDER BY timestamp DESC
             LIMIT ${limit} OFFSET ${offset}
         `)
@@ -162,6 +176,7 @@ export async function getSectorNews(req, res, next) {
 
 export async function getEarningNews(req, res, next) {
     let {
+        language = 'en',   
         limit = 10,
         page = 1,
         tickers
@@ -195,6 +210,7 @@ export async function getEarningNews(req, res, next) {
         FROM pi_naviga_earning_news
         ${tickersQuery.join}
         WHERE timestamp < NOW()
+        AND language = '${language}'
         ${tickersQuery.condition}
     `);
 
@@ -207,6 +223,7 @@ export async function getEarningNews(req, res, next) {
         FROM pi_naviga_earning_news
         ${tickersQuery.join}
         WHERE timestamp < NOW()
+        AND language = '${language}'
         ${tickersQuery.condition}
         ORDER BY timestamp DESC
         LIMIT ${limit} OFFSET ${offset}
@@ -223,6 +240,7 @@ export async function getEarningNews(req, res, next) {
 
 export async function getUserSpecificCompanyNews(tickers, query) {
 	let {
+        language = 'en',   
 		limit = 10,
 		page = 1
 	} = query;
@@ -248,7 +266,8 @@ export async function getUserSpecificCompanyNews(tickers, query) {
 			INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
 			WHERE
 				pi_naviga_tickers.ticker = '${ticker}'
-				AND timestamp < NOW()
+                AND language = '${language}'
+                AND timestamp < NOW()
 			ORDER BY timestamp DESC
 			LIMIT 3
 		`);
