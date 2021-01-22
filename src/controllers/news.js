@@ -203,27 +203,14 @@ export const getUserSpecificNews = async (req, res) => {
   let tickerArray = []
 
   const groupByTickers = await db1(`
-    SELECT ticker FROM company WHERE user_id = '${uid}' AND created_at BETWEEN '${start}' AND '${end}' group by ticker
+    SELECT ticker, count(ticker) FROM company WHERE user_id = '${uid}' AND created_at BETWEEN '${start}' AND '${end}' group by ticker order by COUNT DESC
   `);
 
-  let viewedTickers = []
-  for (const data of groupByTickers) {
-    const { ticker } = data
-
-    const tickerCount = await db1(`
-      SELECT count(*) FROM company WHERE user_id = '${uid}' AND ticker = '${ticker}' AND created_at BETWEEN '${start}' AND '${end}'
-    `);
-    viewedTickers.push({
-      ticker,
-      views: tickerCount[0].count
-    })
-  }
-  viewedTickers = orderBy(viewedTickers, 'views', 'desc');
-  if (viewedTickers.length > 3) {
-    viewedTickers.length = 3
+  if (groupByTickers.length > 3) {
+    groupByTickers.length = 3
   }
 
-  map(viewedTickers, (data) => {
+  map(groupByTickers, (data) => {
     const { ticker } = data
     tickerArray.push(ticker)
   })
