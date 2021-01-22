@@ -35,6 +35,7 @@ import * as widgets from "./controllers/widgets";
 import * as dashboard from "./controllers/dashboard";
 import * as securities from "./controllers/securities";
 import * as pages from "./controllers/pages";
+import { questionnaireSubmission } from "./controllers/questionnaire";
 
 import * as darkpool from "./controllers/darkpool";
 import * as quodd from "./controllers/quodd";
@@ -1608,12 +1609,11 @@ app.get("/all-news", async (req, res) => {
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
 app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
 app.get("/naviga-news/earning", checkAuth, naviga.getEarningNews);
+app.get("/naviga-news/for-you", checkAuth, news.getUserSpecificNews);
 app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
 
 // app.use("/news/trending-ticker", checkAuth);
 app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
-
-app.get("/naviga-news/personal-trending-ticker", checkAuth, news.getUserSpecificNews);
 
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
@@ -2193,6 +2193,9 @@ app.get(
     res.send(result);
   }
 );
+
+// Questionnaire Submission
+app.post("/questionnaire-submission", checkAuth, questionnaireSubmission);
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
