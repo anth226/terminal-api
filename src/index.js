@@ -1608,12 +1608,11 @@ app.get("/all-news", async (req, res) => {
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
 app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
 app.get("/naviga-news/earning", checkAuth, naviga.getEarningNews);
+app.get("/naviga-news/for-you", checkAuth, news.getUserSpecificNews);
 app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
 
 // app.use("/news/trending-ticker", checkAuth);
 app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
-
-app.get("/naviga-news/personal-trending-ticker", checkAuth, news.getUserSpecificNews);
 
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
