@@ -630,17 +630,17 @@ app.post("/product-checkout-paypal", async (req, res) => {
         first_name: data.firstName,
         last_name: data.lastName,
         address1: data.differentBilling
-            ? data.billingAddress
-            : data.shippingAddress,
+          ? data.billingAddress
+          : data.shippingAddress,
         phone: data.phoneNumber,
         city: data.differentBilling ? data.billingCity : data.shippingCity,
         province: data.differentBilling
-            ? data.billingRegion
-            : data.shippingRegion,
+          ? data.billingRegion
+          : data.shippingRegion,
         country: "USA",
         zip: data.differentBilling
-            ? data.billingPostalCode
-            : data.shippingPostalCode,
+          ? data.billingPostalCode
+          : data.shippingPostalCode,
       },
       shipping_address: {
         first_name: data.firstName,
@@ -1613,7 +1613,7 @@ app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
 // app.use("/news/trending-ticker", checkAuth);
 app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
 
-app.get("/news/personal-trending-ticker", checkAuth, news.getUserSpecificNews);
+app.get("/naviga-news/personal-trending-ticker", checkAuth, news.getUserSpecificNews);
 
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
