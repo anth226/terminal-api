@@ -562,7 +562,7 @@ app.post("/product-checkout", async (req, res) => {
 app.post("/upgrade-order", async (req, res) => {
   logger.info("/upgrade-order");
 
-  const { customer } = req.body;
+  const { customer, orderCustomer } = req.body;
 
   if (!customer) {
     res.status(400).send("Invalid customer id");
@@ -570,16 +570,34 @@ app.post("/upgrade-order", async (req, res) => {
   }
 
   try {
-    const subscription = await stripe.subscriptions.create({
+    const intentOptions = {
+      amount: 5700,
+      currency: "USD",
       customer,
-      items: [{ plan: yearlyPlanId }],
-      expand: ["latest_invoice.payment_intent"],
-    });
+      setup_future_usage: "off_session",
+      confirm: true
+    };
+
+    const paymentIntent = await stripe.paymentIntents.create(intentOptions);
+
+    const productVariantId = 37926110363846;
+
+    const order = {
+      line_items: [
+        {
+          variant_id: productVariantId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        id: orderCustomer
+      }
+    };
+
+    const orderData = await shopify.order.create(order);
 
     res.json({
-      status: subscription["latest_invoice"]["payment_intent"]["status"],
-      clientSecret:
-        subscription["latest_invoice"]["payment_intent"]["client_secret"],
+      status: 'succeeded'
     });
   } catch (err) {
     const errMsg = handleStripeError(err);
@@ -587,6 +605,88 @@ app.post("/upgrade-order", async (req, res) => {
       error_code: "UPGRADE_ORDER_ERROR",
       message: errMsg,
     });
+  }
+});
+
+app.post("/product-checkout-paypal", async (req, res) => {
+  const body = req.body;
+  const { data } = body;
+
+  try {
+    const productVariantId = 37409762508998;
+
+    const order = {
+      line_items: [
+        {
+          variant_id: productVariantId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+      },
+      billing_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.differentBilling
+          ? data.billingAddress
+          : data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.differentBilling ? data.billingCity : data.shippingCity,
+        province: data.differentBilling
+          ? data.billingRegion
+          : data.shippingRegion,
+        country: "USA",
+        zip: data.differentBilling
+          ? data.billingPostalCode
+          : data.shippingPostalCode,
+      },
+      shipping_address: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address1: data.shippingAddress,
+        phone: data.phoneNumber,
+        city: data.shippingCity,
+        province: data.shippingRegion,
+        country: "USA",
+        zip: data.shippingPostalCode,
+      },
+      email: data.email,
+    };
+
+    const orderData = await shopify.order.create(order);
+
+    res.json({ order: orderData });
+  } catch (err) {
+    res.json(err);
+  }
+});
+
+app.post("/upgrade-order-paypal", async (req, res) => {
+  const customer = req.body.customer;
+
+  try {
+    const productVariantId = 37926110363846;
+
+    const order = {
+      line_items: [
+        {
+          variant_id: productVariantId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        id: customer
+      }
+    };
+
+    const orderData = await shopify.order.create(order);
+
+    res.json({ order: orderData });
+  } catch (err) {
+    res.json(err);
   }
 });
 
@@ -693,65 +793,69 @@ app.post("/authenticate", async (req, res) => {
     console.log(customer.subscriptions);
     console.log("\nEND\n");
 
-    const response = await stripe.subscriptions.list({
-      customer: customerId,
-    });
+    // temporarily ignore stripe check
+    //TODO: Bring back stripe check after subscription
 
-    let { data } = response;
+    // fetch active subscriptions
+    // const response = await stripe.subscriptions.list({
+    //   customer: customerId,
+    // });
 
-    let subscriptions = data;
+    // let { data } = response;
 
-    console.log(subscriptions);
+    // let subscriptions = data;
 
-    if (subscriptions.length < 1) {
-      throw {
-        terminal_error: true,
-        error_code: "SUBSCRIPTION_CANCELED",
-        message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 1)",
-      };
-    }
+    // if (subscriptions.length < 1) {
+    //   throw {
+    //     terminal_error: true,
+    //     error_code: "SUBSCRIPTION_CANCELED",
+    //     message:
+    //       "Your subscription has been canceled, please contact support to update your subscription. (Code 1)",
+    //   };
+    // }
 
-    if (subscriptions[0].cancel_at_period_end === false) {
-      const updatedSubscription = await stripe.subscriptions.update(
-        subscriptions[0].id,
-        {
-          cancel_at_period_end: true,
-        }
-      );
+    // // Set subscription to auto cancel if it has not been set yet for non prime users
+    // if (subscriptions[0].cancel_at_period_end === false) {
+    //   const updatedSubscription = await stripe.subscriptions.update(
+    //     subscriptions[0].id,
+    //     {
+    //       cancel_at_period_end: true,
+    //     }
+    //   );
+    //
+    //   logger.info("---Updated Subscription---");
+    //   subscriptions[0] = updatedSubscription;
+    // }
 
-      logger.info("---Updated Subscription---");
-      subscriptions[0] = updatedSubscription;
-    }
+    // Check if customer has paid for their subscription and is a non prime user
+    // if (
+    //   subscriptions[0].cancel_at_period_end &&
+    //   Math.round(new Date().getTime() / 1000) > subscriptions[0].cancel_at &&
+    //   userData.isPrime === false
+    // ) {
+    //   // Bounce to payment page for now
+    //   // we may need to handle this diferently because the customer actually exists
+    //   // update existing customers payment method and re-charge rather than sign up new customer
+    //   //customer.subscriptions.data[0].id
+    //   // if(customer.subscriptions.total_count > 0) {
+    //   //   throw { terminal_error: true, error_code:"USER_PAYMENT_NEEDED", message: "Payment needed", customer_id: customerId, subscription_id: customer.subscriptions.data[0].id };
+    //   // } else {
+    //   //   throw { terminal_error: true, error_code:"NO_SUBSCRIPTION", message: "We found your customer record but not your subscription, please contact support." };
+    //   // }
+    //   throw {
+    //     terminal_error: true,
+    //     error_code: "SUBSCRIPTION_CANCELED",
+    //     message:
+    //       "Your subscription has been canceled, please contact support to update your subscription. (Code 2)",
+    //   };
+    // }
 
-    // Check if customer has paid for their subscription
-    if (
-      subscriptions[0].cancel_at_period_end &&
-      Math.round(new Date().getTime() / 1000) > subscriptions[0].cancel_at
-    ) {
-      // Bounce to payment page for now
-      // we may need to handle this diferently because the customer actually exists
-      // update existing customers payment method and re-charge rather than sign up new customer
-      //customer.subscriptions.data[0].id
-      // if(customer.subscriptions.total_count > 0) {
-      //   throw { terminal_error: true, error_code:"USER_PAYMENT_NEEDED", message: "Payment needed", customer_id: customerId, subscription_id: customer.subscriptions.data[0].id };
-      // } else {
-      //   throw { terminal_error: true, error_code:"NO_SUBSCRIPTION", message: "We found your customer record but not your subscription, please contact support." };
-      // }
-      throw {
-        terminal_error: true,
-        error_code: "SUBSCRIPTION_CANCELED",
-        message:
-          "Your subscription has been canceled, please contact support to update your subscription. (Code 2)",
-      };
-    }
-
-    let subStatus = subscriptions[0].status;
-    if (userData.subscriptionStatus !== subStatus) {
-      db.collection("users").doc(decodedToken.uid).update({
-        subscriptionStatus: subscriptions[0].status,
-      });
-    }
+    // let subStatus = subscriptions[0].status;
+    // if (userData.subscriptionStatus !== subStatus) {
+    //   db.collection("users").doc(decodedToken.uid).update({
+    //     subscriptionStatus: subscriptions[0].status,
+    //   });
+    // }
 
     // Finally, create a session cookie with firebase for this user
     const sessionCookie = await admin
@@ -814,7 +918,6 @@ app.post("/payment", async (req, res) => {
       customer: customer.id,
       items: [{ plan: planId }],
       expand: ["latest_invoice.payment_intent"],
-      cancel_at_period_end: true,
       coupon: couponId,
     });
     console.log("THE SUBSCRIPTION");
@@ -1158,7 +1261,8 @@ app.post("/cancellation-request", async (req, res) => {
     user.subscriptionId
   );
 
-  if (getSubscription.status !== "canceled") {
+  // Prevent cancelation request if a user is a prime user or if the subscription is already canceled
+  if (getSubscription.status !== "canceled" && user && user.isPrime !== true) {
     await stripe.subscriptions.update(user.subscriptionId, {
       cancel_at_period_end: true,
     });
@@ -1503,7 +1607,13 @@ app.get("/all-news", async (req, res) => {
 });
 
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
+app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
+app.get("/naviga-news/earning", checkAuth, naviga.getEarningNews);
+app.get("/naviga-news/for-you", checkAuth, news.getUserSpecificNews);
 app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
+
+// app.use("/news/trending-ticker", checkAuth);
+app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
 
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
