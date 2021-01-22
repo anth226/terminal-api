@@ -139,18 +139,22 @@ export async function getSectorNews(req, res, next) {
         `),
         db(`
             SELECT
-                DISTINCT pi_naviga_industries.news_id,
                 pi_naviga_news.id,
                 pi_naviga_news.title,
                 pi_naviga_news.resource_id,
                 pi_naviga_news.description,
-                pi_naviga_news.timestamp
+                pi_naviga_news.timestamp,
+                array_agg(
+                    DISTINCT pi_naviga_tickers.ticker
+                ) as tickers
             FROM pi_naviga_news
             INNER JOIN pi_naviga_industries ON pi_naviga_news.id = pi_naviga_industries.news_id
+            INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
             WHERE
                 pi_naviga_industries.sector = '${sector_code}'
                 AND language = '${language}'
                 AND timestamp < NOW()
+            GROUP BY pi_naviga_news.id
             ORDER BY timestamp DESC
             LIMIT ${limit} OFFSET ${offset}
         `)
