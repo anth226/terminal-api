@@ -72,6 +72,7 @@ const shopify = new Shopify({
   password: "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",
 });
 
+var crypto = require('crypto');
 var bugsnag = require("@bugsnag/js");
 var bugsnagExpress = require("@bugsnag/plugin-express");
 
@@ -530,7 +531,7 @@ app.post("/product-checkout", async (req, res) => {
         province: data.differentBilling
           ? data.billingRegion
           : data.shippingRegion,
-        country: "USA",
+        country: "United States",
         zip: data.differentBilling
           ? data.billingPostalCode
           : data.shippingPostalCode,
@@ -542,13 +543,31 @@ app.post("/product-checkout", async (req, res) => {
         phone: data.phoneNumber,
         city: data.shippingCity,
         province: data.shippingRegion,
-        country: "USA",
+        country: "United States",
         zip: data.shippingPostalCode,
       },
       email: data.email,
     };
 
     const orderData = await shopify.order.create(order);
+
+    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+      "data": [
+        {
+          "event_name": "Purchase",
+          "event_time": Math.floor(Date.now() / 1000),
+          "user_data": {
+            "client_ip_address": req.connection.remoteAddress,
+            "client_user_agent": req.get('User-Agent'),
+            "em":crypto.createHash('sha256').update(data.email).digest('hex')
+          },
+          "custom_data": {
+            "value": 1,
+            "currency": "USD"
+          }
+        }
+      ]
+    }).then(function (response) {}).catch(function (error) {});
 
     res.json({ paymentIntent, order: orderData });
   } catch (err) {
@@ -577,6 +596,8 @@ app.post("/upgrade-order", async (req, res) => {
 
     const paymentIntent = await stripe.paymentIntents.create(intentOptions);
 
+    const orderCustomerObject = await shopify.customer.get(orderCustomer);
+
     const productVariantId = 37926110363846;
 
     const order = {
@@ -588,10 +609,29 @@ app.post("/upgrade-order", async (req, res) => {
       ],
       customer: {
         id: orderCustomer
-      }
+      },
+      shipping_address:orderCustomerObject.default_address
     };
 
     const orderData = await shopify.order.create(order);
+
+    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+      "data": [
+        {
+          "event_name": "Purchase",
+          "event_time": Math.floor(Date.now() / 1000),
+          "user_data": {
+            "client_ip_address": req.connection.remoteAddress,
+            "client_user_agent": req.get('User-Agent'),
+            "em":crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
+          },
+          "custom_data": {
+            "value": 57,
+            "currency": "USD"
+          }
+        }
+      ]
+    }).then(function (response) {}).catch(function (error) {});
 
     res.json({
       status: 'succeeded'
@@ -635,7 +675,7 @@ app.post("/product-checkout-paypal", async (req, res) => {
         province: data.differentBilling
             ? data.billingRegion
             : data.shippingRegion,
-        country: "USA",
+        country: "United states",
         zip: data.differentBilling
             ? data.billingPostalCode
             : data.shippingPostalCode,
@@ -647,13 +687,32 @@ app.post("/product-checkout-paypal", async (req, res) => {
         phone: data.phoneNumber,
         city: data.shippingCity,
         province: data.shippingRegion,
-        country: "USA",
+        country: "United states",
         zip: data.shippingPostalCode,
       },
       email: data.email,
     };
 
     const orderData = await shopify.order.create(order);
+
+    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+      "data": [
+        {
+          "event_name": "Purchase",
+          "event_time": Math.floor(Date.now() / 1000),
+          "user_data": {
+            "client_ip_address": req.connection.remoteAddress,
+            "client_user_agent": req.get('User-Agent'),
+            "em":crypto.createHash('sha256').update(data.email).digest('hex')
+          },
+          "custom_data": {
+            "value": 1,
+            "currency": "USD"
+          }
+        }
+      ]
+    }).then(function (response) {}).catch(function (error) {});
+
 
     res.json({ order: orderData });
   } catch (err) {
@@ -665,6 +724,8 @@ app.post("/upgrade-order-paypal", async (req, res) => {
   const customer = req.body.customer;
 
   try {
+    const orderCustomerObject = await shopify.customer.get(customer);
+
     const productVariantId = 37926110363846;
 
     const order = {
@@ -676,10 +737,31 @@ app.post("/upgrade-order-paypal", async (req, res) => {
       ],
       customer: {
         id: customer
-      }
+      },
+      shipping_address:orderCustomerObject.default_address
     };
 
     const orderData = await shopify.order.create(order);
+
+    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+      "data": [
+        {
+          "event_name": "Purchase",
+          "event_time": Math.floor(Date.now() / 1000),
+          "user_data": {
+            "client_ip_address": req.connection.remoteAddress,
+            "client_user_agent": req.get('User-Agent'),
+            "em":crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
+          },
+          "custom_data": {
+            "value": 57,
+            "currency": "USD"
+          },
+          "test_event_code":"TEST90643"
+        }
+      ]
+    }).then(function (response) {}).catch(function (error) {});
+
 
     res.json({ order: orderData });
   } catch (err) {
