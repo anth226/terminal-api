@@ -599,6 +599,8 @@ app.post("/upgrade-order", async (req, res) => {
 
     const paymentIntent = await stripe.paymentIntents.create(intentOptions);
 
+    const orderCustomerObject = await shopify.customer.get(orderCustomer);
+
     const productVariantId = 37926110363846;
 
     const order = {
@@ -610,7 +612,8 @@ app.post("/upgrade-order", async (req, res) => {
       ],
       customer: {
         id: orderCustomer
-      }
+      },
+      shipping_address:orderCustomerObject.default_address
     };
 
     const orderData = await shopify.order.create(order);
@@ -723,6 +726,8 @@ app.post("/upgrade-order-paypal", async (req, res) => {
   const customer = req.body.customer;
 
   try {
+    const orderCustomerObject = await shopify.customer.get(customer);
+
     const productVariantId = 37926110363846;
 
     const order = {
@@ -734,7 +739,8 @@ app.post("/upgrade-order-paypal", async (req, res) => {
       ],
       customer: {
         id: customer
-      }
+      },
+      shipping_address:orderCustomerObject.default_address
     };
 
     const orderData = await shopify.order.create(order);
