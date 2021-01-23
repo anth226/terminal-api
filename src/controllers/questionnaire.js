@@ -6,8 +6,9 @@ export const questionnaireSubmission = async (req, res) => {
 
   const data = await db.collection("users").doc(terminal_app.claims.uid).get();
 
+  let updateData = {}
   if (profesional_questions) {
-    let updateData = { profesional_questions, feed_access: { isIndiceAccess: true } }
+    updateData = { profesional_questions, feed_access: { isIndiceAccess: true } }
     if (profesional_questions.Q1 === "NO" && profesional_questions.Q2 === "NO" && profesional_questions.Q3 === "NO" && profesional_questions.Q4 === "NO") {
       updateData = { ...updateData, isProfesional: false }
     } else {
@@ -21,7 +22,7 @@ export const questionnaireSubmission = async (req, res) => {
     }
   }
 
-  const userRef = db.collection("users").doc('TtCJ7CkpZ5d6WATm5rckuBeG7A33');
-  await userRef.update(JSON.parse(JSON.stringify(data)));
-  res.send("Updated!")
+  const userRef = db.collection("users").doc(terminal_app.claims.uid);
+  await userRef.update(updateData);
+  res.send({ success: true })
 }
