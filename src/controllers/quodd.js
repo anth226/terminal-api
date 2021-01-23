@@ -1,6 +1,7 @@
 //import axios from "axios";
 import "dotenv/config";
 const { Client } = require("pg");
+import AWS from "aws-sdk";
 
 const MTZ = require("moment-timezone");
 
@@ -8,6 +9,11 @@ import * as getSecurityData from "../intrinio/get_security_data";
 import asyncRedis from "async-redis";
 import redis from "redis";
 import moment from "moment";
+
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+});
 
 import {
   AWS_POSTGRES_DB_DATABASE,
@@ -229,6 +235,14 @@ export async function getAllForTicker(ticker) {
           let day = newYork.format("D");
 
           dateString = `${year}-${month}-${day}`;
+        } else {
+          let newYork = today;
+
+          let year = newYork.format("YYYY");
+          let month = newYork.format("M");
+          let day = newYork.format("D");
+
+          dateString = `${year}-${month}-${day}`;
         }
       }
 
@@ -236,6 +250,34 @@ export async function getAllForTicker(ticker) {
         let key = `e${ticker}/${dateString}.json`;
 
         url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
+
+        let isDataThere = false;
+        while (isDataThere !== true) {
+          const params = {
+            Bucket: process.env.AWS_BUCKET_PRICE_ACTION,
+            Key: key,
+          }
+
+          try {
+            const object = await s3.getObject(params).promise();
+            const data = object.Body.toString();
+            if (data) {
+              isDataThere = true
+            } else {
+              dateString = moment(dateString).subtract(1, "days").format("YYYY-M-D");
+              key = `e${ticker}/${dateString}.json`;
+              url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
+              isDataThere = false
+            }
+          } catch (error) {
+            if (error.code === "NoSuchKey") {
+              dateString = moment(dateString).subtract(1, "days").format("YYYY-M-D");
+              key = `e${ticker}/${dateString}.json`;
+              url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
+              isDataThere = false
+            }
+          }
+        }
       }
     }
   }
