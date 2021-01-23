@@ -252,7 +252,6 @@ export async function getAllForTicker(ticker) {
         url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
 
         let isDataThere = false;
-        let subtractDay = 1
         while (isDataThere !== true) {
           const params = {
             Bucket: process.env.AWS_BUCKET_PRICE_ACTION,
@@ -265,18 +264,16 @@ export async function getAllForTicker(ticker) {
             if (data) {
               isDataThere = true
             } else {
-              dateString = moment(dateString).subtract(subtractDay, "days").format("YYYY-M-D");
+              dateString = moment(dateString).subtract(1, "days").format("YYYY-M-D");
               key = `e${ticker}/${dateString}.json`;
               url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
-              subtractDay += 1
               isDataThere = false
             }
           } catch (error) {
             if (error.code === "NoSuchKey") {
-              dateString = moment(dateString).subtract(subtractDay, "days").format("YYYY-M-D");
+              dateString = moment(dateString).subtract(1, "days").format("YYYY-M-D");
               key = `e${ticker}/${dateString}.json`;
               url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
-              subtractDay += 1
               isDataThere = false
             }
           }
