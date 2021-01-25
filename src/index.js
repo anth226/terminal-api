@@ -1688,6 +1688,7 @@ app.get("/all-news", async (req, res) => {
 
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
 app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
+app.get("/naviga-news/titan/:titan_uri", checkAuth, naviga.getTitanNews);
 app.get("/naviga-news/earning", checkAuth, naviga.getEarningNews);
 app.get("/naviga-news/for-you", checkAuth, news.getUserSpecificNews);
 app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
