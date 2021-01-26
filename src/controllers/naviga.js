@@ -329,6 +329,70 @@ export async function getEarningNews(req, res, next) {
     });
 }
 
+export async function getTitanNews(req, res, next) {
+    let {
+        language = 'en',   
+        limit = 10,
+        page = 1
+    } = req.query;
+    let { titan_uri } = req.params;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    if (page < 1) {
+        page = 1;
+    }
+
+    const titan = (await db(`
+        SELECT * FROM pi_naviga_titans WHERE titan_uri = '${titan_uri}'
+    `))[0];
+
+    const apin = titan ? titan.apin : '';
+
+    const offset = (page - 1) * limit;
+
+    const [total, news] = await Promise.all([
+        db(`
+            SELECT COUNT(*) as total
+            FROM pi_naviga_news
+            INNER JOIN pi_naviga_persons ON pi_naviga_news.id = pi_naviga_persons.news_id
+            WHERE
+                pi_naviga_persons.person_code = '${apin}'
+                AND language = '${language}'
+                AND timestamp < NOW()
+        `),
+        db(`
+            SELECT
+                pi_naviga_news.id,
+                pi_naviga_news.title,
+                pi_naviga_news.resource_id,
+                pi_naviga_news.description,
+                pi_naviga_news.timestamp
+            FROM pi_naviga_news
+            INNER JOIN pi_naviga_persons ON pi_naviga_news.id = pi_naviga_persons.news_id
+            WHERE
+                pi_naviga_persons.person_code = '${apin}'
+                AND language = '${language}'
+                AND timestamp < NOW()
+            ORDER BY timestamp DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `)
+    ]);
+
+
+    const totalResults = parseInt(total[0].total);
+    const totalPages = Math.ceil(totalResults / limit);
+
+    return res.json({
+        news,
+        totalPages: totalPages,
+        currentPage: page,
+        nextPage: page + 1,
+        previousPage: page === 1 ? null : (page - 1)
+    });
+}
+
 export async function getUserSpecificCompanyNews(tickers, query) {
 	let {
         language = 'en',   
