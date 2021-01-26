@@ -1142,7 +1142,12 @@ app.get("/profile", async (req, res) => {
     chargesAmount.push(charge.amount);
   });
 
-  let paymentMethod = customer.subscriptions.data[0].default_payment_method;
+  let subscription = customer.subscriptions.data[0]
+
+  let paymentMethod;
+  if (subscription) {
+    paymentMethod = subscription.default_payment_method;
+  }
   if (paymentMethod == null) {
     paymentMethod = customer.invoice_settings.default_payment_method;
   }
@@ -1152,11 +1157,11 @@ app.get("/profile", async (req, res) => {
     card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
     card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
     customer_id: req.terminal_app.claims.customer_id,
-    subscription_id: customer.subscriptions.data[0].id,
-    customer_since: customer.subscriptions.data[0].created,
-    amount: customer.subscriptions.data[0].plan.amount / 100.0,
-    trial_end: customer.subscriptions.data[0].trial_end,
-    next_payment: customer.subscriptions.data[0].current_period_end,
+    subscription_id: subscription ? subscription.id : "",
+    customer_since: subscription ? subscription.created : "0",
+    amount: subscription ? subscription.plan.amount / 100.0 : 0,
+    trial_end: subscription ? subscription.trial_end : "0",
+    next_payment: subscription ? subscription.current_period_end : "0",
     firstName: user.firstName ? user.firstName : "",
     lastName: user.lastName ? user.lastName : "",
     city: user.city ? user.city : "",
