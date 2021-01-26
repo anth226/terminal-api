@@ -1142,6 +1142,7 @@ app.get("/profile", async (req, res) => {
     chargesAmount.push(charge.amount);
   });
 
+  //TODO: Handle no subscription when accessing settings. ternary for subscription object is temp fix
   let subscription = customer.subscriptions.data[0]
 
   let paymentMethod;
