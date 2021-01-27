@@ -1328,6 +1328,21 @@ app.post("/signup", async (req, res) => {
   }
 });
 
+app.post("/demorequest", async (req, res) => {
+  try {
+    const { email, name, phoneNumber } = req.body;
+
+    sendEmail.sendDemoRequest(name,phoneNumber,email);
+
+    res.send({ success: true });
+  } catch (error) {
+    res.json({
+      success: false,
+      error,
+    });
+  }
+});
+
 app.use("/cancellation-request", checkAuth);
 app.post("/cancellation-request", async (req, res) => {
   const { cancelReason } = req.body;
