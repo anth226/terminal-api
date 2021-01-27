@@ -251,6 +251,8 @@ export async function getAllForTicker(ticker) {
 
         url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
 
+        let checks = 0;
+
         let isDataThere = false;
         while (isDataThere !== true) {
           const params = {
@@ -276,6 +278,12 @@ export async function getAllForTicker(ticker) {
               url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
               isDataThere = false
             }
+          }
+          checks += 1;
+
+          if (checks >= 7) {
+            url = undefined;
+            break;
           }
         }
       }
