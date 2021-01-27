@@ -33,6 +33,14 @@ export const sendPaymentFailedEmail = async (recipient) => {
   );
 };
 
+export const sendDemoRequest = async (name, phone, email) => {
+  sendEmail(
+      "DEMO REQUEST",
+      `<html><body>Name: ${name} <br> Phone: ${phone} <br> Email: ${email}</body></html>`,
+      [process.env.EMAIL_SUPPORT]
+  );
+}
+
 // const sendEmail = (to, subject, message, from) => {
 const sendEmail = (subject, body, recipients) => {
   const params = {
