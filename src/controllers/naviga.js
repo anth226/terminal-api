@@ -166,6 +166,83 @@ export async function getCompanyNews(req, res, next) {
     });
 }
 
+export async function getGeneralNews(req, res, next) {
+    let {
+        language = 'en',
+        limit = 10,
+        page = 1,
+        include_otc = false,
+        exchanges = defaultExchanges
+    } = req.query;
+
+    if (typeof exchanges === 'string') {
+        exchanges = exchanges.split(',').map(t => t.trim()).filter(Boolean);
+    }
+
+    if (include_otc) {
+        exchanges = [
+            ...exchanges,
+            ...otcExchanges
+        ];
+    }
+
+    exchanges = exchanges.map(exchange => `'${exchange}'`).join(',');
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    if (page < 1) {
+        page = 1;
+    }
+
+    const offset = (page - 1) * limit;
+
+    const [total, news] = await Promise.all([
+        db(`
+            SELECT
+                count(DISTINCT pi_naviga_news.id) as total
+            FROM pi_naviga_news
+            INNER JOIN pi_naviga_subjects ON pi_naviga_news.id = pi_naviga_subjects.news_id
+            ${exchanges.length ? `INNER JOIN pi_naviga_tickers ON pi_naviga_tickers.news_id = pi_naviga_news.id` : ''}
+            WHERE
+                pi_naviga_subjects.subject_code IN ('IS/biz.markfore','IS/biz.openings','IS/biz.buy','IS/biz.manda','IS/biz.acquire','IS/biz.assets','IS/biz.mergers','IS/biz.stake','IS/econ.global','IS/econ.national','IS/econ','IS/fin.biz')
+                ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}
+                AND language = '${language}'
+                AND timestamp < NOW()
+        `),
+        db(`
+            SELECT
+                DISTINCT pi_naviga_news.id,
+                pi_naviga_news.title,
+                pi_naviga_news.resource_id,
+                pi_naviga_news.description,
+                pi_naviga_news.language,
+                pi_naviga_news.timestamp
+            FROM pi_naviga_news
+            INNER JOIN pi_naviga_subjects ON pi_naviga_news.id = pi_naviga_subjects.news_id
+            ${exchanges.length ? `INNER JOIN pi_naviga_tickers ON pi_naviga_tickers.news_id = pi_naviga_news.id` : ''}
+            WHERE
+                pi_naviga_subjects.subject_code IN ('IS/biz.markfore','IS/biz.openings','IS/biz.buy','IS/biz.manda','IS/biz.acquire','IS/biz.assets','IS/biz.mergers','IS/biz.stake','IS/econ.global','IS/econ.national','IS/econ','IS/fin.biz')
+                ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}         
+                AND language = '${language}'
+                AND timestamp < NOW()
+            ORDER BY timestamp DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `)
+    ]);
+
+    const totalResults = parseInt(total[0].total);
+    const totalPages = Math.ceil(totalResults / limit);
+
+    return res.json({
+        news,
+        totalPages: totalPages,
+        currentPage: page,
+        nextPage: page + 1,
+        previousPage: page === 1 ? null : (page - 1)
+    });
+}
+
 export async function getSectorNews(req, res, next) {
     let {
         language = 'en',   
