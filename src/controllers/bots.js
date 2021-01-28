@@ -24,3 +24,15 @@ export async function processWidgetInput(widgetInstanceId) {
     return { data: null };
   }
 }
+
+export async function processUserPortfolio(portId) {
+  const url = `${process.env.AWS_EB_ENDPOINT_BOT}/user_portfolios/${portId}/update?token=XXX`;
+
+  try {
+    const response = await axios.get(url);
+    return { data: response.data };
+  } catch (error) {
+    console.log(error);
+    return { data: null };
+  }
+}
