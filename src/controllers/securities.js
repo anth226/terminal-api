@@ -1,8 +1,17 @@
 import db from "../db";
+import db1 from "../db1";
 import * as getCompanyData from "../intrinio/get_company_data";
 
 export const lookup = async (companyAPI, identifier, userID) => {
-  console.time("lookup");
+  console.log("made it into new lookup");
+
+  const query = {
+    text:
+      "INSERT INTO company (user_id, ticker, created_at) VALUES ($1, $2, now())",
+    values: [userID, identifier],
+  };
+
+  await db1(query);
 
   let companyResult = await db(`
     SELECT c.*,
