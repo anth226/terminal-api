@@ -29,12 +29,15 @@ import * as nerdwalletSavings from "./scrape/nerdwallet_savings";
 import * as portfolios from "./controllers/portfolios";
 import * as hooks from "./controllers/hooks";
 import * as news from "./controllers/news";
+import * as naviga from "./controllers/naviga";
 import * as performance from "./controllers/performance";
 import * as widgets from "./controllers/widgets";
 import * as dashboard from "./controllers/dashboard";
 import * as securities from "./controllers/securities";
 import * as pages from "./controllers/pages";
+import { questionnaireSubmission } from "./controllers/questionnaire";
 
+import * as darkpool from "./controllers/darkpool";
 import * as quodd from "./controllers/quodd";
 import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
@@ -668,8 +671,8 @@ app.post("/product-checkout-paypal", async (req, res) => {
         first_name: data.firstName,
         last_name: data.lastName,
         address1: data.differentBilling
-            ? data.billingAddress
-            : data.shippingAddress,
+          ? data.billingAddress
+          : data.shippingAddress,
         phone: data.phoneNumber,
         city: data.differentBilling ? data.billingCity : data.shippingCity,
         province: data.differentBilling
@@ -677,8 +680,8 @@ app.post("/product-checkout-paypal", async (req, res) => {
             : data.shippingRegion,
         country: "United states",
         zip: data.differentBilling
-            ? data.billingPostalCode
-            : data.shippingPostalCode,
+          ? data.billingPostalCode
+          : data.shippingPostalCode,
       },
       shipping_address: {
         first_name: data.firstName,
@@ -712,7 +715,6 @@ app.post("/product-checkout-paypal", async (req, res) => {
         }
       ]
     }).then(function (response) {}).catch(function (error) {});
-
 
     res.json({ order: orderData });
   } catch (err) {
@@ -761,7 +763,6 @@ app.post("/upgrade-order-paypal", async (req, res) => {
         }
       ]
     }).then(function (response) {}).catch(function (error) {});
-
 
     res.json({ order: orderData });
   } catch (err) {
@@ -1141,7 +1142,13 @@ app.get("/profile", async (req, res) => {
     chargesAmount.push(charge.amount);
   });
 
-  let paymentMethod = customer.subscriptions.data[0].default_payment_method;
+  //TODO: Handle no subscription when accessing settings. ternary for subscription object is temp fix
+  let subscription = customer.subscriptions.data[0]
+
+  let paymentMethod;
+  if (subscription) {
+    paymentMethod = subscription.default_payment_method;
+  }
   if (paymentMethod == null) {
     paymentMethod = customer.invoice_settings.default_payment_method;
   }
@@ -1151,11 +1158,11 @@ app.get("/profile", async (req, res) => {
     card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
     card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
     customer_id: req.terminal_app.claims.customer_id,
-    subscription_id: customer.subscriptions.data[0].id,
-    customer_since: customer.subscriptions.data[0].created,
-    amount: customer.subscriptions.data[0].plan.amount / 100.0,
-    trial_end: customer.subscriptions.data[0].trial_end,
-    next_payment: customer.subscriptions.data[0].current_period_end,
+    subscription_id: subscription ? subscription.id : "",
+    customer_since: subscription ? subscription.created : "0",
+    amount: subscription ? subscription.plan.amount / 100.0 : 0,
+    trial_end: subscription ? subscription.trial_end : "0",
+    next_payment: subscription ? subscription.current_period_end : "0",
     firstName: user.firstName ? user.firstName : "",
     lastName: user.lastName ? user.lastName : "",
     city: user.city ? user.city : "",
@@ -1311,6 +1318,21 @@ app.post("/signup", async (req, res) => {
       lastName,
       phoneNumber,
     });
+
+    res.send({ success: true });
+  } catch (error) {
+    res.json({
+      success: false,
+      error,
+    });
+  }
+});
+
+app.post("/demorequest", async (req, res) => {
+  try {
+    const { email, name, phoneNumber } = req.body;
+
+    sendEmail.sendDemoRequest(name,phoneNumber,email);
 
     res.send({ success: true });
   } catch (error) {
@@ -1684,6 +1706,17 @@ app.get("/all-news", async (req, res) => {
   const news = await getNews.getAllNews(companyAPI);
   res.send(news);
 });
+
+app.get("/naviga-news", checkAuth, naviga.getAllNews);
+app.get("/naviga-news/general", checkAuth, naviga.getGeneralNews);
+app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
+app.get("/naviga-news/titan/:titan_uri", checkAuth, naviga.getTitanNews);
+app.get("/naviga-news/earning", checkAuth, naviga.getEarningNews);
+app.get("/naviga-news/for-you", checkAuth, news.getUserSpecificNews);
+app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
+
+// app.use("/news/trending-ticker", checkAuth);
+app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
 
 // Stocks news api
 app.use("/news/market-headlines", checkAuth);
@@ -2091,6 +2124,12 @@ app.get("/dashboards", async (req, res) => {
   res.send(result);
 });
 
+app.use("/stockwall", checkAuth);
+app.get("/stockwall", async (req, res) => {
+  const result = await dashboard.getStockWall(req.terminal_app.claims.uid);
+  res.send(result);
+});
+
 app.use("/pin", checkAuth);
 app.get("/pin", async (req, res) => {
   const result = await widgets.create(
@@ -2141,6 +2180,22 @@ app.get("/widgets/:id", async (req, res) => {
 // app.use("/widgets/global/:type", checkAuth);
 app.get("/widgets/global/:type", async (req, res) => {
   const result = await widgets.getGlobalWidgetByType(req.params.type);
+  res.send(result);
+});
+
+/* Dark Pool */
+app.get("/darkpool/snapshot", async (req, res) => {
+  const result = await darkpool.getSnapshot();
+  res.send(result);
+});
+
+app.get("/darkpool/sidebar", async (req, res) => {
+  const result = await darkpool.getSidebar();
+  res.send(result);
+});
+
+app.get("/darkpool/table", async (req, res) => {
+  const result = await darkpool.getTable();
   res.send(result);
 });
 
@@ -2241,6 +2296,9 @@ app.get(
     res.send(result);
   }
 );
+
+// Questionnaire Submission
+app.post("/questionnaire-submission", checkAuth, questionnaireSubmission);
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();

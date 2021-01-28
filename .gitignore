@@ -19,3 +19,8 @@ _/
 
 firebase-production.json
 firebase-staging.json
+.idea/codeStyles/codeStyleConfig.xml
+.idea/modules.xml
+.idea/terminal-api.iml
+.idea/vcs.xml
+.idea/workspace.xml

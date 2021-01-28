@@ -3,9 +3,15 @@ import redis, {
   KEY_NEWS_MARKET,
   KEY_NEWS_SOURCES,
 } from "../redis";
+import db from "../db";
+import db1 from "../db1";
+import moment from "moment";
+import { union, orderBy, map } from "lodash";
 
 import * as stocksNews from "../newsApi/stocksApi";
 import * as newsHelper from "../newsApi/newsHelper";
+import { getCompanyNews, getUserSpecificCompanyNews } from "./naviga";
+import { getDashboardId } from "./dashboard";
 
 const chalk = require("chalk");
 
@@ -153,4 +159,79 @@ export async function getGeneralMarketNews() {
   console.log("news.length", news.length);
 
   return news;
+}
+
+export const getMostViewedPinnedCompanyNews = async (req, res, next) => {
+  const start = moment().startOf('day').format()
+  const end = moment().endOf('day').format()
+
+  let tickerArray = []
+
+  const groupByTickers = await db1(`
+    SELECT ticker FROM company WHERE created_at BETWEEN '${start}' AND '${end}' group by ticker
+  `);
+
+  for (const data of groupByTickers) {
+    const { ticker } = data
+    tickerArray.push(ticker)
+  }
+
+  const pinedTickers = await db(`
+    SELECT wd.input
+    FROM widget_instances wi
+    LEFT JOIN widget_data wd ON wd.id = wi.widget_data_id
+    WHERE wi.dashboard_id = 53
+    AND (wi.widget_id = 4 OR wi.widget_id = 7)
+    AND wd.input is not NULL
+  `);
+
+  for (const data of pinedTickers) {
+    const { input: { ticker } } = data
+    tickerArray.push(ticker)
+  }
+
+  tickerArray = union(tickerArray)
+  req = { ...req, params: { ticker: tickerArray } }
+  await getCompanyNews(req, res)
+}
+
+export const getUserSpecificNews = async (req, res) => {
+  const { terminal_app: { claims: { uid } } } = req
+  const start = moment().subtract(7, 'd').format()
+  const end = moment().format()
+
+  let tickerArray = []
+
+  const groupByTickers = await db1(`
+    SELECT ticker, count(ticker) FROM company WHERE user_id = '${uid}' AND created_at BETWEEN '${start}' AND '${end}' group by ticker order by COUNT DESC
+  `);
+
+  if (groupByTickers.length > 3) {
+    groupByTickers.length = 3
+  }
+
+  map(groupByTickers, (data) => {
+    const { ticker } = data
+    tickerArray.push(ticker)
+  })
+
+  const dashboardId = await getDashboardId(uid)
+
+  const pinedTickers = await db(`
+    SELECT wd.input
+    FROM widget_instances wi
+    LEFT JOIN widget_data wd ON wd.id = wi.widget_data_id
+    WHERE wi.dashboard_id = ${dashboardId}
+    AND (wi.widget_id = 4 OR wi.widget_id = 7)
+    AND wd.input is not NULL
+  `);
+
+  for (const data of pinedTickers) {
+    const { input: { ticker } } = data
+    tickerArray.push(ticker)
+  }
+
+  tickerArray = union(tickerArray)
+  const result = await getUserSpecificCompanyNews(tickerArray, req.query)
+  return res.json(result)
 }
