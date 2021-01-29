@@ -24,7 +24,8 @@ export async function getAllNews(req, res, next) {
         limit = 10,
         page = 1,
         include_otc = false,
-        exchanges = defaultExchanges
+        exchanges = defaultExchanges,
+        goc = 'US',
     } = req.query;
 
     page = parseInt(page);
@@ -32,6 +33,10 @@ export async function getAllNews(req, res, next) {
     
     if (typeof exchanges === 'string') {
         exchanges = exchanges.split(',').map(t => t.trim()).filter(Boolean);
+    }
+    
+    if (typeof goc === 'string') {
+        goc = goc.split(',').map(t => t.trim()).filter(Boolean);
     }
 
     if (include_otc) {
@@ -42,6 +47,7 @@ export async function getAllNews(req, res, next) {
     }
 
     exchanges = exchanges.map(exchange => `'${exchange}'`).join(',');
+    goc = goc.map(country => `'${country}'`).join(',');
 
     if (page < 1) {
         page = 1;
@@ -56,6 +62,7 @@ export async function getAllNews(req, res, next) {
             INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
             WHERE timestamp < NOW()
             ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}
+            ${goc.length ? `AND goc IN (${goc})` : ''}
             AND language = '${language}'
         `),
         db(`
@@ -64,6 +71,7 @@ export async function getAllNews(req, res, next) {
             INNER JOIN pi_naviga_tickers ON pi_naviga_news.id = pi_naviga_tickers.news_id
             WHERE timestamp < NOW()
             ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}
+            ${goc.length ? `AND goc IN (${goc})` : ''}
             AND language = '${language}'
             GROUP BY pi_naviga_news.id
             ORDER BY timestamp::timestamp DESC
@@ -89,6 +97,7 @@ export async function getCompanyNews(req, res, next) {
         limit = 10,
         page = 1,
         include_otc = false,
+        goc = 'US',
         exchanges = defaultExchanges
     } = req.query;
     let { ticker } = req.params;
@@ -103,6 +112,10 @@ export async function getCompanyNews(req, res, next) {
         exchanges = exchanges.split(',').map(t => t.trim()).filter(Boolean);
     }
 
+    if (typeof goc === 'string') {
+        goc = goc.split(',').map(t => t.trim()).filter(Boolean);
+    }
+
     if (include_otc) {
         exchanges = [
             ...exchanges,
@@ -111,6 +124,7 @@ export async function getCompanyNews(req, res, next) {
     }
 
     exchanges = exchanges.map(exchange => `'${exchange}'`).join(',');
+    goc = goc.map(country => `'${country}'`).join(',');
 
     page = parseInt(page);
     limit = parseInt(limit);
@@ -130,6 +144,7 @@ export async function getCompanyNews(req, res, next) {
             WHERE
                 pi_naviga_tickers.ticker IN (${tickers})
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}
+                ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
         `),
@@ -147,6 +162,7 @@ export async function getCompanyNews(req, res, next) {
             WHERE
                 pi_naviga_tickers.ticker IN (${tickers})
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}         
+                ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
             ORDER BY timestamp DESC
@@ -171,12 +187,17 @@ export async function getGeneralNews(req, res, next) {
         language = 'en',
         limit = 10,
         page = 1,
+        goc = 'US',
         include_otc = false,
         exchanges = defaultExchanges
     } = req.query;
 
     if (typeof exchanges === 'string') {
         exchanges = exchanges.split(',').map(t => t.trim()).filter(Boolean);
+    }
+
+    if (typeof goc === 'string') {
+        goc = goc.split(',').map(t => t.trim()).filter(Boolean);
     }
 
     if (include_otc) {
@@ -187,6 +208,7 @@ export async function getGeneralNews(req, res, next) {
     }
 
     exchanges = exchanges.map(exchange => `'${exchange}'`).join(',');
+    goc = goc.map(country => `'${country}'`).join(',');
 
     page = parseInt(page);
     limit = parseInt(limit);
@@ -204,6 +226,7 @@ export async function getGeneralNews(req, res, next) {
             FROM pi_naviga_news
             INNER JOIN pi_naviga_subjects ON pi_naviga_news.id = pi_naviga_subjects.news_id
             ${exchanges.length ? `INNER JOIN pi_naviga_tickers ON pi_naviga_tickers.news_id = pi_naviga_news.id` : ''}
+            ${goc.length ? `AND goc IN (${goc})` : ''}
             WHERE
                 pi_naviga_subjects.subject_code IN ('IS/biz.markfore','IS/biz.openings','IS/biz.buy','IS/biz.manda','IS/biz.acquire','IS/biz.assets','IS/biz.mergers','IS/biz.stake','IS/econ.global','IS/econ.national','IS/econ','IS/fin.biz')
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}
@@ -224,6 +247,7 @@ export async function getGeneralNews(req, res, next) {
             WHERE
                 pi_naviga_subjects.subject_code IN ('IS/biz.markfore','IS/biz.openings','IS/biz.buy','IS/biz.manda','IS/biz.acquire','IS/biz.assets','IS/biz.mergers','IS/biz.stake','IS/econ.global','IS/econ.national','IS/econ','IS/fin.biz')
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}         
+                ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
             ORDER BY timestamp DESC
@@ -249,12 +273,17 @@ export async function getSectorNews(req, res, next) {
         limit = 10,
         page = 1,
         include_otc = false,
+        goc = 'US',
         exchanges = defaultExchanges
     } = req.query;
     let { sector_code } = req.params;
 
     if (typeof exchanges === 'string') {
         exchanges = exchanges.split(',').map(t => t.trim()).filter(Boolean);
+    }
+
+    if (typeof goc === 'string') {
+        goc = goc.split(',').map(t => t.trim()).filter(Boolean);
     }
 
     if (include_otc) {
@@ -265,6 +294,7 @@ export async function getSectorNews(req, res, next) {
     }
 
     exchanges = exchanges.map(exchange => `'${exchange}'`).join(',');
+    goc = goc.map(country => `'${country}'`).join(',');
 
     page = parseInt(page);
     limit = parseInt(limit);
@@ -284,6 +314,7 @@ export async function getSectorNews(req, res, next) {
             WHERE
                 pi_naviga_industries.sector = '${sector_code}'
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}   
+                ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
         `),
@@ -303,6 +334,7 @@ export async function getSectorNews(req, res, next) {
             WHERE
                 pi_naviga_industries.sector = '${sector_code}'
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}   
+                ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
             GROUP BY pi_naviga_news.id
@@ -332,11 +364,16 @@ export async function getEarningNews(req, res, next) {
         page = 1,
         tickers,
         include_otc = false,
+        goc = 'US',
         exchanges = defaultExchanges    
     } = req.query;
 
     if (typeof exchanges === 'string') {
         exchanges = exchanges.split(',').map(t => t.trim()).filter(Boolean);
+    }
+
+    if (typeof goc === 'string') {
+        goc = goc.split(',').map(t => t.trim()).filter(Boolean);
     }
 
     if (include_otc) {
@@ -347,6 +384,7 @@ export async function getEarningNews(req, res, next) {
     }
 
     exchanges = exchanges.map(exchange => `'${exchange}'`).join(',');
+    goc = goc.map(country => `'${country}'`).join(',');
 
     if (tickers && typeof tickers === 'string') {
         tickers = tickers.split(',').map(t => t.toUpperCase().trim()).filter(Boolean).map(t => `'${t}'`);
@@ -377,6 +415,7 @@ export async function getEarningNews(req, res, next) {
             FROM pi_naviga_earning_news
             INNER JOIN pi_naviga_tickers ON pi_naviga_earning_news.news_id = pi_naviga_tickers.news_id
             ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}   
+            ${goc.length ? `AND goc IN (${goc})` : ''}
             WHERE timestamp < NOW()
             AND language = '${language}'
             ${tickersQuery.condition}
@@ -387,6 +426,7 @@ export async function getEarningNews(req, res, next) {
             INNER JOIN pi_naviga_tickers ON pi_naviga_earning_news.news_id = pi_naviga_tickers.news_id
             WHERE timestamp < NOW()
             ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}   
+            ${goc.length ? `AND goc IN (${goc})` : ''}
             AND language = '${language}'
             ${tickersQuery.condition}
             ORDER BY timestamp DESC
@@ -410,6 +450,7 @@ export async function getTitanNews(req, res, next) {
     let {
         language = 'en',   
         limit = 10,
+        goc = 'US',
         page = 1
     } = req.query;
     let { titan_uri } = req.params;
@@ -420,6 +461,12 @@ export async function getTitanNews(req, res, next) {
     if (page < 1) {
         page = 1;
     }
+
+    if (typeof goc === 'string') {
+        goc = goc.split(',').map(t => t.trim()).filter(Boolean);
+    }
+
+    goc = goc.map(country => `'${country}'`).join(',');
 
     const titan = (await db(`
         SELECT * FROM pi_naviga_titans WHERE titan_uri = '${titan_uri}'
@@ -436,6 +483,7 @@ export async function getTitanNews(req, res, next) {
             INNER JOIN pi_naviga_persons ON pi_naviga_news.id = pi_naviga_persons.news_id
             WHERE
                 pi_naviga_persons.person_code = '${apin}'
+                ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
         `),
@@ -450,6 +498,7 @@ export async function getTitanNews(req, res, next) {
             INNER JOIN pi_naviga_persons ON pi_naviga_news.id = pi_naviga_persons.news_id
             WHERE
                 pi_naviga_persons.person_code = '${apin}'
+                ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
             ORDER BY timestamp DESC
@@ -476,11 +525,16 @@ export async function getUserSpecificCompanyNews(tickers, query) {
 		limit = 10,
         page = 1,
         include_otc = false,
+        goc = 'US',
         exchanges = defaultExchanges
     } = query;
     
     if (typeof exchanges === 'string') {
         exchanges = exchanges.split(',').map(t => t.trim()).filter(Boolean);
+    }
+
+    if (typeof goc === 'string') {
+        goc = goc.split(',').map(t => t.trim()).filter(Boolean);
     }
 
     if (include_otc) {
@@ -491,6 +545,7 @@ export async function getUserSpecificCompanyNews(tickers, query) {
     }
 
     exchanges = exchanges.map(exchange => `'${exchange}'`).join(',');
+    goc = goc.map(country => `'${country}'`).join(',');
 
 	page = parseInt(page);
 	limit = parseInt(limit);
@@ -514,6 +569,7 @@ export async function getUserSpecificCompanyNews(tickers, query) {
 			WHERE
                 pi_naviga_tickers.ticker = '${ticker}'
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}
+                ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
 			ORDER BY timestamp DESC
