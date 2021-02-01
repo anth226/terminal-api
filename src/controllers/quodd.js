@@ -340,7 +340,6 @@ export async function getLastPrice(ticker) {
 
 export async function getLastPriceChange(ticker) {
   let response;
-  let openPrice;
   //let realtime;
   let delayed;
   let qTicker = "e" + ticker;
@@ -366,35 +365,41 @@ export async function getLastPriceChange(ticker) {
     let vals = jsonPerf.values;
     let openVal = vals.today.value;
     let openDate = vals.today.date;
+    
     delete vals["today"];
+    
     vals["open"] = {
       date: openDate,
       value: openVal,
     };
-    openPrice = intrinioResponse.open_price;
+
     if (cachedPrice_15) {
       delayed = cachedPrice_15 / 100;
-      let percentChange = (delayed / openPrice - 1) * 100;
+    
+      let percentChange = (delayed / openVal - 1) * 100;
+    
       response = {
         //last_price_realtime: realtime,
         last_price: delayed,
-        open_price: openPrice,
+        open_price: openVal,
         performance: percentChange,
         values: vals,
       };
     } else {
       if (intrinioResponse.last_price) {
         let lastPrice = intrinioResponse.last_price;
-        let percentChange = (lastPrice / openPrice - 1) * 100;
+        let percentChange = (lastPrice / openVal - 1) * 100;
+    
         response = {
           //last_price_realtime: intrinioPrice.last_price,
           last_price: lastPrice,
-          open_price: openPrice,
+          open_price: openVal,
           performance: percentChange,
           values: vals,
         };
       }
     }
+    
     return response;
   }
 }
