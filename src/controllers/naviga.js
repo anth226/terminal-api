@@ -1,4 +1,5 @@
 import db from './../navigaDB';
+import mainDB from './../db';
 import { concat, orderBy } from "lodash";
 
 const defaultExchanges = [
@@ -592,6 +593,22 @@ export async function getUserSpecificCompanyNews(tickers, query) {
 		nextPage: page + 1,
 		previousPage: page === 1 ? null : (page - 1)
 	};
+}
+
+export const getStrongBuyNews = async (req, res) => {
+	const news = await mainDB(`
+		SELECT wd.input
+		FROM widgets w
+		JOIN widget_instances wi ON wi.widget_id = w.id
+		JOIN widget_data wd ON wd.id = wi.widget_data_id 
+		WHERE w.id = 12
+`);
+
+	if (size(news) !== 0) {
+		const { input: { tickers } } = news[0]
+		const result = await getUserSpecificCompanyNews(tickers, req.query)
+		res.json(result)
+	}
 }
 
 const paginate = (array, limit, page) => {
