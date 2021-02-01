@@ -2352,11 +2352,24 @@ app.get("/subscription_fixing", async (req, res) => {
               customer_id,
               subscription_id: newSubscription.id,
             });
+
+            let docRef = db.collection("users").doc(user.uid);
+            await docRef.update({
+              customerId: customer_id,
+              subscriptionId: newSubscription.id,
+              subscriptionStatus: newSubscription.status
+            });
+
           } else if (subscription && subscription.cancel_at_period_end === true) {
             const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
               cancel_at_period_end: false
             });
             console.log("updatedSubscription---", updatedSubscription)
+
+            let docRef = db.collection("users").doc(user.uid);
+            await docRef.update({
+              subscriptionStatus: updatedSubscription.status
+            });
           }
         }
       }
