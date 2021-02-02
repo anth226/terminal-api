@@ -1729,8 +1729,8 @@ app.get("/news/market-headlines", async (req, res) => {
   // );
   // res.send(headlines);
 
-  const headlines = await news.getGeneralMarketNews();
-  res.send(headlines);
+  // const headlines = await news.getGeneralMarketNews();
+  res.send([]);
 });
 
 app.use("/news-sources", checkAuth);
