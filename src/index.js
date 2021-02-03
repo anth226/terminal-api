@@ -1710,6 +1710,7 @@ app.get("/all-news", async (req, res) => {
 });
 
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
+app.get("/naviga-news/:id/resource_id", checkAuth, naviga.getNewsResourceID);
 app.get("/naviga-news/general", checkAuth, naviga.getGeneralNews);
 app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
 app.get("/naviga-news/titan/:titan_uri", checkAuth, naviga.getTitanNews);
