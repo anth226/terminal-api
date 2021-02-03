@@ -1,3 +1,4 @@
+import { sendAccessRequest } from "../sendEmail";
 import { db, admin } from "../services/firebase";
 
 export const questionnaireSubmission = async (req, res) => {
@@ -23,6 +24,12 @@ export const questionnaireSubmission = async (req, res) => {
       updateData = { ...updateData, feed_access: { ...updateData.feed_access, isRealtimeNasdaqAccess: "YES" } }
     } else {
       updateData = { ...updateData, feed_access: { ...updateData.feed_access, isRealtimeNasdaqAccess: "REQUESTED" } }
+      sendAccessRequest(
+        `${data.data().firstName} ${data.data().lastName}`,
+        data.data().email,
+        terminal_app.claims.uid,
+        terminal_app.claims.subscription_id
+      );
     }
   }
 
