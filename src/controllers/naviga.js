@@ -19,6 +19,20 @@ const otcExchanges = [
     'OtherOTC',
 ];
 
+export async function getNewsResourceID(req, res, next) {
+    const id = req.params.id;
+
+    const news = await db(`
+        SELECT pi_naviga_news.resource_id
+        FROM pi_naviga_news
+        WHERE id = '${id}'
+    `);
+
+    return res.json({
+        resource_id: news[0] && news[0].resource_id
+    });
+}
+
 export async function getAllNews(req, res, next) {
     let {
         language = 'en',
