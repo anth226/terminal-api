@@ -1,6 +1,6 @@
 import db from './../navigaDB';
 import mainDB from './../db';
-import { concat, orderBy } from "lodash";
+import { concat, orderBy, size } from "lodash";
 
 const defaultExchanges = [
     'AMEX',
