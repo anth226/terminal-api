@@ -2198,8 +2198,8 @@ app.get("/darkpool/sidebar", async (req, res) => {
   res.send(result);
 });
 
-app.get("/darkpool/table", async (req, res) => {
-  const result = await darkpool.getTable();
+app.get("/darkpool/options", async (req, res) => {
+  const result = await darkpool.getOptions();
   res.send(result);
 });
 
