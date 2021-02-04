@@ -243,7 +243,7 @@ export async function getGeneralNews(req, res, next) {
             ${exchanges.length ? `INNER JOIN pi_naviga_tickers ON pi_naviga_tickers.news_id = pi_naviga_news.id` : ''}
             ${goc.length ? `AND goc IN (${goc})` : ''}
             WHERE
-                pi_naviga_subjects.subject_code IN ('IS/biz.markfore','IS/biz.openings','IS/biz.buy','IS/biz.manda','IS/biz.acquire','IS/biz.assets','IS/biz.mergers','IS/biz.stake','IS/econ.global','IS/econ.national','IS/econ','IS/fin.biz')
+                pi_naviga_subjects.subject_code IN ('IS/fin.shortsel','IS/fin.stkmoves','IS/fin.secanal','IS/fin.exchange','IS/fin.markups','IS/fin.rumor','IS/fin.techanal','IS/fin.stocks','IS/biz.mergers','IS/biz.mastate','IS/fin.stkoffer','IS/fin.split','IS/fin.intrade','IS/impact.joint','IS/biz.dividend')
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
@@ -260,7 +260,7 @@ export async function getGeneralNews(req, res, next) {
             INNER JOIN pi_naviga_subjects ON pi_naviga_news.id = pi_naviga_subjects.news_id
             ${exchanges.length ? `INNER JOIN pi_naviga_tickers ON pi_naviga_tickers.news_id = pi_naviga_news.id` : ''}
             WHERE
-                pi_naviga_subjects.subject_code IN ('IS/biz.markfore','IS/biz.openings','IS/biz.buy','IS/biz.manda','IS/biz.acquire','IS/biz.assets','IS/biz.mergers','IS/biz.stake','IS/econ.global','IS/econ.national','IS/econ','IS/fin.biz')
+                pi_naviga_subjects.subject_code IN ('IS/fin.shortsel','IS/fin.stkmoves','IS/fin.secanal','IS/fin.exchange','IS/fin.markups','IS/fin.rumor','IS/fin.techanal','IS/fin.stocks','IS/biz.mergers','IS/biz.mastate','IS/fin.stkoffer','IS/fin.split','IS/fin.intrade','IS/impact.joint','IS/biz.dividend')
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}         
                 ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
