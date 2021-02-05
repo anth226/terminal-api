@@ -1,5 +1,6 @@
 import db from './../navigaDB';
-import { concat, orderBy } from "lodash";
+import mainDB from './../db';
+import { concat, orderBy, size } from "lodash";
 
 const defaultExchanges = [
     'AMEX',
@@ -17,6 +18,20 @@ const otcExchanges = [
     'OTC-QX',
     'OtherOTC',
 ];
+
+export async function getNewsResourceID(req, res, next) {
+    const id = req.params.id;
+
+    const news = await db(`
+        SELECT pi_naviga_news.resource_id
+        FROM pi_naviga_news
+        WHERE id = '${id}'
+    `);
+
+    return res.json({
+        resource_id: news[0] && news[0].resource_id
+    });
+}
 
 export async function getAllNews(req, res, next) {
     let {
@@ -228,7 +243,7 @@ export async function getGeneralNews(req, res, next) {
             ${exchanges.length ? `INNER JOIN pi_naviga_tickers ON pi_naviga_tickers.news_id = pi_naviga_news.id` : ''}
             ${goc.length ? `AND goc IN (${goc})` : ''}
             WHERE
-                pi_naviga_subjects.subject_code IN ('IS/biz.markfore','IS/biz.openings','IS/biz.buy','IS/biz.manda','IS/biz.acquire','IS/biz.assets','IS/biz.mergers','IS/biz.stake','IS/econ.global','IS/econ.national','IS/econ','IS/fin.biz')
+                pi_naviga_subjects.subject_code IN ('IS/fin.shortsel','IS/fin.stkmoves','IS/fin.secanal','IS/fin.exchange','IS/fin.markups','IS/fin.rumor','IS/fin.techanal','IS/fin.stocks','IS/biz.mergers','IS/biz.mastate','IS/fin.stkoffer','IS/fin.split','IS/fin.intrade','IS/impact.joint','IS/biz.dividend')
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}
                 AND language = '${language}'
                 AND timestamp < NOW()
@@ -245,7 +260,7 @@ export async function getGeneralNews(req, res, next) {
             INNER JOIN pi_naviga_subjects ON pi_naviga_news.id = pi_naviga_subjects.news_id
             ${exchanges.length ? `INNER JOIN pi_naviga_tickers ON pi_naviga_tickers.news_id = pi_naviga_news.id` : ''}
             WHERE
-                pi_naviga_subjects.subject_code IN ('IS/biz.markfore','IS/biz.openings','IS/biz.buy','IS/biz.manda','IS/biz.acquire','IS/biz.assets','IS/biz.mergers','IS/biz.stake','IS/econ.global','IS/econ.national','IS/econ','IS/fin.biz')
+                pi_naviga_subjects.subject_code IN ('IS/fin.shortsel','IS/fin.stkmoves','IS/fin.secanal','IS/fin.exchange','IS/fin.markups','IS/fin.rumor','IS/fin.techanal','IS/fin.stocks','IS/biz.mergers','IS/biz.mastate','IS/fin.stkoffer','IS/fin.split','IS/fin.intrade','IS/impact.joint','IS/biz.dividend')
                 ${exchanges.length ? `AND exchange IN (${exchanges})` : ''}         
                 ${goc.length ? `AND goc IN (${goc})` : ''}
                 AND language = '${language}'
@@ -592,6 +607,22 @@ export async function getUserSpecificCompanyNews(tickers, query) {
 		nextPage: page + 1,
 		previousPage: page === 1 ? null : (page - 1)
 	};
+}
+
+export const getStrongBuyNews = async (req, res) => {
+	const news = await mainDB(`
+		SELECT wd.input
+		FROM widgets w
+		JOIN widget_instances wi ON wi.widget_id = w.id
+		JOIN widget_data wd ON wd.id = wi.widget_data_id 
+		WHERE w.id = 12
+`);
+
+	if (size(news) !== 0) {
+		const { input: { tickers } } = news[0]
+		const result = await getUserSpecificCompanyNews(tickers, req.query)
+		res.json(result)
+	}
 }
 
 const paginate = (array, limit, page) => {

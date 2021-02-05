@@ -57,6 +57,8 @@ import Stripe from "stripe";
 const multer = require("multer");
 const AWS = require("aws-sdk");
 import { v4 as uuidv4 } from "uuid";
+import { isEmpty } from "lodash";
+import moment from "moment";
 
 import { isAuthorized } from "./middleware/authorized";
 import { db, admin } from "./services/firebase";
@@ -1708,9 +1710,11 @@ app.get("/all-news", async (req, res) => {
 });
 
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
+app.get("/naviga-news/:id/resource_id", checkAuth, naviga.getNewsResourceID);
 app.get("/naviga-news/general", checkAuth, naviga.getGeneralNews);
 app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
 app.get("/naviga-news/titan/:titan_uri", checkAuth, naviga.getTitanNews);
+app.get("/naviga-news/strong-buy", checkAuth, naviga.getStrongBuyNews);
 app.get("/naviga-news/earning", checkAuth, naviga.getEarningNews);
 app.get("/naviga-news/for-you", checkAuth, news.getUserSpecificNews);
 app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
@@ -1726,8 +1730,8 @@ app.get("/news/market-headlines", async (req, res) => {
   // );
   // res.send(headlines);
 
-  const headlines = await news.getGeneralMarketNews();
-  res.send(headlines);
+  // const headlines = await news.getGeneralMarketNews();
+  res.send([]);
 });
 
 app.use("/news-sources", checkAuth);
@@ -2194,8 +2198,8 @@ app.get("/darkpool/sidebar", async (req, res) => {
   res.send(result);
 });
 
-app.get("/darkpool/table", async (req, res) => {
-  const result = await darkpool.getTable();
+app.get("/darkpool/options", async (req, res) => {
+  const result = await darkpool.getOptions();
   res.send(result);
 });
 
@@ -2299,6 +2303,84 @@ app.get(
 
 // Questionnaire Submission
 app.post("/questionnaire-submission", checkAuth, questionnaireSubmission);
+
+// subscription fixing
+app.get("/subscription_fixing", async (req, res) => {
+  if (process.env.DISABLE_CRON == "true") {
+    res.send("disabled");
+    return;
+  }
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+  const userLists = await admin.auth().listUsers(1000)
+  for (const user of userLists.users) {
+    try {
+      if (user.customClaims && !isEmpty(user.customClaims)) {
+        const { subscription_id, customer_id } = user.customClaims
+        if (subscription_id) {
+          const subscription = await stripe.subscriptions.retrieve(
+            subscription_id
+          );
+          console.log(subscription)
+
+          if (subscription && subscription.cancel_at_period_end === true &&
+            (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
+          ) {
+            console.log("subscription--", subscription)
+            const customerData = await stripe.customers.retrieve(
+              customer_id
+            );
+
+            if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method) {
+              await stripe.customers.update(
+                customer_id,
+                { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+              );
+            }
+            console.log("customerData--", customerData)
+
+            const newSubscription = await stripe.subscriptions.create({
+              customer: customer_id,
+              items: [{ plan: planId }],
+              expand: ["latest_invoice.payment_intent"],
+              coupon: couponId,
+            });
+            console.log("new subscription ---", newSubscription)
+
+            await admin.auth().setCustomUserClaims(user.uid, {
+              customer_id,
+              subscription_id: newSubscription.id,
+            });
+
+            let docRef = db.collection("users").doc(user.uid);
+            await docRef.update({
+              customerId: customer_id,
+              subscriptionId: newSubscription.id,
+              subscriptionStatus: newSubscription.status
+            });
+
+          } else if (subscription && subscription.cancel_at_period_end === true) {
+            const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+              cancel_at_period_end: false
+            });
+            console.log("updatedSubscription---", updatedSubscription)
+
+            let docRef = db.collection("users").doc(user.uid);
+            await docRef.update({
+              subscriptionStatus: updatedSubscription.status
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error(user.uid, "---", error)
+    }
+  }
+  res.send("ok");
+});
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
