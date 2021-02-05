@@ -7,6 +7,7 @@ export async function getSnapshot() {
       callSum,
       callFlow,
       callPremTotal,
+      totalSum,
       putToCall,
       flowSentiment;
 
@@ -24,7 +25,7 @@ export async function getSnapshot() {
     putSum = result[1].flow_count;
     putPremTotal = result[1].total_premium;
 
-    let totalSum = (Number(callSum || 0) + Number(putSum || 0)).toFixed(2);
+    totalSum = Number((Number(callSum || 0) + Number(putSum || 0)).toFixed(2));
 
     putFlow = Number(putSum || 0).toFixed(2) / totalSum;
     callFlow = Number(callSum || 0).toFixed(2) / totalSum;
@@ -38,24 +39,24 @@ export async function getSnapshot() {
     putToCall = -1.0 // infinite
   }
 
-  if (putToCall && putPremTotal && callPremTotal) {
-    // 1.0 = bullish
-    // 0.0 = bearish
+  if (totalSum && putSum && putPremTotal && callPremTotal) {
 
-    // putPrem / callPrem
-    // 1000 / 100 = 10
+    let premTotal = (Number(putPremTotal) + Number(callPremTotal)).toFixed(2);
+    let putPremToTotalPrem = Number(putPremTotal).toFixed(2) / premTotal;
 
-    // putCount / callCount
-    // 100 / 10 = 10
+    let putSumToTotalSum = Number(putSum).toFixed(2) / totalSum;
 
-    flowSentiment = 1.0;
+    let avg = (putSumToTotalSum > 0 && putPremToTotalPrem > 0) ? 2 : 1
+    let avgRatios = (putSumToTotalSum + putPremToTotalPrem)/avg;
+
+    flowSentiment = 1 - (avgRatios || 0);
   }
 
   return {
-    call_count: callSum,
+    call_count: Number(callSum || 0),
     call_flow: callFlow,
     call_total_prem: callPremTotal,
-    put_count: putSum,
+    put_count: Number(putSum || 0),
     put_flow: putFlow,
     put_total_prem: putPremTotal,
     put_to_call: putToCall,
