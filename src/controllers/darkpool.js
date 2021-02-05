@@ -1,6 +1,7 @@
 import optionsDB from './../optionsDB';
 import {CACHED_PRICE_15MIN} from "../redis";
 import redis from "redis";
+import asyncRedis from "async-redis";
 
 export async function getSnapshot() {
   let putSum,
