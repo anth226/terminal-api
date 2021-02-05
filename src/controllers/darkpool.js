@@ -1,4 +1,6 @@
 import optionsDB from './../optionsDB';
+import {CACHED_PRICE_15MIN} from "../redis";
+import redis from "redis";
 
 export async function getSnapshot() {
   let putSum,
@@ -85,10 +87,51 @@ export async function getSidebar() {
 
 export async function getOptions() {
   const result = await optionsDB(`
-        SELECT time, ticker, exp, strike, cp, spot, contract_quantity, price_per_contract, type, prem
+        SELECT id, time, ticker, exp, strike, cp, spot, contract_quantity, price_per_contract, type, prem
         FROM options
         WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
         ORDER BY time DESC
         `)
   return result;
+}
+let sharedCache;
+const connectSharedCache = () => {
+  let credentials = {
+    host: process.env.REDIS_HOST_SHARED_CACHE,
+    port: process.env.REDIS_PORT_SHARED_CACHE,
+  };
+
+  if (!sharedCache) {
+    const client = redis.createClient(credentials);
+    client.on("error", function (error) {
+      //   reportError(error);
+    });
+
+    sharedCache = asyncRedis.decorate(client);
+  }
+  return sharedCache;
+};
+
+export async function fillSpotPrice() {
+
+  const options = await getOptions();
+
+  connectSharedCache();
+
+  if (options) {
+    for (var i = 0; i < options.length; i++) {
+
+      let qTicker = "e" + options[i].ticker;
+      let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
+
+      if (cachedPrice_15) {
+        let p = cachedPrice_15 / 100
+        const result = await optionsDB(`
+        UPDATE options SET spot = ${p} WHERE id = ${options[i].id}
+        `)
+      }
+    }
+  }
+
+  return {success: true}
 }

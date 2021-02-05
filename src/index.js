@@ -2203,6 +2203,11 @@ app.get("/darkpool/options", async (req, res) => {
   res.send(result);
 });
 
+app.get("/darkpool/fill_options", async (req, res) => {
+  const result = await darkpool.fillSpotPrice();
+  res.send(result);
+});
+
 // ciks
 app.use("/billionaire/:identifier/ciks/:rank/set", checkAuth);
 app.get(
