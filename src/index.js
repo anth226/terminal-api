@@ -678,8 +678,8 @@ app.post("/product-checkout-paypal", async (req, res) => {
         phone: data.phoneNumber,
         city: data.differentBilling ? data.billingCity : data.shippingCity,
         province: data.differentBilling
-            ? data.billingRegion
-            : data.shippingRegion,
+          ? data.billingRegion
+          : data.shippingRegion,
         country: "United states",
         zip: data.differentBilling
           ? data.billingPostalCode
@@ -2386,6 +2386,12 @@ app.get("/subscription_fixing", async (req, res) => {
   }
   res.send("ok");
 });
+
+// User Profmance
+app.get("/user-performance", checkAuth, dashboard.userPerformance)
+
+// ETFS
+app.get("/user-etfs", checkAuth, dashboard.getEtfs)
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
