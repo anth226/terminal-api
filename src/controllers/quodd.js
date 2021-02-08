@@ -402,7 +402,7 @@ export async function getLastPriceChange(ticker) {
     
     return response;
   } else {
-    const last_price = cachedPrice_15 || (intrinioResponse && intrinioResponse.last_price) || 0;
+    const last_price = (cachedPrice_15 && (cachedPrice_15 / 100)) || (intrinioResponse && intrinioResponse.last_price) || 0;
     const open_price = (intrinioResponse && intrinioResponse.open_price) || 0;
 
     return {
