@@ -1,6 +1,8 @@
 import db from "../db";
 import db1 from "../db1";
 import * as getCompanyData from "../intrinio/get_company_data";
+import redis from "redis";
+import asyncRedis from "async-redis";
 
 export const lookup = async (companyAPI, identifier, userID) => {
   console.log("made it into new lookup");
@@ -85,11 +87,11 @@ export const syncExistingSecuritiesWithRedis = async (res) => {
       FROM securities
     `);
 
-    res.write(securities.length);
+    res.write(securities.length.toString());
 
     for (let i = 0; i < securities.length; i++) {
-      res.write(i);
-      await sharedCache.set(`C_SEC-e${securities[i].ticker}`)
+      res.write(i.toString());
+      await sharedCache.set(`C_SEC-e${securities[i].ticker}`, 'true');
     }
 
     res.write('done');
