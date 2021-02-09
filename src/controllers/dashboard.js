@@ -149,6 +149,19 @@ export const userPerformance = async (req, res) => {
         let stocks = {}
 
         for await (let stock of Object.keys(result.output.stocks)) {
+          let name
+
+          const companyData = await db(`
+            SELECT json
+            FROM companies
+            WHERE ticker = '${stock}'
+            LIMIT 1
+          `);
+
+          if (size(companyData) !== 0) {
+            name = companyData[0].json.name
+          }
+
           let trades = []
 
           map(result.output.stocks[stock].trades, (data) => {
@@ -160,37 +173,24 @@ export const userPerformance = async (req, res) => {
           if (size(trades) !== 0) {
             if (size(trades) > 1) {
               trades = orderBy(trades, "open_date", "desc")[0]
-
-              let intrinioResponse = await getSecurityData.getSecurityLastPrice(stock);
-              if (intrinioResponse && intrinioResponse.last_price) {
-                trades = [{
-                  ...trades,
-                  last_price: intrinioResponse.last_price,
-                  performance: (intrinioResponse.last_price - trades.open_price) / trades.open_price * 100
-                }];
-              } else {
-                trades = [{
-                  ...trades,
-                  last_price: null,
-                }];
-              }
-
             } else if (size(trades) === 1) {
               trades = trades[0]
+            }
 
-              let intrinioResponse = await getSecurityData.getSecurityLastPrice(stock);
-              if (intrinioResponse && intrinioResponse.last_price) {
-                trades = [{
-                  ...trades,
-                  last_price: intrinioResponse.last_price,
-                  performance: (intrinioResponse.last_price - trades.open_price) / trades.open_price * 100
-                }];
-              } else {
-                trades = [{
-                  ...trades,
-                  last_price: null,
-                }];
-              }
+            let intrinioResponse = await getSecurityData.getSecurityLastPrice(stock);
+            if (intrinioResponse && intrinioResponse.last_price) {
+              trades = [{
+                ...trades,
+                last_price: intrinioResponse.last_price,
+                performance: (intrinioResponse.last_price - trades.open_price) / trades.open_price * 100,
+                name
+              }];
+            } else {
+              trades = [{
+                ...trades,
+                last_price: null,
+                name
+              }];
             }
           }
 
