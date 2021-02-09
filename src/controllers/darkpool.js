@@ -15,9 +15,11 @@ export async function getSnapshot() {
       flowSentiment;
 
   const result = await optionsDB(`
-      (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'C' AS cp FROM options WHERE cp = 'C')
+      (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'C' AS cp FROM options WHERE cp = 'C'
+      AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options))
       UNION
-      (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'P' AS cp FROM options WHERE cp = 'P')
+      (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'P' AS cp FROM options WHERE cp = 'P'
+      AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options))
       ORDER BY cp ASC
       `)
 
@@ -58,10 +60,10 @@ export async function getSnapshot() {
   return {
     call_count: Number(callSum || 0),
     call_flow: callFlow,
-    call_total_prem: callPremTotal,
+    call_total_prem: Number(callPremTotal),
     put_count: Number(putSum || 0),
     put_flow: putFlow,
-    put_total_prem: putPremTotal,
+    put_total_prem: Number(putPremTotal),
     put_to_call: putToCall,
     flow_sentiment: flowSentiment
   };
