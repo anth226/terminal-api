@@ -75,3 +75,49 @@ export const getTypeByTicker = async (ticker) => {
   `);
   return type;
 };
+
+export const syncExistingSecuritiesWithRedis = async (res) => {
+  try {
+    const sharedCache = connectSharedCache();
+
+    let securities = await db(`
+      SELECT ticker
+      FROM securities
+    `);
+
+    res.write(securities.length);
+
+    for (let i = 0; i < securities.length; i++) {
+      res.write(i);
+      await sharedCache.set(`C_SEC-e${securities[i].ticker}`)
+    }
+
+    res.write('done');
+    return 'done';
+  } catch (e) {
+    res.write('error');
+    res.write(e.message);
+    
+    return 'error';
+  }
+};
+
+const connectSharedCache = () => {
+  let sharedCache = null;
+
+  let credentials = {
+    host: process.env.REDIS_HOST_SHARED_CACHE,
+    port: process.env.REDIS_PORT_SHARED_CACHE,
+  };
+
+  if (!sharedCache) {
+    const client = redis.createClient(credentials);
+    client.on("error", function (error) {
+      //   reportError(error);
+    });
+
+    sharedCache = asyncRedis.decorate(client);
+  }
+
+  return sharedCache;
+};
