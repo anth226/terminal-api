@@ -401,5 +401,20 @@ export async function getLastPriceChange(ticker) {
     }
     
     return response;
+  } else {
+    const last_price = (cachedPrice_15 && (cachedPrice_15 / 100)) || (intrinioResponse && intrinioResponse.last_price) || 0;
+    const open_price = (intrinioResponse && intrinioResponse.open_price) || 0;
+
+    return {
+      last_price,
+      open_price,
+      performance: (last_price / open_price - 1) * 100,
+      values: {
+        open: {
+          date: intrinioResponse && intrinioResponse.last_time,
+          value: open_price,
+        }
+      },
+    };
   }
 }
