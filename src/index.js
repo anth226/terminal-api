@@ -1734,6 +1734,12 @@ app.get("/news/market-headlines", async (req, res) => {
   res.send([]);
 });
 
+app.get("/migration-script", async (req, res) => {
+  await securities.syncExistingSecuritiesWithRedis(req.query.ticker, res);
+
+  res.end();
+});
+
 app.use("/news-sources", checkAuth);
 app.get("/news-sources", async (req, res) => {
   // const sources = await newsHelper.getSources(process.env.NEWS_API_KEY);
