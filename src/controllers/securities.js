@@ -78,13 +78,14 @@ export const getTypeByTicker = async (ticker) => {
   return type;
 };
 
-export const syncExistingSecuritiesWithRedis = async (res) => {
+export const syncExistingSecuritiesWithRedis = async (ticker, res) => {
   try {
     const sharedCache = connectSharedCache();
 
     let securities = await db(`
       SELECT ticker
       FROM securities
+      ${ticker && `WHERE ticker = '${ticker}'`}
     `);
 
     res.write(securities.length.toString());
