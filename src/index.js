@@ -1735,7 +1735,7 @@ app.get("/news/market-headlines", async (req, res) => {
 });
 
 app.get("/migration-script", async (req, res) => {
-  await securities.syncExistingSecuritiesWithRedis(res);
+  await securities.syncExistingSecuritiesWithRedis(req.query.ticker, res);
 
   res.end();
 });
