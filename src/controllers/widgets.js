@@ -30,9 +30,10 @@ export async function getGlobalWidgetByType(widgetType) {
         perf = JSON.parse(perf);
         last_price = last_price / 100;
         let open_price = perf.values.today.value;
+        let delta = Math.round(((last_price / open_price - 1) * 100) * 100) / 100;
         
         security.price = last_price;
-        security.delta = `${(last_price / open_price - 1) * 100}%`;
+        security.delta = `${delta}%`;
       }
 
       return security;
