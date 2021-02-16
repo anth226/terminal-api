@@ -78,6 +78,17 @@ export const getTypeByTicker = async (ticker) => {
   return type;
 };
 
+export const clearCachedSecuritiesFromSharedCache = async (res) => {
+  const sharedCache = connectSharedCache();
+  const keys = await sharedCache.keys('C_SEC-e*');
+
+  for (let i = 0; i < keys.length; i++) {
+    await sharedCache.del(keys[i]);
+  }
+  
+  return res.send(keys);
+}
+
 export const syncExistingSecuritiesWithRedis = async (ticker, res) => {
   try {
     const sharedCache = connectSharedCache();
