@@ -33,6 +33,7 @@ export let CACHED_SYMBOL = "CS";
 export let CACHED_PRICE_REALTIME = "C_R";
 export let CACHED_PRICE_15MIN = "C_15";
 export let KEY_SECURITY_PERFORMANCE = "KEY_SEC_PERF";
+export let CACHED_PRICE_CLOSE = "C_PC";
 
 function connectDatabase() {
   let credentials = {
