@@ -106,6 +106,67 @@ export async function getStockWall(userId) {
   }
 }
 
+export const userPortfolio = async (req, res) => {
+  const { query: { type = 'common_stock' } } = req
+
+  let result = await db(`
+    SELECT *
+    FROM dashboards
+    WHERE user_id = '${req.terminal_app.claims.uid}'
+  `);
+
+  if (result) {
+    if (result.length < 1) {
+      let query = {
+        text:
+          "INSERT INTO dashboards (user_id, is_default, name) VALUES ($1, $2, $3) RETURNING *",
+        values: [userId, true, ""],
+      };
+      result = await db(query);
+
+      let id = dashboards[0].id;
+
+      query = {
+        text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
+        values: [id],
+      };
+
+      await db(query);
+    }
+    let dashboards = result;
+
+    let { id } = dashboards[0];
+
+    result = await db(`
+      SELECT ticker, json_agg(json_build_object('portfolio_id', portfolio_id, 'type', type, 'open_price', open_price, 'open_date', open_date, 'close_price', close_price, 'close_date', close_date) ORDER BY open_date DESC) AS trade
+      from portfolio_histories
+      JOIN portfolios ON portfolios.id = portfolio_histories.portfolio_id 
+      WHERE portfolios.dashboard_id = '${id}' AND type = '${type}' AND close_date is null GROUP BY ticker
+    `)
+
+    for (const data of result) {
+      let { ticker, trade } = data
+      let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
+      if (intrinioResponse && intrinioResponse.last_price) {
+        trade[0] = {
+          ...trade[0],
+          last_price: intrinioResponse.last_price,
+          performance: (intrinioResponse.last_price - trade[0].open_price) / trade[0].open_price * 100
+        };
+      } else {
+        trade[0] = {
+          ...trade[0],
+          last_price: null,
+          performance: null
+        };
+      }
+    }
+
+  }
+
+  res.json(result)
+}
+
 export const userPerformance = async (req, res) => {
   let result = await db(`
     SELECT *
@@ -136,73 +197,12 @@ export const userPerformance = async (req, res) => {
     let { id } = dashboards[0];
 
     result = await db(`
-      SELECT widget_instances.*, widget_data.*, widgets.*, widget_instances.id AS widget_instance_id
-      FROM widget_instances
-      JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
-      JOIN widgets ON widgets.id = widget_instances.widget_id 
-      WHERE dashboard_id = '${id}' AND widgets.id = 17
-    `);
-
-    if (size(result) !== 0) {
-      result = result[0]
-      if (result.output && result.output.stocks) {
-        let stocks = {}
-
-        for await (let stock of Object.keys(result.output.stocks)) {
-          let name
-
-          const companyData = await db(`
-            SELECT json
-            FROM companies
-            WHERE ticker = '${stock}'
-            LIMIT 1
-          `);
-
-          if (size(companyData) !== 0) {
-            name = companyData[0].json.name
-          }
-
-          let trades = []
-
-          map(result.output.stocks[stock].trades, (data) => {
-            if (data.close_date === null) {
-              trades.push(data)
-            }
-          })
-
-          if (size(trades) !== 0) {
-            if (size(trades) > 1) {
-              trades = orderBy(trades, "open_date", "desc")[0]
-            } else if (size(trades) === 1) {
-              trades = trades[0]
-            }
-
-            let intrinioResponse = await getSecurityData.getSecurityLastPrice(stock);
-            if (intrinioResponse && intrinioResponse.last_price) {
-              trades = [{
-                ...trades,
-                last_price: intrinioResponse.last_price,
-                performance: (intrinioResponse.last_price - trades.open_price) / trades.open_price * 100,
-                name
-              }];
-            } else {
-              trades = [{
-                ...trades,
-                last_price: null,
-                name
-              }];
-            }
-            stocks = { ...stocks, [stock]: trades }
-          }
-
-        }
-
-        result.output.stocks = stocks
-      }
-    }
+      SELECT portfolio_performances.*
+      from portfolio_performances
+      JOIN portfolios ON portfolios.id = portfolio_performances.portfolio_id 
+      WHERE portfolios.dashboard_id = ${id}
+    `)
   }
-
-
 
   res.json(result)
 }
