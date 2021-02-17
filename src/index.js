@@ -1734,6 +1734,38 @@ app.get("/news/market-headlines", async (req, res) => {
   res.send([]);
 });
 
+app.get("/fetch-shared-securities", async (req, res) => {
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
+  securities.fetchCachedSecuritiesFromSharedCache(res);
+});
+
+app.get("/clear-shared-securities", async (req, res) => {
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
+  securities.clearCachedSecuritiesFromSharedCache(res);
+});
+
+app.get("/migration-script", async (req, res) => {
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
+  await securities.syncExistingSecuritiesWithRedis(req.query.ticker, res);
+
+  res.end();
+});
+
 app.use("/news-sources", checkAuth);
 app.get("/news-sources", async (req, res) => {
   // const sources = await newsHelper.getSources(process.env.NEWS_API_KEY);

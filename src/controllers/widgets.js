@@ -3,6 +3,12 @@ import * as dashboard from "./dashboard";
 import * as securities from "./securities";
 import * as bots from "./bots";
 import * as getSecurityData from "../intrinio/get_security_data";
+import asyncRedis from "async-redis";
+import redis from "redis";
+import {
+  CACHED_PRICE_15MIN,
+  KEY_SECURITY_PERFORMANCE
+} from "../redis";
 
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
@@ -11,7 +17,29 @@ export async function getGlobalWidgetByType(widgetType) {
     JOIN widget_data ON widget_data.id = widget_instances.widget_data_id 
     JOIN widgets ON widgets.id = widget_instances.widget_id
     WHERE widgets.type = '${widgetType}' AND widget_instances.dashboard_id = 0
-    `);
+  `);
+
+  if (widgetType === 'CompanyTopStocks' && result.length > 0) {
+    let sharedCache = connectSharedCache();
+
+    result[0].output = await Promise.all(result[0].output.map(async (security) => {
+      let perf = await sharedCache.get(`${KEY_SECURITY_PERFORMANCE}-${security.ticker}`);
+      let last_price = await sharedCache.get(`${CACHED_PRICE_15MIN}e${security.ticker}`);
+
+      if (perf && last_price) {
+        perf = JSON.parse(perf);
+        last_price = last_price / 100;
+        let open_price = perf.values.today.value;
+        let delta = Math.round(((last_price / open_price - 1) * 100) * 100) / 100;
+        
+        security.price = last_price;
+        security.delta = `${delta}%`;
+      }
+
+      return security;
+    }));
+  }
+
   if (result.length > 0) {
     return result[0];
   }
@@ -332,3 +360,24 @@ export const unPinByTicker = async (userId, input) => {
 
   return true;
 }
+
+const connectSharedCache = () => {
+  let sharedCache = null;
+
+  let credentials = {
+    host: process.env.REDIS_HOST_SHARED_CACHE,
+    port: process.env.REDIS_PORT_SHARED_CACHE,
+  };
+
+  if (!sharedCache) {
+    const client = redis.createClient(credentials);
+    client.on("error", function (error) {
+      //   reportError(error);
+    });
+
+    sharedCache = asyncRedis.decorate(client);
+  }
+
+  return sharedCache;
+};
+
