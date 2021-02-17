@@ -144,7 +144,7 @@ export const create = async (userId, widgetType, input) => {
         if (!ticker) {
           return;
         }
-        let res = await processStockBuy(widgetInstanceId, dashboardId, ticker);
+        let res = await processStockBuy(dashboardId, ticker);
         await bots.processUserPortfolio(dashboardId);
       }
 
@@ -153,7 +153,7 @@ export const create = async (userId, widgetType, input) => {
   }
 };
 
-export const processStockBuy = async (widgetId, dashboardId, ticker) => {
+export const processStockBuy = async (dashboardId, ticker) => {
   let open_price;
   let type;
   let stockType = await securities.getTypeByTicker(ticker);
@@ -167,6 +167,15 @@ export const processStockBuy = async (widgetId, dashboardId, ticker) => {
   }
 
   let portId = await getPortfolioByDashboardID(dashboardId);
+  if(!portId){
+    let query = {
+      text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
+      values: [dashboardId],
+    };
+
+    portId = await db(query);
+    portId = portId[0]
+  }
   let portfolioId = portId.id;
 
   let query = {
@@ -183,6 +192,26 @@ export const processStockSell = async (widgetId, dashboardId) => {
   let portfolioId;
   let widget = await getWidgetById(widgetId);
   let ticker = widget.output.ticker;
+  let price = await getSecurityData.getSecurityLastPrice(ticker);
+  if (price) {
+    close_price = price.last_price;
+  }
+  let portId = await getPortfolioByDashboardID(dashboardId);
+  if (portId) {
+    portfolioId = portId.id;
+  }
+  let query = {
+    text: `UPDATE portfolio_histories SET close_price = $3, close_date = now() WHERE portfolio_id = $1 AND ticker = $2 AND open_price IS NOT NULL AND close_price IS NULL`,
+    values: [portfolioId, ticker, close_price],
+  };
+
+  return await db(query);
+};
+
+export const processStockSellByDashboard = async (dashboardId, ticker) => {
+  let close_price;
+  let portfolioId;
+
   let price = await getSecurityData.getSecurityLastPrice(ticker);
   if (price) {
     close_price = price.last_price;
@@ -272,3 +301,34 @@ export const get = async (widgetId) => {
   }
   return null;
 };
+
+export const pinByTicker = async (userId, input) => {
+  console.log(userId,input)
+  let dashboardId = await dashboard.getDashboardId(userId);
+
+  if (dashboardId) {
+    let { ticker } = input;
+    if (!ticker) {
+      return;
+    }
+    await processStockBuy(dashboardId, ticker);
+    await bots.processUserPortfolio(dashboardId);
+  }
+
+  return true;
+}
+
+export const unPinByTicker = async (userId, input) => {
+  let dashboardId = await dashboard.getDashboardId(userId);
+
+  if (dashboardId) {
+    let { ticker } = input;
+    if (!ticker) {
+      return;
+    }
+    await processStockSellByDashboard(dashboardId, ticker);
+    await bots.processUserPortfolio(dashboardId);
+  }
+
+  return true;
+}

@@ -2387,8 +2387,31 @@ app.get("/subscription_fixing", async (req, res) => {
   res.send("ok");
 });
 
-// User Profmance
+// User Portfolio
+app.get("/user-portfolio", checkAuth, dashboard.userPortfolio)
+
+// User Performance
 app.get("/user-performance", checkAuth, dashboard.userPerformance)
+
+// Stock PIN/ UNPIN
+app.use("/stock/pin", checkAuth);
+app.post("/stock/pin", async (req, res) => {
+  console.log("here",req.body)
+  const result = await widgets.pinByTicker(
+    req.terminal_app.claims.uid,
+    req.body.input
+  );
+  res.send(result);
+});
+
+app.use("/stock/unpin", checkAuth);
+app.post("/stock/unpin", async (req, res) => {
+  const result = await widgets.unPinByTicker(
+    req.terminal_app.claims.uid,
+    req.body.input
+  );
+  res.send(result);
+});
 
 // ETFS
 app.get("/user-etfs", checkAuth, dashboard.getEtfs)
