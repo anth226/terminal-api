@@ -1641,7 +1641,7 @@ app.get("/similar/:ticker", async (req, res) => {
 app.use("/search/:query", checkAuth);
 app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
-  const results = await search.searchCompanies(companyAPI, query, securityAPI);
+  const results = await search.searchCompanies(query);
   res.send(results);
 });
 
