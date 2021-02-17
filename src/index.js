@@ -1734,6 +1734,10 @@ app.get("/news/market-headlines", async (req, res) => {
   res.send([]);
 });
 
+app.get("/clear-shared-securities", async (req, res) => {
+  securities.clearCachedSecuritiesFromSharedCache(res);
+});
+
 app.get("/migration-script", async (req, res) => {
   await securities.syncExistingSecuritiesWithRedis(req.query.ticker, res);
 
