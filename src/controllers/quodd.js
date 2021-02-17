@@ -24,6 +24,7 @@ import {
   CACHED_PRICE_REALTIME,
   CACHED_PRICE_15MIN,
   KEY_SECURITY_PERFORMANCE,
+  CACHED_PRICE_CLOSE
 } from "../redis";
 
 let dbs = {};
@@ -355,6 +356,7 @@ export async function getLastPriceChange(ticker) {
   // }
 
   let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
+  let closePrice = await sharedCache.get(`${CACHED_PRICE_CLOSE}${qTicker}`);
   let perf = await sharedCache.get(`${KEY_SECURITY_PERFORMANCE}-${ticker}`);
 
   // intrinioResponse now out here because we're calculating change
@@ -380,6 +382,7 @@ export async function getLastPriceChange(ticker) {
     
       response = {
         //last_price_realtime: realtime,
+        close_price: closePrice / 100,
         last_price: delayed,
         open_price: openVal,
         performance: percentChange,
@@ -392,6 +395,7 @@ export async function getLastPriceChange(ticker) {
     
         response = {
           //last_price_realtime: intrinioPrice.last_price,
+          close_price: closePrice / 100,
           last_price: lastPrice,
           open_price: openVal,
           performance: percentChange,
@@ -401,5 +405,21 @@ export async function getLastPriceChange(ticker) {
     }
     
     return response;
+  } else {
+    const last_price = (cachedPrice_15 && (cachedPrice_15 / 100)) || (intrinioResponse && intrinioResponse.last_price) || 0;
+    const open_price = (intrinioResponse && intrinioResponse.open_price) || 0;
+
+    return {
+      close_price: closePrice / 100,
+      last_price,
+      open_price,
+      performance: (last_price / open_price - 1) * 100,
+      values: {
+        open: {
+          date: intrinioResponse && intrinioResponse.last_time,
+          value: open_price,
+        }
+      },
+    };
   }
 }
