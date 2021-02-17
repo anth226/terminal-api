@@ -69,16 +69,18 @@ export const getTopFunds = async (topData, topNum) => {
   if (result.length > 0) {
     for (let i in result) {
       let fund = result[i];
-      let fundCategory = fund.json.fundCategory;
+      if (fund.json && fund.json.fundCategory) {
+        let fundCategory = fund.json.fundCategory;
 
-      if (fund[dataObj]) {
-        if (fund[dataObj][topData]) {
-          if (fundCategory[0] == "E") {
-            eFunds.push(fund);
-          } else if (fundCategory[0] == "F") {
-            fFunds.push(fund);
-          } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
-            oFunds.push(fund);
+        if (fund[dataObj]) {
+          if (fund[dataObj][topData]) {
+            if (fundCategory[0] == "E") {
+              eFunds.push(fund);
+            } else if (fundCategory[0] == "F") {
+              fFunds.push(fund);
+            } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
+              oFunds.push(fund);
+            }
           }
         }
       }
@@ -137,29 +139,31 @@ export const getTopDiscountsFunds = async (topNum) => {
   if (result.length > 0) {
     for (let i in result) {
       let fund = result[i];
-      let fundCategory = fund.json.fundCategory;
+      if (fund.json && fund.json.fundCategory) {
+        let fundCategory = fund.json.fundCategory;
 
-      if (fund["json"]) {
-        if (fund["json"]["nav"] && fund["json"]["mktPrice"]) {
-          let difference = (
-            (fund.json.mktPrice / fund.json.nav - 1) *
-            100
-          ).toFixed(2);
-          if (fundCategory[0] == "E") {
-            eFunds.push({
-              fund: fund,
-              diff: difference,
-            });
-          } else if (fundCategory[0] == "F") {
-            fFunds.push({
-              fund: fund,
-              diff: difference,
-            });
-          } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
-            oFunds.push({
-              fund: fund,
-              diff: difference,
-            });
+        if (fund["json"]) {
+          if (fund["json"]["nav"] && fund["json"]["mktPrice"]) {
+            let difference = (
+                (fund.json.mktPrice / fund.json.nav - 1) *
+                100
+            ).toFixed(2);
+            if (fundCategory[0] == "E") {
+              eFunds.push({
+                fund: fund,
+                diff: difference,
+              });
+            } else if (fundCategory[0] == "F") {
+              fFunds.push({
+                fund: fund,
+                diff: difference,
+              });
+            } else if (fundCategory[0] == "H" || fundCategory[0] == "C") {
+              oFunds.push({
+                fund: fund,
+                diff: difference,
+              });
+            }
           }
         }
       }
