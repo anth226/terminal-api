@@ -82,9 +82,9 @@ export const clearCachedSecuritiesFromSharedCache = async (res) => {
   const sharedCache = connectSharedCache();
   const keys = await sharedCache.keys('C_SEC-e*');
 
-  // for (let i = 0; i < keys.length; i++) {
-  //   await sharedCache.del(keys[i]);
-  // }
+  for (let i = 0; i < keys.length; i++) {
+    await sharedCache.del(keys[i]);
+  }
   
   return res.send(keys);
 }
