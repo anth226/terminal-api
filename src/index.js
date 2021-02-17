@@ -1734,16 +1734,14 @@ app.get("/news/market-headlines", async (req, res) => {
   res.send([]);
 });
 
-app.get("/get-shared-securities", async (req, res) => {
+app.get("/fetch-shared-securities", async (req, res) => {
   let { query } = req;
   if (query.token != "XXX") {
     res.send("fail");
     return;
   }
 
-  const keys = securities.fetchCachedSecuritiesFromSharedCache();
-
-  res.send(keys);
+  securities.fetchCachedSecuritiesFromSharedCache(res);
 });
 
 app.get("/clear-shared-securities", async (req, res) => {
