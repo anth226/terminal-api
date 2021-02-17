@@ -1734,11 +1734,35 @@ app.get("/news/market-headlines", async (req, res) => {
   res.send([]);
 });
 
+app.get("/get-shared-securities", async (req, res) => {
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
+  const keys = securities.fetchCachedSecuritiesFromSharedCache();
+
+  res.send(keys);
+});
+
 app.get("/clear-shared-securities", async (req, res) => {
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
   securities.clearCachedSecuritiesFromSharedCache(res);
 });
 
 app.get("/migration-script", async (req, res) => {
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
   await securities.syncExistingSecuritiesWithRedis(req.query.ticker, res);
 
   res.end();

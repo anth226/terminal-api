@@ -78,9 +78,15 @@ export const getTypeByTicker = async (ticker) => {
   return type;
 };
 
-export const clearCachedSecuritiesFromSharedCache = async (res) => {
+export const fetchCachedSecuritiesFromSharedCache = async () => {
   const sharedCache = connectSharedCache();
   const keys = await sharedCache.keys('C_SEC-e*');
+
+  return keys;
+}
+
+export const clearCachedSecuritiesFromSharedCache = async (res) => {
+  const keys = await fetchCachedSecuritiesFromSharedCache();
 
   for (let i = 0; i < keys.length; i++) {
     await sharedCache.del(keys[i]);
