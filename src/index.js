@@ -1648,7 +1648,7 @@ app.get("/search/:query", async (req, res) => {
 app.use("/search-sec/:query", checkAuth);
 app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
-  const results = await search.searchSec(securityAPI, query);
+  const results = await search.searchCompanies(query);
   res.send(results);
 });
 
