@@ -2,28 +2,21 @@ import db from "../db";
 import axios from "axios";
 
 export async function searchCompanies(query) {
-  const securities = db({
-    text: `
-      SELECT ticker, name, type 
-      FROM securities
-      WHERE ticker LIKE '%' || $1 || '%'
-    `,
-    values: [query],
-  });
+  const [securities, mutualFunds] = await Promise.all([
+    db({
+      text: `
+        SELECT ticker, name, type 
+        FROM securities
+        WHERE ticker LIKE '%' || $1 || '%'
+        OR name LIKE '%' || $1 || '%'
+        AND type != 'mutual_fund'
+      `,
+      values: [query],
+    }),
+    searchMutualFunds(query)
+  ]);
 
-  return securities;
-}
-
-export async function searchSecurities(query) {
-  let data = await db(`
-              SELECT ticker, name
-              FROM securities
-              WHERE ticker LIKE '%${query}%' OR name LIKE '%${query}%'
-            `);
-
-  //console.log(data);
-
-  return data;
+  return [...securities, mutualFunds];
 }
 
 export function searchMutualFunds(query) {
@@ -42,25 +35,6 @@ export function searchMutualFunds(query) {
     });
 
   return data;
-}
-
-export function searchSec(intrinioApi, query) {
-  const opts = {
-    pageSize: 20, // Number | The number of results to return
-  };
-
-  let res = intrinioApi
-    .searchCompanies(query, opts)
-    .then(function (data) {
-      return data;
-    })
-    .catch(function (error) {
-      return error;
-    });
-
-  //console.log(res);
-
-  return res;
 }
 
 export async function prefetchTitans() {
