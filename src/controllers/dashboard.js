@@ -192,9 +192,9 @@ export const userPerformance = async (req, res) => {
                 name
               }];
             }
+            stocks = { ...stocks, [stock]: trades }
           }
 
-          stocks = { ...stocks, [stock]: trades }
         }
 
         result.output.stocks = stocks
