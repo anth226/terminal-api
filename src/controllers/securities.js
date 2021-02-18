@@ -126,8 +126,12 @@ export const syncExistingSecuritiesWithRedis = async (ticker, res) => {
 
 export const getTopStocks = async () => {
   const topStocks = await db(`
-    SELECT id, name, ticker, today_performance as delta 
+    SELECT id, name, ticker, today_performance as delta
     FROM securities
+    where today_performance IS NOT NULL 
+    AND today_performance != 'NaN'
+    AND price_percent_change_7_days > 0
+    AND json_metrics IS NOT NULL
     ORDER BY today_performance DESC
     LIMIT 20
   `);
