@@ -2188,6 +2188,15 @@ app.get("/pin", async (req, res) => {
 //   res.send(null);
 // });
 
+// app.use("/top-stocks", checkAuth);
+app.get("/top-stocks", async (req, res) => {
+  const topStocks = await securities.getTopStocks();
+
+  return res.send({
+    output: topStocks
+  });
+});
+
 app.use("/widgets/pin", checkAuth);
 app.post("/widgets/pin", async (req, res) => {
   const result = await widgets.create(
@@ -2432,6 +2441,6 @@ app.get("/test", async (req, res) => {
 
 app.use(middleware.errorHandler);
 
-app.listen(process.env.PORT, () =>
-  console.log(`listening on ${process.env.PORT}`)
-);
+app.listen(process.env.PORT, () => {
+  console.log(`listening on ${process.env.PORT}`) 
+});
