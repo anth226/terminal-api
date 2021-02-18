@@ -3,6 +3,7 @@ import db1 from "../db1";
 import * as getCompanyData from "../intrinio/get_company_data";
 import redis from "redis";
 import asyncRedis from "async-redis";
+import { getLastPriceChange } from "../controllers/quodd";
 
 export const lookup = async (companyAPI, identifier, userID) => {
   console.log("made it into new lookup");
@@ -122,6 +123,34 @@ export const syncExistingSecuritiesWithRedis = async (ticker, res) => {
     return 'error';
   }
 };
+
+export const getTopStocks = async () => {
+  const topStocks = await db(`
+    SELECT id, name, ticker, today_performance as delta
+    FROM securities
+    where today_performance IS NOT NULL 
+    AND today_performance != 'NaN'
+    AND price_percent_change_7_days > 0
+    AND json_metrics IS NOT NULL
+    ORDER BY today_performance DESC
+    LIMIT 20
+  `);
+
+  return (await Promise.all(topStocks.map(async (security) => {
+    let response = await getLastPriceChange(security.ticker);
+
+    security.price = response && response.last_price;
+    security.delta = response && response.performance;
+
+    return security;
+  }))).filter(security => security.price && security.delta !== Infinity).sort((a, b) => {
+    return b.delta - a.delta;
+  }).map(security => {
+    security.delta = `${Math.round(security.delta * 100) / 100}%`;
+
+    return security;
+  });
+}
 
 const connectSharedCache = () => {
   let sharedCache = null;
