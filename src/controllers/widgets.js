@@ -9,6 +9,7 @@ import {
   CACHED_PRICE_15MIN,
   KEY_SECURITY_PERFORMANCE
 } from "../redis";
+import {getLastPrice} from "./quodd";
 
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
@@ -240,9 +241,9 @@ export const processStockSellByDashboard = async (dashboardId, ticker) => {
   let close_price;
   let portfolioId;
 
-  let price = await getSecurityData.getSecurityLastPrice(ticker);
-  if (price) {
-    close_price = price.last_price;
+  let priceResponse = await getLastPrice(ticker);
+  if (priceResponse) {
+    close_price = priceResponse.last_price;
   }
   let portId = await getPortfolioByDashboardID(dashboardId);
   if (portId) {

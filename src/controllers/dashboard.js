@@ -2,7 +2,7 @@ import { map, size, mapKeys, orderBy } from "lodash";
 
 import db from "../db";
 import * as getSecurityData from "../intrinio/get_security_data";
-import { getLastPrice } from "./quodd";
+import { getLastPrice, getLastPriceChange } from "./quodd";
 
 export async function get(userId) {
   let result = await db(`
@@ -162,12 +162,12 @@ export const userPortfolio = async (req, res) => {
         data = { ...data, name }
       }
 
-      let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
-      if (intrinioResponse && intrinioResponse.last_price) {
+      let priceResponse = await getLastPriceChange(ticker);
+      if (priceResponse) {
         trade[0] = {
           ...trade[0],
-          last_price: intrinioResponse.last_price,
-          performance: (intrinioResponse.last_price - trade[0].open_price) / trade[0].open_price * 100
+          last_price: priceResponse.last_price,
+          performance: priceResponse.performance
         };
       } else {
         trade[0] = {
@@ -320,12 +320,12 @@ export const pinnedStocks = async (userId) => {
         data = { ...data, name }
       }
 
-      let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
-      if (intrinioResponse && intrinioResponse.last_price) {
+      let priceResponse = await getLastPriceChange(ticker);
+      if (priceResponse) {
         trade[0] = {
           ...trade[0],
-          last_price: intrinioResponse.last_price,
-          performance: (intrinioResponse.last_price - trade[0].open_price) / trade[0].open_price * 100
+          last_price: priceResponse.last_price,
+          performance: priceResponse.performance
         };
       } else {
         trade[0] = {
