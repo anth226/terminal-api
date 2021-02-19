@@ -1102,10 +1102,13 @@ app.get("/user", async (req, res) => {
 
     const dashboards = await dashboard.get(req.terminal_app.claims.uid);
 
+    const pinnedStocks = await dashboard.pinnedStocks(req.terminal_app.claims.uid);
+
     res.json({
       success: true,
       user,
       dashboards,
+      pinnedStocks
     });
   } catch (error) {
     res.json({
