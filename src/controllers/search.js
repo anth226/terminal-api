@@ -1,5 +1,6 @@
 import db from "../db";
 import axios from "axios";
+import { uniqBy } from "lodash";
 
 export async function searchCompanies(query) {
   const [securities, mutualFunds] = await Promise.all([
@@ -7,16 +8,23 @@ export async function searchCompanies(query) {
       text: `
         SELECT ticker, name, type 
         FROM securities
-        WHERE ticker LIKE '%' || $1 || '%'
-        OR name LIKE '%' || $1 || '%'
-        AND type != 'mutual_fund'
+        WHERE ticker ILIKE '%' || $1 || '%'
+        OR name ILIKE '%' || $1 || '%'
       `,
       values: [query],
     }),
-    searchMutualFunds(query)
+    (async () => {
+      const funds = await searchMutualFunds(query);
+
+      return funds.map(fund => {
+        fund.ticker = fund.tickerSymbol;
+
+        return fund;
+      });
+    })()
   ]);
 
-  return [...securities, mutualFunds];
+  return uniqBy([...securities, ...mutualFunds], 'ticker');
 }
 
 export function searchMutualFunds(query) {
