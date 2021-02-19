@@ -167,7 +167,7 @@ export const userPortfolio = async (req, res) => {
         trade[0] = {
           ...trade[0],
           last_price: priceResponse.last_price,
-          performance: priceResponse.performance
+          performance: (priceResponse.last_price - trade[0].open_price) / trade[0].open_price * 100
         };
       } else {
         trade[0] = {
@@ -325,7 +325,7 @@ export const pinnedStocks = async (userId) => {
         trade[0] = {
           ...trade[0],
           last_price: priceResponse.last_price,
-          performance: priceResponse.performance
+          performance: (priceResponse.last_price - trade[0].open_price) / trade[0].open_price * 100
         };
       } else {
         trade[0] = {
