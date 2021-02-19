@@ -120,7 +120,7 @@ export const userPortfolio = async (req, res) => {
       let query = {
         text:
           "INSERT INTO dashboards (user_id, is_default, name) VALUES ($1, $2, $3) RETURNING *",
-        values: [userId, true, ""],
+        values: [req.terminal_app.claims.uid, true, ""],
       };
       result = await db(query);
 
@@ -134,6 +134,7 @@ export const userPortfolio = async (req, res) => {
       await db(query);
     }
     let dashboards = result;
+    let stocks = []
 
     let { id } = dashboards[0];
 
@@ -144,8 +145,23 @@ export const userPortfolio = async (req, res) => {
       WHERE portfolios.dashboard_id = '${id}' AND type = '${type}' AND close_date is null GROUP BY ticker
     `)
 
-    for (const data of result) {
+    for (let data of result) {
       let { ticker, trade } = data
+
+      let name
+
+      const companyData = await db(`
+        SELECT json
+        FROM companies
+        WHERE ticker = '${ticker}'
+        LIMIT 1
+      `);
+
+      if (size(companyData) !== 0) {
+        name = companyData[0].json.name
+        data = { ...data, name }
+      }
+
       let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
       if (intrinioResponse && intrinioResponse.last_price) {
         trade[0] = {
@@ -160,8 +176,9 @@ export const userPortfolio = async (req, res) => {
           performance: null
         };
       }
+      stocks.push(data)
     }
-
+    result = stocks
   }
 
   res.json(result)
@@ -247,4 +264,80 @@ export const getEtfs = async (req, res) => {
   }
 
   res.json(result)
+}
+
+export const pinnedStocks = async (userId) => {
+  let result = await db(`
+    SELECT *
+    FROM dashboards
+    WHERE user_id = '${userId}'
+  `);
+
+  if (result) {
+    if (result.length < 1) {
+      let query = {
+        text:
+          "INSERT INTO dashboards (user_id, is_default, name) VALUES ($1, $2, $3) RETURNING *",
+        values: [userId, true, ""],
+      };
+      result = await db(query);
+
+      let id = dashboards[0].id;
+
+      query = {
+        text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
+        values: [id],
+      };
+
+      await db(query);
+    }
+    let dashboards = result;
+    let stocks = []
+
+    let { id } = dashboards[0];
+
+    result = await db(`
+      SELECT ticker, json_agg(json_build_object('portfolio_id', portfolio_id, 'type', type, 'open_price', open_price, 'open_date', open_date, 'close_price', close_price, 'close_date', close_date) ORDER BY open_date DESC) AS trade
+      from portfolio_histories
+      JOIN portfolios ON portfolios.id = portfolio_histories.portfolio_id 
+      WHERE portfolios.dashboard_id = ${id} AND close_date is null GROUP BY ticker
+    `)
+
+    for (let data of result) {
+      let { ticker, trade } = data
+
+      let name
+
+      const companyData = await db(`
+          SELECT json
+          FROM companies
+          WHERE ticker = '${ticker}'
+          LIMIT 1
+        `);
+
+      if (size(companyData) !== 0) {
+        name = companyData[0].json.name
+        data = { ...data, name }
+      }
+
+      let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
+      if (intrinioResponse && intrinioResponse.last_price) {
+        trade[0] = {
+          ...trade[0],
+          last_price: intrinioResponse.last_price,
+          performance: (intrinioResponse.last_price - trade[0].open_price) / trade[0].open_price * 100
+        };
+      } else {
+        trade[0] = {
+          ...trade[0],
+          last_price: null,
+          performance: null
+        };
+      }
+      stocks.push(data)
+    }
+    result = stocks
+  }
+
+  return result
 }
