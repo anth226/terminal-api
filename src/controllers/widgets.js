@@ -2,6 +2,7 @@ import db from "../db";
 import * as dashboard from "./dashboard";
 import * as securities from "./securities";
 import * as bots from "./bots";
+import * as quodd from "./quodd";
 import * as getSecurityData from "../intrinio/get_security_data";
 import asyncRedis from "async-redis";
 import redis from "redis";
@@ -38,6 +39,23 @@ export async function getGlobalWidgetByType(widgetType) {
 
       return security;
     }));
+  }
+
+  if (widgetType === 'CompanyStrongBuys' && result.length) {
+    result[0].output = await Promise.all(result[0].output.map(async (security) => {
+      const priceChange = await quodd.getLastPriceChange(security.ticker);
+      let performance = priceChange.performance;
+      
+      if (priceChange && priceChange.values && priceChange.values.threemonth && priceChange.values.threemonth.value) {
+        performance = (priceChange.last_price / priceChange.values.threemonth.value - 1) * 100;
+      }
+
+      security.perf = (Math.round(performance * 100) / 100).toFixed(2);
+      security.last_price = priceChange.last_price;
+
+      return security;
+    }));
+
   }
 
   if (result.length > 0) {
