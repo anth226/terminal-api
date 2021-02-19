@@ -208,9 +208,9 @@ export const processStockBuy = async (dashboardId, ticker) => {
     type = stockType[0].type;
   }
 
-  let price = await getSecurityData.getSecurityLastPrice(ticker);
-  if (price) {
-    open_price = price.last_price;
+  let priceResponse = await getLastPrice(ticker);
+  if (priceResponse) {
+    open_price = priceResponse.last_price;
   }
 
   let portId = await getPortfolioByDashboardID(dashboardId);
