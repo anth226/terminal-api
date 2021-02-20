@@ -2,6 +2,7 @@ import db from "../db";
 import * as dashboard from "./dashboard";
 import * as securities from "./securities";
 import * as bots from "./bots";
+import * as quodd from "./quodd";
 import * as getSecurityData from "../intrinio/get_security_data";
 import asyncRedis from "async-redis";
 import redis from "redis";
@@ -9,6 +10,7 @@ import {
   CACHED_PRICE_15MIN,
   KEY_SECURITY_PERFORMANCE
 } from "../redis";
+import {getLastPrice} from "./quodd";
 
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
@@ -38,6 +40,23 @@ export async function getGlobalWidgetByType(widgetType) {
 
       return security;
     }));
+  }
+
+  if (widgetType === 'CompanyStrongBuys' && result.length) {
+    result[0].output = await Promise.all(result[0].output.map(async (security) => {
+      const priceChange = await quodd.getLastPriceChange(security.ticker);
+      let performance = priceChange.performance;
+      
+      if (priceChange && priceChange.values && priceChange.values.threemonth && priceChange.values.threemonth.value) {
+        performance = (priceChange.last_price / priceChange.values.threemonth.value - 1) * 100;
+      }
+
+      security.perf = (Math.round(performance * 100) / 100).toFixed(2);
+      security.last_price = priceChange.last_price;
+
+      return security;
+    }));
+
   }
 
   if (result.length > 0) {
@@ -172,7 +191,7 @@ export const create = async (userId, widgetType, input) => {
         if (!ticker) {
           return;
         }
-        let res = await processStockBuy(widgetInstanceId, dashboardId, ticker);
+        let res = await processStockBuy(dashboardId, ticker);
         await bots.processUserPortfolio(dashboardId);
       }
 
@@ -181,7 +200,7 @@ export const create = async (userId, widgetType, input) => {
   }
 };
 
-export const processStockBuy = async (widgetId, dashboardId, ticker) => {
+export const processStockBuy = async (dashboardId, ticker) => {
   let open_price;
   let type;
   let stockType = await securities.getTypeByTicker(ticker);
@@ -189,12 +208,21 @@ export const processStockBuy = async (widgetId, dashboardId, ticker) => {
     type = stockType[0].type;
   }
 
-  let price = await getSecurityData.getSecurityLastPrice(ticker);
-  if (price) {
-    open_price = price.last_price;
+  let priceResponse = await getLastPrice(ticker);
+  if (priceResponse) {
+    open_price = priceResponse.last_price;
   }
 
   let portId = await getPortfolioByDashboardID(dashboardId);
+  if(!portId){
+    let query = {
+      text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
+      values: [dashboardId],
+    };
+
+    portId = await db(query);
+    portId = portId[0]
+  }
   let portfolioId = portId.id;
 
   let query = {
@@ -214,6 +242,26 @@ export const processStockSell = async (widgetId, dashboardId) => {
   let price = await getSecurityData.getSecurityLastPrice(ticker);
   if (price) {
     close_price = price.last_price;
+  }
+  let portId = await getPortfolioByDashboardID(dashboardId);
+  if (portId) {
+    portfolioId = portId.id;
+  }
+  let query = {
+    text: `UPDATE portfolio_histories SET close_price = $3, close_date = now() WHERE portfolio_id = $1 AND ticker = $2 AND open_price IS NOT NULL AND close_price IS NULL`,
+    values: [portfolioId, ticker, close_price],
+  };
+
+  return await db(query);
+};
+
+export const processStockSellByDashboard = async (dashboardId, ticker) => {
+  let close_price;
+  let portfolioId;
+
+  let priceResponse = await getLastPrice(ticker);
+  if (priceResponse) {
+    close_price = priceResponse.last_price;
   }
   let portId = await getPortfolioByDashboardID(dashboardId);
   if (portId) {
@@ -301,6 +349,37 @@ export const get = async (widgetId) => {
   return null;
 };
 
+export const pinByTicker = async (userId, input) => {
+  console.log(userId,input)
+  let dashboardId = await dashboard.getDashboardId(userId);
+
+  if (dashboardId) {
+    let { ticker } = input;
+    if (!ticker) {
+      return;
+    }
+    await processStockBuy(dashboardId, ticker);
+    await bots.processUserPortfolio(dashboardId);
+  }
+
+  return true;
+}
+
+export const unPinByTicker = async (userId, input) => {
+  let dashboardId = await dashboard.getDashboardId(userId);
+
+  if (dashboardId) {
+    let { ticker } = input;
+    if (!ticker) {
+      return;
+    }
+    await processStockSellByDashboard(dashboardId, ticker);
+    await bots.processUserPortfolio(dashboardId);
+  }
+
+  return true;
+}
+
 const connectSharedCache = () => {
   let sharedCache = null;
 
@@ -320,3 +399,4 @@ const connectSharedCache = () => {
 
   return sharedCache;
 };
+
