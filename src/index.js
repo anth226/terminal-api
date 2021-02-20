@@ -1102,10 +1102,13 @@ app.get("/user", async (req, res) => {
 
     const dashboards = await dashboard.get(req.terminal_app.claims.uid);
 
+    const pinnedStocks = await dashboard.pinnedStocks(req.terminal_app.claims.uid);
+
     res.json({
       success: true,
       user,
       dashboards,
+      pinnedStocks
     });
   } catch (error) {
     res.json({
@@ -1113,6 +1116,14 @@ app.get("/user", async (req, res) => {
       error,
     });
   }
+});
+
+app.use("/pinned-stocks", checkAuth);
+app.get("/pinned-stocks", async (req, res) => {
+
+  const pinnedStocks = await dashboard.pinnedStocks(req.terminal_app.claims.uid);
+
+  res.json(pinnedStocks);
 });
 
 app.use("/profile", checkAuth);
@@ -1641,14 +1652,14 @@ app.get("/similar/:ticker", async (req, res) => {
 app.use("/search/:query", checkAuth);
 app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
-  const results = await search.searchCompanies(companyAPI, query, securityAPI);
+  const results = await search.searchCompanies(query);
   res.send(results);
 });
 
 app.use("/search-sec/:query", checkAuth);
 app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
-  const results = await search.searchSec(securityAPI, query);
+  const results = await search.searchCompanies(query);
   res.send(results);
 });
 
@@ -2428,8 +2439,31 @@ app.get("/subscription_fixing", async (req, res) => {
   res.send("ok");
 });
 
-// User Profmance
+// User Portfolio
+app.get("/user-portfolio", checkAuth, dashboard.userPortfolio)
+
+// User Performance
 app.get("/user-performance", checkAuth, dashboard.userPerformance)
+
+// Stock PIN/ UNPIN
+app.use("/stock/pin", checkAuth);
+app.post("/stock/pin", async (req, res) => {
+  console.log("here",req.body)
+  const result = await widgets.pinByTicker(
+    req.terminal_app.claims.uid,
+    req.body.input
+  );
+  res.send(result);
+});
+
+app.use("/stock/unpin", checkAuth);
+app.post("/stock/unpin", async (req, res) => {
+  const result = await widgets.unPinByTicker(
+    req.terminal_app.claims.uid,
+    req.body.input
+  );
+  res.send(result);
+});
 
 // ETFS
 app.get("/user-etfs", checkAuth, dashboard.getEtfs)
