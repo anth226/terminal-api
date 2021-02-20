@@ -1118,6 +1118,14 @@ app.get("/user", async (req, res) => {
   }
 });
 
+app.use("/pinned-stocks", checkAuth);
+app.get("/pinned-stocks", async (req, res) => {
+
+  const pinnedStocks = await dashboard.pinnedStocks(req.terminal_app.claims.uid);
+
+  res.json(pinnedStocks);
+});
+
 app.use("/profile", checkAuth);
 app.get("/profile", async (req, res) => {
   const doc = await db
