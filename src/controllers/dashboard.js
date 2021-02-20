@@ -293,53 +293,17 @@ export const pinnedStocks = async (userId) => {
       await db(query);
     }
     let dashboards = result;
-    let stocks = []
 
     let { id } = dashboards[0];
 
     result = await db(`
-      SELECT ticker, json_agg(json_build_object('portfolio_id', portfolio_id, 'type', type, 'open_price', open_price, 'open_date', open_date, 'close_price', close_price, 'close_date', close_date) ORDER BY open_date DESC) AS trade
+      SELECT ticker
       from portfolio_histories
       JOIN portfolios ON portfolios.id = portfolio_histories.portfolio_id 
       WHERE portfolios.dashboard_id = ${id} AND close_date is null GROUP BY ticker
     `)
 
-    for (let data of result) {
-      let { ticker, trade } = data
-
-      let name
-
-      const companyData = await db(`
-          SELECT json
-          FROM companies
-          WHERE ticker = '${ticker}'
-          LIMIT 1
-        `);
-
-      if (size(companyData) !== 0) {
-        name = companyData[0].json.name
-        data = { ...data, name }
-      }
-
-      let priceResponse = await getLastPriceChange(ticker);
-      if (priceResponse) {
-        trade[0] = {
-          ...trade[0],
-          last_price: priceResponse.last_price,
-          performance: priceResponse.performance,
-          pin_performance: (priceResponse.last_price - trade[0].open_price) / trade[0].open_price * 100
-        };
-      } else {
-        trade[0] = {
-          ...trade[0],
-          last_price: null,
-          performance: null
-        };
-      }
-      stocks.push(data)
-    }
-    result = stocks
+    return result;
   }
-
-  return result
+  return null;
 }
