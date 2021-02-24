@@ -24,7 +24,15 @@ export async function searchCompanies(query) {
     })()
   ]);
 
-  return uniqBy([...securities, ...mutualFunds], 'ticker');
+  return uniqBy([...securities, ...mutualFunds], 'ticker').filter(security => {
+    return security.ticker && security.name;
+  }).map(security => {
+    security.score = getMatchScore(security, query.toLowerCase());
+
+    return security;
+  }).sort((a, b) => {
+    return a.score - b.score;
+  });
 }
 
 export function searchMutualFunds(query) {
@@ -68,4 +76,24 @@ export async function prefetchPortfolios() {
     return result;
   }
   return [];
+}
+
+const getMatchScore = (security, query) => {
+  if (security.ticker && security.ticker.toLowerCase() === query) {
+    return 0;
+  }
+
+  if (security.ticker && security.ticker.toLowerCase().startsWith(query)) {
+    return 1;
+  }
+
+  if (security.ticker && security.ticker.toLowerCase().includes(query)) {
+    return 2;
+  }
+
+  if (security.name && security.name.toLowerCase().startsWith(query)) {
+    return 3;
+  }
+
+  return 4;
 }
