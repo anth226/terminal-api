@@ -27,7 +27,7 @@ export async function searchCompanies(query) {
   return uniqBy([...securities, ...mutualFunds], 'ticker').filter(security => {
     return security.ticker && security.name;
   }).map(security => {
-    security.score = getMatchScore(security, query);
+    security.score = getMatchScore(security, query.toLowerCase());
 
     return security;
   }).sort((a, b) => {
