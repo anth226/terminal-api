@@ -6,7 +6,7 @@ export const getFollowedTitans = async (userId) => {
     FROM billionaire_watchlists
     LEFT JOIN billionaires
     ON billionaire_watchlists.titan_id = billionaires.id
-    WHERE user_id = '${userId}'
+    WHERE user_id = '${userId}' AND billionaires.name is not null
   `);
 
   if (result.length > 0) {

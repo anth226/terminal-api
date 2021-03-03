@@ -97,6 +97,16 @@ export async function getOptions() {
         `)
   return result;
 }
+
+export async function getOption(id) {
+  const result = await optionsDB(`
+        SELECT id, time, ticker, exp, strike, cp, spot, contract_quantity, price_per_contract, type, prem
+        FROM options
+        WHERE id=${id}
+        `);
+  return result;
+}
+
 let sharedCache;
 const connectSharedCache = () => {
   let credentials = {
