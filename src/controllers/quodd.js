@@ -12,7 +12,7 @@ import moment from "moment";
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 });
 
 import {
@@ -24,7 +24,7 @@ import {
   CACHED_PRICE_REALTIME,
   CACHED_PRICE_15MIN,
   KEY_SECURITY_PERFORMANCE,
-  CACHED_PRICE_CLOSE
+  CACHED_PRICE_CLOSE,
 } from "../redis";
 
 let dbs = {};
@@ -259,25 +259,29 @@ export async function getAllForTicker(ticker) {
           const params = {
             Bucket: process.env.AWS_BUCKET_PRICE_ACTION,
             Key: key,
-          }
+          };
 
           try {
             const object = await s3.getObject(params).promise();
             const data = object.Body.toString();
             if (data) {
-              isDataThere = true
+              isDataThere = true;
             } else {
-              dateString = moment(dateString).subtract(1, "days").format("YYYY-M-D");
+              dateString = moment(dateString)
+                .subtract(1, "days")
+                .format("YYYY-M-D");
               key = `e${ticker}/${dateString}.json`;
               url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
-              isDataThere = false
+              isDataThere = false;
             }
           } catch (error) {
             if (error.code === "NoSuchKey") {
-              dateString = moment(dateString).subtract(1, "days").format("YYYY-M-D");
+              dateString = moment(dateString)
+                .subtract(1, "days")
+                .format("YYYY-M-D");
               key = `e${ticker}/${dateString}.json`;
               url = `https://${process.env.AWS_BUCKET_PRICE_ACTION}.s3.amazonaws.com/${key}`;
-              isDataThere = false
+              isDataThere = false;
             }
           }
           checks += 1;
@@ -340,10 +344,13 @@ export async function getLastPrice(ticker) {
 }
 
 export async function getLastPriceChange(ticker) {
+  console.log("\n\nLAST PRICE CHANGE");
   let response;
   //let realtime;
   let delayed;
   let qTicker = "e" + ticker;
+
+  console.log("qTicker", qTicker);
 
   connectSharedCache();
 
@@ -359,17 +366,23 @@ export async function getLastPriceChange(ticker) {
   let closePrice = await sharedCache.get(`${CACHED_PRICE_CLOSE}${qTicker}`);
   let perf = await sharedCache.get(`${KEY_SECURITY_PERFORMANCE}-${ticker}`);
 
+  console.log("cachedPrice_15", cachedPrice_15);
+  console.log("closePrice", closePrice);
+  console.log("perf", perf);
+
   // intrinioResponse now out here because we're calculating change
   //  based on open_price from intrinio
   let intrinioResponse = await getSecurityData.getSecurityLastPrice(ticker);
+  console.log("intrinioResponse", intrinioResponse);
+
   if (intrinioResponse && perf) {
     let jsonPerf = JSON.parse(perf);
     let vals = jsonPerf.values;
     let openVal = vals.today.value;
     let openDate = vals.today.date;
-    
+
     delete vals["today"];
-    
+
     vals["open"] = {
       date: openDate,
       value: openVal,
@@ -377,9 +390,9 @@ export async function getLastPriceChange(ticker) {
 
     if (cachedPrice_15) {
       delayed = cachedPrice_15 / 100;
-    
+
       let percentChange = (delayed / openVal - 1) * 100;
-    
+
       response = {
         //last_price_realtime: realtime,
         close_price: closePrice / 100,
@@ -392,7 +405,7 @@ export async function getLastPriceChange(ticker) {
       if (intrinioResponse.last_price) {
         let lastPrice = intrinioResponse.last_price;
         let percentChange = (lastPrice / openVal - 1) * 100;
-    
+
         response = {
           //last_price_realtime: intrinioPrice.last_price,
           close_price: closePrice / 100,
@@ -401,13 +414,20 @@ export async function getLastPriceChange(ticker) {
           performance: percentChange,
           values: vals,
         };
+        console.log("response 1", response);
       }
     }
-    
+
     return response;
   } else {
-    const last_price = (cachedPrice_15 && (cachedPrice_15 / 100)) || (intrinioResponse && intrinioResponse.last_price) || 0;
+    const last_price =
+      (cachedPrice_15 && cachedPrice_15 / 100) ||
+      (intrinioResponse && intrinioResponse.last_price) ||
+      0;
     const open_price = (intrinioResponse && intrinioResponse.open_price) || 0;
+
+    console.log("last_price", last_price);
+    console.log("open_price", open_price);
 
     return {
       close_price: closePrice / 100,
@@ -418,7 +438,7 @@ export async function getLastPriceChange(ticker) {
         open: {
           date: intrinioResponse && intrinioResponse.last_time,
           value: open_price,
-        }
+        },
       },
     };
   }
