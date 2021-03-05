@@ -113,6 +113,7 @@ export async function getOptions(req) {
       ticker,
       last_time,
       order_direction,
+      date,
       sort_column;
 
   if (req && req.query) {
@@ -128,6 +129,9 @@ export async function getOptions(req) {
     }
     if (query.last_time) {
       last_time = parseInt(query.last_time);
+    }    
+    if (query.date) {
+      date = query.date;
     }
     if (query.sort_column && query.sort_column.length > 0) {
       sort_column = query.sort_column;
@@ -155,6 +159,7 @@ export async function getOptions(req) {
         ${(sort_column && order_direction) ? `ORDER BY ${sort_column} ${order_direction}` : 'ORDER BY time DESC'}
         ${limit ? `LIMIT ${limit} OFFSET ${offset}` : ''}
         `);
+  return result;
 };
 
 export async function getOption(id) {
