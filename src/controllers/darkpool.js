@@ -13,22 +13,25 @@ export async function getSnapshot(req) {
       callPremTotal,
       totalSum,
       putToCall,
-      flowSentiment;
-
+      flowSentiment,
+      date;
 
   let { query } = req;
   if (query.ticker && query.ticker.length > 0) {
     ticker = query.ticker.toLowerCase();
   }
+  if (query.date) {
+    date = query.date;
+  };
 
   let snapshotQuery = `
       (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'C' AS cp FROM options WHERE cp = 'C'
-      AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options)
+      AND to_timestamp(time)::date = ${date ? `'${date}'` : '(SELECT to_timestamp(MAX(time))::date FROM options)'}
       ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
       )
       UNION
       (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'P' AS cp FROM options WHERE cp = 'P'
-      AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options)
+      AND to_timestamp(time)::date = ${date ? `'${date}'` : '(SELECT to_timestamp(MAX(time))::date FROM options)'}
       ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
       )
       ORDER BY cp ASC
@@ -153,7 +156,7 @@ export async function getOptions(req) {
   const result = await optionsDB(`
         SELECT id, time, ticker, exp, strike, cp, spot, contract_quantity, price_per_contract, type, prem
         FROM options
-        WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
+        WHERE to_timestamp(time)::date = ${date ? `'${date}'` : '(SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)'}
         ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
         ${last_time ? `AND time < ${last_time}` : ''}
         ${(sort_column && order_direction) ? `ORDER BY ${sort_column} ${order_direction}` : 'ORDER BY time DESC'}
