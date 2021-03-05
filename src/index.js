@@ -2251,7 +2251,7 @@ app.get("/darkpool/sidebar", async (req, res) => {
 });
 
 app.get("/darkpool/options", async (req, res) => {
-  const result = await darkpool.getOptions();
+  const result = await darkpool.getOptions(req.query.date);
   res.send(result);
 });
 

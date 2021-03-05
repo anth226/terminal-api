@@ -88,11 +88,11 @@ export async function getSidebar() {
   return options;
 }
 
-export async function getOptions() {
+export async function getOptions(date) {
   const result = await optionsDB(`
         SELECT id, time, ticker, exp, strike, cp, spot, contract_quantity, price_per_contract, type, prem
         FROM options
-        WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
+        WHERE to_timestamp(time)::date = '${date}'
         ORDER BY time DESC
         `)
   return result;
