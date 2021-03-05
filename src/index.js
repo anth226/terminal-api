@@ -69,6 +69,7 @@ import {
   planId,
   yearlyPlanId,
 } from "./services/stripe";
+import { listAllUsers } from "./controllers/user";
 import Shopify from "shopify-api-node";
 
 const shopify = new Shopify({
@@ -2241,7 +2242,7 @@ app.get("/widgets/global/:type", async (req, res) => {
 
 /* Dark Pool */
 app.get("/darkpool/snapshot", async (req, res) => {
-  const result = await darkpool.getSnapshot();
+  const result = await darkpool.getSnapshot(req);
   res.send(result);
 });
 
@@ -2251,12 +2252,17 @@ app.get("/darkpool/sidebar", async (req, res) => {
 });
 
 app.get("/darkpool/options", async (req, res) => {
-  const result = await darkpool.getOptions();
+  const result = await darkpool.getOptions(req);
   res.send(result);
 });
 
 app.get("/darkpool/option/:id", async (req, res) => {
   const result = await darkpool.getOption(req.params.id);
+  res.send(result);
+});
+
+app.get("/darkpool/options/search/:ticker", async (req, res) => {
+  const result = await darkpool.searchOptions(req.params.ticker);
   res.send(result);
 });
 
@@ -2453,7 +2459,6 @@ app.get("/user-performance", checkAuth, dashboard.userPerformance)
 // Stock PIN/ UNPIN
 app.use("/stock/pin", checkAuth);
 app.post("/stock/pin", async (req, res) => {
-  console.log("here",req.body)
   const result = await widgets.pinByTicker(
     req.terminal_app.claims.uid,
     req.body.input
@@ -2473,6 +2478,48 @@ app.post("/stock/unpin", async (req, res) => {
 // ETFS
 app.get("/user-etfs", checkAuth, dashboard.getEtfs)
 
+// User report
+app.get("/user-access-report", checkAuth, async (req, res) => {
+  const userLists = await listAllUsers();
+  let totalNonProfessionalIndice = 0
+  let totalProfessionalIndice = 0
+  let totalNonProfessionalRealtime = 0
+  let totalProfessionalRealtime = 0
+
+  for await (const user of userLists) {
+    const data = await db.collection("users").doc(user.uid).get();
+    if (data.data()) {
+      const { feed_access, isProfesional } = data.data()
+      if (feed_access && isProfesional && isProfesional === true) {
+        if (feed_access.isRealtimeNasdaqAccess === "YES") {
+          totalProfessionalRealtime += 1
+        }
+        if (feed_access.isIndiceAccess === true) {
+          totalProfessionalIndice += 1
+        }
+      } else if (feed_access && isProfesional && isProfesional === false) {
+        if (feed_access.isRealtimeNasdaqAccess === "YES") {
+          totalNonProfessionalRealtime += 1
+        }
+        if (feed_access.isIndiceAccess == true) {
+          totalNonProfessionalIndice += 1
+        }
+      }
+    }
+  }
+
+  res.json({
+    indice_access: {
+      non_professional: totalNonProfessionalIndice,
+      professional: totalProfessionalIndice
+    },
+    realtime_nasdaq_access: {
+      non_professional: totalNonProfessionalRealtime,
+      professional: totalProfessionalRealtime
+    }
+  })
+})
+
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
   res.send(result);
@@ -2481,5 +2528,6 @@ app.get("/test", async (req, res) => {
 app.use(middleware.errorHandler);
 
 app.listen(process.env.PORT, () => {
-  console.log(`listening on ${process.env.PORT}`) 
+  console.log(`listening on ${process.env.PORT}`)
 });
+// debug
