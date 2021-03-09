@@ -3,8 +3,9 @@ import {CACHED_PRICE_15MIN} from "../redis";
 import redis from "redis";
 import asyncRedis from "async-redis";
 
-export async function getSnapshot() {
-  let putSum,
+export async function getSnapshot(req) {
+  let ticker,
+      putSum,
       putFlow,
       putPremTotal,
       callSum,
@@ -14,14 +15,26 @@ export async function getSnapshot() {
       putToCall,
       flowSentiment;
 
-  const result = await optionsDB(`
+
+  let { query } = req;
+  if (query.ticker && query.ticker.length > 0) {
+    ticker = query.ticker.toLowerCase();
+  }
+
+  let snapshotQuery = `
       (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'C' AS cp FROM options WHERE cp = 'C'
-      AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options))
+      AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options)
+      ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
+      )
       UNION
       (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'P' AS cp FROM options WHERE cp = 'P'
-      AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options))
+      AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options)
+      ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
+      )
       ORDER BY cp ASC
-      `)
+      `
+
+  const result = await optionsDB(snapshotQuery)
 
   if (result && result.length > 0) {
     callSum = result[0].flow_count;
@@ -44,18 +57,24 @@ export async function getSnapshot() {
     putToCall = -1.0 // infinite
   }
 
-  if (totalSum && putSum && putPremTotal && callPremTotal) {
+  // if (totalSum && putSum && putPremTotal && callPremTotal) {
+  //
+  //   let premTotal = (Number(putPremTotal) + Number(callPremTotal)).toFixed(2);
+  //   let putPremToTotalPrem = Number(putPremTotal).toFixed(2) / premTotal;
+  //
+  //   let putSumToTotalSum = Number(putSum).toFixed(2) / totalSum;
+  //
+  //   let avg = (putSumToTotalSum > 0 && putPremToTotalPrem > 0) ? 2 : 1
+  //   let avgRatios = (putSumToTotalSum + putPremToTotalPrem)/avg;
+  //
+  //   flowSentiment = 1 - (avgRatios || 0);
+  // }
 
-    let premTotal = (Number(putPremTotal) + Number(callPremTotal)).toFixed(2);
-    let putPremToTotalPrem = Number(putPremTotal).toFixed(2) / premTotal;
-
-    let putSumToTotalSum = Number(putSum).toFixed(2) / totalSum;
-
-    let avg = (putSumToTotalSum > 0 && putPremToTotalPrem > 0) ? 2 : 1
-    let avgRatios = (putSumToTotalSum + putPremToTotalPrem)/avg;
-
-    flowSentiment = 1 - (avgRatios || 0);
+  if (totalSum) {
+  let putSumToTotalSum = Number(putSum || 0).toFixed(2) / totalSum;
+  flowSentiment = 1 - (putSumToTotalSum || 0);
   }
+
 
   return {
     call_count: Number(callSum || 0),
@@ -88,15 +107,56 @@ export async function getSidebar() {
   return options;
 }
 
-export async function getOptions() {
+export async function getOptions(req) {
+  let limit,
+      page = 1,
+      ticker,
+      last_time,
+      order_direction,
+      sort_column;
+
+  if (req && req.query) {
+    let query = req.query
+    if (query.limit) {
+      limit = parseInt(query.limit);
+    }
+    if (query.page) {
+      page = parseInt(query.page);
+    }
+    if (query.ticker && query.ticker.length > 0) {
+      ticker = query.ticker.toLowerCase();
+    }
+    if (query.last_time) {
+      last_time = parseInt(query.last_time);
+    }
+    if (query.sort_column && query.sort_column.length > 0) {
+      sort_column = query.sort_column;
+    }
+    if (sort_column) {
+      order_direction = query.order_direction || 'DESC'
+    }
+  }
+
+  if (page < 1) {
+    page = 1;
+  }
+
+  let offset;
+  if (limit) {
+    offset = (page - 1) * limit;
+  }
+
   const result = await optionsDB(`
         SELECT id, time, ticker, exp, strike, cp, spot, contract_quantity, price_per_contract, type, prem
         FROM options
         WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
-        ORDER BY time DESC
-        `)
+        ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
+        ${last_time ? `AND time < ${last_time}` : ''}
+        ${(sort_column && order_direction) ? `ORDER BY ${sort_column} ${order_direction}` : 'ORDER BY time DESC'}
+        ${limit ? `LIMIT ${limit} OFFSET ${offset}` : ''}
+        `);
   return result;
-}
+};
 
 export async function getOption(id) {
   const result = await optionsDB(`
@@ -104,6 +164,24 @@ export async function getOption(id) {
         FROM options
         WHERE id=${id}
         `);
+  return result;
+}
+
+export async function searchOptions(ticker) {
+  if (ticker && ticker.length > 0) {
+    ticker = ticker.toLowerCase();
+  } else {
+    return [];
+  }
+
+  const result = await optionsDB(`
+        SELECT ticker
+        FROM options
+        WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
+        AND LOWER(ticker) LIKE '%${ticker}%'
+        GROUP BY ticker
+        ORDER BY (LOWER(ticker) = '${ticker}') desc, length(ticker)
+        `)
   return result;
 }
 
