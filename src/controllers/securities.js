@@ -143,7 +143,8 @@ export const getTopStocks = async () => {
     security.delta = response && response.performance;
 
     return security;
-  }))).filter(security => security.price && security.delta !== Infinity).sort((a, b) => {
+  }))).filter(security => security.price && security.delta !== Infinity)  
+      .filter(security => security.price && security.delta >= 0).sort((a, b) => {
     return b.delta - a.delta;
   }).map(security => {
     security.delta = `${Math.round(security.delta * 100) / 100}%`;
