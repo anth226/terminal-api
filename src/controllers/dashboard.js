@@ -32,7 +32,7 @@ export async function get(userId) {
       };
       result = await db(query);
 
-      let id = dashboards[0].id;
+      let id = result[0].id;
 
       query = {
         text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
@@ -124,7 +124,7 @@ export const userPortfolio = async (req, res) => {
       };
       result = await db(query);
 
-      let id = dashboards[0].id;
+      let id = result[0].id;
 
       query = {
         text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
@@ -201,7 +201,7 @@ export const userPerformance = async (req, res) => {
       };
       result = await db(query);
 
-      let id = dashboards[0].id;
+      let id = result[0].id;
 
       query = {
         text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
@@ -241,7 +241,7 @@ export const getEtfs = async (req, res) => {
       };
       result = await db(query);
 
-      let id = dashboards[0].id;
+      let id = result[0].id;
 
       query = {
         text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
@@ -283,7 +283,7 @@ export const pinnedStocks = async (userId) => {
       };
       result = await db(query);
 
-      let id = dashboards[0].id;
+      let id = result[0].id;
 
       query = {
         text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
