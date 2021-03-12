@@ -44,6 +44,7 @@ import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as institutions from "./controllers/institutions";
 import * as titans from "./controllers/titans";
+import * as alerts from "./controllers/alerts";
 import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
@@ -77,6 +78,12 @@ const shopify = new Shopify({
   apiKey: "26774218d929d0a2e7ad7d46a4cfde09",
   password: "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",
 });
+
+const pino = require('express-pino-logger')();
+const client = require('twilio')(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 var crypto = require('crypto');
 var bugsnag = require("@bugsnag/js");
@@ -166,6 +173,12 @@ app.use((req, res, next) => {
 });
 
 app.use(middleware.requestHandler);
+
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use(pino);
+
 /*
 ~~~~~~Utils~~~~~~
 */
@@ -2020,6 +2033,46 @@ app.get("/titans", async (req, res) => {
   // const result = await titans.getPortfolios(req.body);
   const result = await titans.getTitans(req.body);
   res.send(result);
+});
+
+// Alerts
+
+app.use("/alerts/:id/subscribe", checkAuth);
+app.get("/alerts/:id/subscribe", async (req, res) => {
+  const result = await alerts.subscribeAlert(
+    req.terminal_app.claims.uid,
+    req.params.id,
+    req.body.phone
+  );
+  res.send(result);
+});
+
+app.use("/alerts/:id/unsubscribe", checkAuth);
+app.get("/alerts/:id/unsubscribe", async (req, res) => {
+  const result = await titans.unsubscribeAlert(
+    req.terminal_app.claims.uid,
+    req.params.id
+  );
+  res.send(result);
+});
+
+
+// Twilio SMS
+app.post('/messages', (req, res) => {
+  res.header('Content-Type', 'application/json');
+  client.messages
+    .create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: req.body.to,
+      body: req.body.body
+    })
+    .then(() => {
+      res.send(JSON.stringify({ success: true }));
+    })
+    .catch(err => {
+      console.log(err);
+      res.send(JSON.stringify({ success: false }));
+    });
 });
 
 app.get("/portfolios/search/typeahead", async (req, res) => {
