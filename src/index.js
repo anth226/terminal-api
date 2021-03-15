@@ -36,6 +36,7 @@ import * as dashboard from "./controllers/dashboard";
 import * as securities from "./controllers/securities";
 import * as pages from "./controllers/pages";
 import { questionnaireSubmission } from "./controllers/questionnaire";
+import * as holdings from "./controllers/holdings";
 
 import * as darkpool from "./controllers/darkpool";
 import * as quodd from "./controllers/quodd";
@@ -2479,6 +2480,29 @@ app.get(
     res.send(result);
   }
 );
+
+// ciks endpoints
+app.use("/ciks/:cik", checkAuth);
+app.get("/ciks/:cik", async (req, res) => {
+    const result = await holdings.getHoldingsByCik(req.params.cik);
+    res.send(result);
+  }
+);
+
+app.use("/ciks/institutions/data", checkAuth);
+app.get("/ciks/institutions/data", async (req, res) => {
+  const result = await institutions.getInstitutionsCikData(req);
+  res.send(result);
+});
+
+app.use("/ciks/titans/:uri", checkAuth);
+app.get("/ciks/titans/:uri", async (req, res) => {
+  const result = await titans.getTitansCikData(
+    req.params.uri,
+    req.terminal_app.claims.uid
+  );
+  res.send(result);
+});
 
 app.use("/billionaire/:identifier/ciks/:rank/promote", checkAuth);
 app.get(

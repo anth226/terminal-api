@@ -69,6 +69,41 @@ export const getInstitution = async (id) => {
   return data;
 };
 
+export const getInstitutionsCikData = async (req) => {
+  let clause;
+  let { query } = req;
+  if (query.id && query.id.length > 0) {
+    clause = `WHERE i.id = ${query.id}`
+  } else if (query.cik && query.cik.length > 0) {
+    clause = `WHERE i.cik = '${query.cik}'`
+  }
+
+  if (!clause) {
+    return null;
+  }
+
+
+  let result = await db(`
+    SELECT i.name, i.cik, i.id,
+    i.json::json->>'net_worth' AS net_worth,
+    i.json::json->>'fund_size' AS fund_size,
+    i.json::json->>'performance_quarter' AS performance_quarter, 
+    i.json::json->>'performance_one_year'AS performance_one_year,
+    i.json::json->>'performance_five_year' AS performance_five_year,
+    h.json_snapshot,
+    h.json_allocations,
+    h.json_top_10
+    FROM institutions AS i
+    LEFT JOIN cik_holdings h on h.cik = i.cik
+    ${clause}
+  `);
+
+  if (result && result.length > 0) {
+    return result[0];
+  }
+
+  return null;
+};
 export async function getHoldings(id) {
   return await db(`
   SELECT i_h.json_holdings
