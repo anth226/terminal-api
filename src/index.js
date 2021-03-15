@@ -2103,7 +2103,7 @@ app.get("/alerts/:id/subscribe", async (req, res) => {
 
 app.use("/alerts/:id/unsubscribe", checkAuth);
 app.get("/alerts/:id/unsubscribe", async (req, res) => {
-  const result = await titans.unsubscribeAlert(
+  const result = await alerts.unsubscribeAlert(
     req.body.phone,
     req.params.id
   );
@@ -2114,6 +2114,55 @@ app.get("/alerts/:id/unsubscribe", async (req, res) => {
 app.get("/daily_alerts", async (req, res) => {
   const result = await alerts.getDailyAlerts();
   res.send(result);
+});
+
+//Cathie Wood subscribe
+app.use("/cw_subscribe", checkAuth);
+app.post("/cw_subscribe", async (req, res) => {
+  await alerts.addCWAlertUser(
+    req.terminal_app.claims.uid,
+    req.body.phone
+  );
+
+  const alertResult = await alerts.getAlertByName("CW Subscribe");
+  res.header('Content-Type', 'application/json');
+  client.messages
+    .create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: req.body.phone,
+      body: alertResult[0].message
+    })
+    .then(() => {
+      res.send(JSON.stringify({ success: true }));
+    })
+    .catch(err => {
+      console.log(err);
+      res.send(JSON.stringify({ success: false }));
+    });
+});
+
+//Cathie Wood unsubscribe
+app.use("/cw_unsubscribe", checkAuth);
+app.post("/cw_unsubscribe", async (req, res) => {
+  await alerts.unsubscribeCWAlert(
+    req.body.phone
+  );
+  
+  const alertResult = await alerts.getAlertByName("CW Unsubscribe");
+  res.header('Content-Type', 'application/json');
+  client.messages
+    .create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: req.body.phone,
+      body: alertResult[0].message
+    })
+    .then(() => {
+      res.send(JSON.stringify({ success: true }));
+    })
+    .catch(err => {
+      console.log(err);
+      res.send(JSON.stringify({ success: false }));
+    });
 });
 
 
