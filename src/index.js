@@ -2042,9 +2042,9 @@ app.get("/titans", async (req, res) => {
 // app.use("/alerts", checkAuth);
 app.post("/alerts", async (req, res) => {
   const result = await alerts.createAlert(
-    req.body.description,
+    req.body.name,
     req.body.message,
-    req.body.isDaily,
+    req.body.isDaily
   );
   res.send(result);
 });
@@ -2073,9 +2073,9 @@ app.get("/alerts/:id/deactivate", async (req, res) => {
   res.send(result);
 });
 
-app.use("/alerts/:id/subscribe", checkAuth);
-app.get("/alerts/:id/subscribe", async (req, res) => {
-  const result = await alerts.subscribeAlert(
+ app.use("/alerts/:id/addUser", checkAuth);
+app.get("/alerts/:id/addUser", async (req, res) => {
+  const result = await alerts.addAlertUser(
     req.terminal_app.claims.uid,
     req.params.id,
     req.body.phone
@@ -2083,10 +2083,19 @@ app.get("/alerts/:id/subscribe", async (req, res) => {
   res.send(result);
 });
 
+app.use("/alerts/:id/subscribe", checkAuth);
+app.get("/alerts/:id/subscribe", async (req, res) => {
+  const result = await alerts.subscribeAlert(
+    req.body.phone,
+    req.params.id
+  );
+  res.send(result);
+});
+
 app.use("/alerts/:id/unsubscribe", checkAuth);
 app.get("/alerts/:id/unsubscribe", async (req, res) => {
   const result = await titans.unsubscribeAlert(
-    req.terminal_app.claims.uid,
+    req.body.phone,
     req.params.id
   );
   res.send(result);
@@ -2118,18 +2127,20 @@ app.post('/alerts/send_sms', (req, res) => {
 });
 
 // Receives response from
-app.post('alert/response', function (req, res) {
-  var resp = new client.TwimlResponse();
-  if( req.body.Body.trim().toLowerCase() === 'subscribe' ) {
-    var fromNum = req.body.From;
-    if(numbers.indexOf(fromNum) !== -1) {
-      resp.message('You already subscribed!');
-    } else {
-      resp.message('Thank you, you are now subscribed. Reply "STOP" to stop receiving updates.');
-      usersRef.push(fromNum);
-    }
+var MessagingResponse = require('twilio').twiml.MessagingResponse;
+
+app.post('/alert/response', function (req, res) {
+  var resp = new MessagingResponse();
+  var responseMsg = req.body.Body.trim().toLowerCase();
+  var fromNum = req.body.From;
+  if (responseMsg.includes('unsubscribe')) {
+    alerts.unsubscribeAlert(fromNum, responseMsg.substring(16));
+    resp.message('You are now unscubscribed!');    
+  } else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
+    alerts.subscribeAlert(fromNum, responseMsg.substring(14));
+    resp.message('Thanks for subscribing!');
   } else {
-    resp.message('Welcome to Daily Updates. Text "Subscribe" receive updates.');
+    resp.message('Invalid keyword!');
   }
   res.writeHead(200, {
     'Content-Type':'text/xml'
@@ -2145,7 +2156,7 @@ var dailySMS = new cronJob( '0 12 * * *', async function() {
 
     if(dailyAlerts.length > 0) {
       for( var i = 0; i < dailyAlerts.length; i++ ) {
-        alertUsers = await alerts.getAlertUsers(dailyAlerts[i].id);
+        alertUsers = await alerts.getAlertActiveUsers(dailyAlerts[i].id);
         if(alertUsers.length > 0) {
           for( var x = 0; x < alertUsers.length; x++ ) {
             client.messages
