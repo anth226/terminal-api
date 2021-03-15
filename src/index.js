@@ -44,6 +44,8 @@ import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as institutions from "./controllers/institutions";
 import * as titans from "./controllers/titans";
+import * as trades from "./controllers/trades";
+import * as alerts from "./controllers/alerts";
 import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
@@ -78,6 +80,14 @@ const shopify = new Shopify({
   apiKey: "26774218d929d0a2e7ad7d46a4cfde09",
   password: "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",
 });
+
+const pino = require('express-pino-logger')();
+const client = require('twilio')(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+var cronJob = require('cron').CronJob;
 
 var crypto = require('crypto');
 var bugsnag = require("@bugsnag/js");
@@ -167,6 +177,12 @@ app.use((req, res, next) => {
 });
 
 app.use(middleware.requestHandler);
+
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use(pino);
+
 /*
 ~~~~~~Utils~~~~~~
 */
@@ -2022,6 +2038,168 @@ app.get("/titans", async (req, res) => {
   const result = await titans.getTitans(req.body);
   res.send(result);
 });
+
+// Alerts
+
+// app.use("/alerts", checkAuth);
+app.post("/alerts", async (req, res) => {
+  const result = await alerts.createAlert(
+    req.body.name,
+    req.body.message,
+    req.body.isDaily
+  );
+  res.send(result);
+});
+
+//app.use("/alerts/:id", checkAuth);
+app.get("/alerts/:id", async (req, res) => {
+  const result = await alerts.getAlert(req.params.id);
+  res.send(result);
+});
+
+//app.use("/alerts/:id/users", checkAuth);
+app.get("/alerts/:id/users", async (req, res) => {
+  const result = await alerts.getAlertUsers(req.params.id);
+  res.send(result);
+});
+
+//app.use("/alerts/:id/activate", checkAuth);
+app.get("/alerts/:id/activate", async (req, res) => {
+  const result = await alerts.activateAlert(req.params.id);
+  res.send(result);
+});
+
+//app.use("/alerts/:id/deactivate", checkAuth);
+app.get("/alerts/:id/deactivate", async (req, res) => {
+  const result = await alerts.deactivateAlert(req.params.id);
+  res.send(result);
+});
+
+ app.use("/alerts/:id/addUser", checkAuth);
+app.get("/alerts/:id/addUser", async (req, res) => {
+  const result = await alerts.addAlertUser(
+    req.terminal_app.claims.uid,
+    req.params.id,
+    req.body.phone
+  );
+  res.send(result);
+});
+
+app.use("/alerts/:id/subscribe", checkAuth);
+app.get("/alerts/:id/subscribe", async (req, res) => {
+  const result = await alerts.subscribeAlert(
+    req.body.phone,
+    req.params.id
+  );
+  res.send(result);
+});
+
+app.use("/alerts/:id/unsubscribe", checkAuth);
+app.get("/alerts/:id/unsubscribe", async (req, res) => {
+  const result = await titans.unsubscribeAlert(
+    req.body.phone,
+    req.params.id
+  );
+  res.send(result);
+});
+
+//app.use("/daily_alerts", checkAuth);
+app.get("/daily_alerts", async (req, res) => {
+  const result = await alerts.getDailyAlerts();
+  res.send(result);
+});
+
+
+// Twilio SMS
+app.post('/alerts/send_sms', (req, res) => {
+  res.header('Content-Type', 'application/json');
+  client.messages
+    .create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: req.body.to,
+      body: req.body.message
+    })
+    .then(() => {
+      res.send(JSON.stringify({ success: true }));
+    })
+    .catch(err => {
+      console.log(err);
+      res.send(JSON.stringify({ success: false }));
+    });
+});
+
+// Receives response from
+var MessagingResponse = require('twilio').twiml.MessagingResponse;
+
+app.post('/alert/response', function (req, res) {
+  var resp = new MessagingResponse();
+  var responseMsg = req.body.Body.trim().toLowerCase();
+  var fromNum = req.body.From;
+  if (responseMsg.includes('unsubscribe')) {
+    alerts.unsubscribeAlert(fromNum, responseMsg.substring(16));
+    resp.message('You are now unscubscribed!');    
+  } else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
+    alerts.subscribeAlert(fromNum, responseMsg.substring(14));
+    resp.message('Thanks for subscribing!');
+  } else {
+    resp.message('Invalid keyword!');
+  }
+  res.writeHead(200, {
+    'Content-Type':'text/xml'
+  });
+  res.end(resp.toString());
+});
+
+// Update Cathie Wood Daily SMS Notification's Message every 11:30AM
+var updateDailyAlertMessage = new cronJob( '30 11 * * *', async function() {
+    let updatedDailyAlert = await alerts.updateCWDailyAlertMessage();
+},  null, true);
+
+// Sends Daily SMS Notification every 12PM
+var dailySMS = new cronJob( '0 12 * * *', async function() {
+    let dailyAlerts = await alerts.getDailyAlerts();
+    var alertUsers;
+
+    if(dailyAlerts.length > 0) {
+      for( var i = 0; i < dailyAlerts.length; i++ ) {
+        alertUsers = await alerts.getAlertActiveUsers(dailyAlerts[i].id);
+        if(alertUsers.length > 0) {
+          for( var x = 0; x < alertUsers.length; x++ ) {
+            client.messages
+            .create({
+              from: process.env.TWILIO_PHONE_NUMBER,
+              to: alertUsers[x].user_phone_number,
+              body: dailyAlerts[i].message
+            })
+            .then(() => {
+              console.log(JSON.stringify({ success: true }));
+            })
+            .catch(err => {
+              console.log(err);
+              console.log(JSON.stringify({ success: false }));
+            });
+          }
+        }
+      }
+    }
+},  null, true);
+
+
+// get ARK Funds daily trades every 11AM
+var dailyTrades = new cronJob( '0 11 * * *', async function() {
+    let dailyArkTrades = await trades.getTrades();
+},  null, true);
+
+app.get("/trades/top_buy", async (req, res) => {
+  const result = await trades.getTop3Buy();
+  res.send(result);
+});
+
+app.get("/trades/top_sell", async (req, res) => {
+  const result = await trades.getTop3Sell();
+  res.send(result);
+});
+
 
 app.get("/portfolios/search/typeahead", async (req, res) => {
   const results = await search.prefetchPortfolios();
