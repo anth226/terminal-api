@@ -23,6 +23,22 @@ export async function getAlert(id) {
   return result;
 }
 
+export async function getAlerts(req) {
+  let name;
+  if (req && req.query) {
+    let query = req.query
+    if (query.name && query.name.length > 0) {
+      name = query.name;
+    }
+  }
+  const result = await db(`
+        SELECT id, name, message
+        FROM alerts
+        ${name ? `WHERE name='${name}'` : ''}
+        `);
+  return result;
+}
+
 export async function getAlertUsers(alertID) {
   const result = await db(`
         SELECT alert_id, user_id, user_phone_number
@@ -122,7 +138,7 @@ export async function updateCWDailyAlertMessage() {
 
   let message = "Portfolio Insider Prime Alerts\nCathie Woods - Ark Invest Daily Trades\n\n"+
       "Buys\nTicker | Shares | % of EFT";
-      
+
   for(let i = 0; i < buyResult.length; i++) {
     message += "\n" + buyResult[i].ticker + " " + buyResult[i].shares + " " + buyResult[i].etf_percent + " ";
   }

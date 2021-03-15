@@ -2051,6 +2051,12 @@ app.post("/alerts", async (req, res) => {
 });
 
 //app.use("/alerts/:id", checkAuth);
+app.get("/alerts", async (req, res) => {
+  const result = await alerts.getAlerts(req);
+  res.send(result);
+});
+
+//app.use("/alerts/:id", checkAuth);
 app.get("/alerts/:id", async (req, res) => {
   const result = await alerts.getAlert(req.params.id);
   res.send(result);
