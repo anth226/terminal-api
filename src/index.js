@@ -36,6 +36,7 @@ import * as dashboard from "./controllers/dashboard";
 import * as securities from "./controllers/securities";
 import * as pages from "./controllers/pages";
 import { questionnaireSubmission } from "./controllers/questionnaire";
+import * as holdings from "./controllers/holdings";
 
 import * as darkpool from "./controllers/darkpool";
 import * as quodd from "./controllers/quodd";
@@ -68,6 +69,7 @@ import {
   stripe,
   endpointSecret,
   couponId,
+  couponIdFree,
   planId,
   yearlyPlanId,
 } from "./services/stripe";
@@ -2485,6 +2487,29 @@ app.get(
   }
 );
 
+// ciks endpoints
+app.use("/ciks/:cik", checkAuth);
+app.get("/ciks/:cik", async (req, res) => {
+    const result = await holdings.getHoldingsByCik(req.params.cik);
+    res.send(result);
+  }
+);
+
+app.use("/ciks/institutions/data", checkAuth);
+app.get("/ciks/institutions/data", async (req, res) => {
+  const result = await institutions.getInstitutionsCikData(req);
+  res.send(result);
+});
+
+app.use("/ciks/titans/:uri", checkAuth);
+app.get("/ciks/titans/:uri", async (req, res) => {
+  const result = await titans.getTitansCikData(
+    req.params.uri,
+    req.terminal_app.claims.uid
+  );
+  res.send(result);
+});
+
 app.use("/billionaire/:identifier/ciks/:rank/promote", checkAuth);
 app.get(
   "/billionaire/:identifier/ciks/:rank/promote",
@@ -2556,8 +2581,13 @@ app.get(
 // Questionnaire Submission
 app.post("/questionnaire-submission", checkAuth, questionnaireSubmission);
 
-// subscription fixing
-app.get("/subscription_fixing", async (req, res) => {
+// stripe - fetch subscriptions
+app.get("/fetch_subscriptions", async (req, res) => {
+  if (process.env.RELEASE_STAGE == "production") {
+    res.send("fail");
+    return;
+  }
+
   if (process.env.DISABLE_CRON == "true") {
     res.send("disabled");
     return;
@@ -2567,40 +2597,128 @@ app.get("/subscription_fixing", async (req, res) => {
     res.send("fail");
     return;
   }
+
+  var users = [];
+
   const userLists = await admin.auth().listUsers(1000)
+
   for (const user of userLists.users) {
-    try {
-      if (user.customClaims && !isEmpty(user.customClaims)) {
-        const { subscription_id, customer_id } = user.customClaims
-        if (subscription_id) {
-          const subscription = await stripe.subscriptions.retrieve(
+    users.push(user)
+  }
+
+  if (userLists.pageToken) {
+    const userLists2 = await admin.auth().listUsers(1000, userLists.pageToken)
+    if (userLists2 && userLists2.users.length > 0) {
+      for (const user of userLists2.users) {
+        users.push(user)
+      }
+    }
+  }
+
+  var subs = [];
+
+  for (const user of users) {
+    if (user.customClaims && !isEmpty(user.customClaims)) {
+      const { subscription_id, customer_id } = user.customClaims
+      if (subscription_id) {
+        const subscription = await stripe.subscriptions.retrieve(
             subscription_id
-          );
-          console.log(subscription)
+        );
+        const activesub = await stripe.subscriptions.list({
+          customer: customer_id,
+        });
+        const customerData = await stripe.customers.retrieve(
+            customer_id
+        );
 
-          if (subscription && subscription.cancel_at_period_end === true &&
+        // console.log(subscription)
+        subs.push({user: user, sub: subscription, active_sub: activesub, customer: customerData});
+
+        if (subs.length > 100) {
+          break;
+        }
+      }
+    }
+  }
+  res.send({subs: subs});
+});
+
+// stripe - fetch user subscription and fix
+app.get("/fetch_user_subscription", async (req, res) => {
+  if (process.env.RELEASE_STAGE == "production") {
+    res.send("fail");
+    return;
+  }
+
+  if (process.env.DISABLE_CRON == "true") {
+    res.send("disabled");
+    return;
+  }
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
+  if (query.uid && query.uid.length > 0) {
+    console.log(query.uid);
+  } else {
+    res.send("failed, no user");
+    return;
+  }
+
+  var updateSubscription = false;
+  if (query.updatesub && query.updatesub === "true") {
+    console.log(query.updatesub);
+    updateSubscription = true;
+  }
+
+  const user = await admin.auth().getUser(query.uid);
+
+  var sub;
+
+  if (user.customClaims && !isEmpty(user.customClaims)) {
+    const { subscription_id, customer_id } = user.customClaims
+    if (subscription_id) {
+      const subscription = await stripe.subscriptions.retrieve(
+          subscription_id
+      );
+      const activesub = await stripe.subscriptions.list({
+        customer: customer_id,
+      });
+      const customerData = await stripe.customers.retrieve(
+          customer_id
+      );
+
+      sub = {user: user, sub: subscription, active_sub: activesub, customer: customerData};
+
+      try {
+        if (subscription.status === "active") {
+          console.log("This account is active");
+        } else if (subscription && subscription.cancel_at_period_end === true &&
             (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
-          ) {
-            console.log("subscription--", subscription)
-            const customerData = await stripe.customers.retrieve(
-              customer_id
-            );
+        ) {
+          console.log("found canceled subscription");
 
-            if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method) {
+          if (updateSubscription) {
+            if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
               await stripe.customers.update(
-                customer_id,
-                { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+                  customer_id,
+                  { invoice_settings: { default_payment_method: subscription.default_payment_method } }
               );
             }
-            console.log("customerData--", customerData)
 
+
+            console.log("attempting to create sub");
             const newSubscription = await stripe.subscriptions.create({
               customer: customer_id,
               items: [{ plan: planId }],
               expand: ["latest_invoice.payment_intent"],
-              coupon: couponId,
+              coupon: couponIdFree,
             });
             console.log("new subscription ---", newSubscription)
+
+            sub = {...sub, new_sub: newSubscription}
 
             await admin.auth().setCustomUserClaims(user.uid, {
               customer_id,
@@ -2613,26 +2731,151 @@ app.get("/subscription_fixing", async (req, res) => {
               subscriptionId: newSubscription.id,
               subscriptionStatus: newSubscription.status
             });
+          }
+        } else if (sub && sub.sub && sub.sub.cancel_at_period_end === true && sub.sub.status != "canceled") {
 
-          } else if (subscription && subscription.cancel_at_period_end === true) {
+          console.log("not canceled yet but set to cancel");
+
+          if (updateSubscription) {
             const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
               cancel_at_period_end: false
             });
             console.log("updatedSubscription---", updatedSubscription)
+            sub = {...sub, updated_sub: updatedSubscription}
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
               subscriptionStatus: updatedSubscription.status
             });
           }
+        } else {
+          console.log("This account should stay canceled");
         }
+
+      } catch (error) {
+        console.error(user.uid, "---", error)
       }
-    } catch (error) {
-      console.error(user.uid, "---", error)
     }
   }
-  res.send("ok");
+  res.send({sub: sub});
 });
+
+// subscription fixing
+// app.get("/subscription_fixing_all", async (req, res) => {
+//   if (process.env.DISABLE_CRON == "true") {
+//     res.send("disabled");
+//     return;
+//   }
+//   let { query } = req;
+//   if (query.token != "XXX") {
+//     res.send("fail");
+//     return;
+//   }
+//
+//   var updateSubscription = false;
+//   if (query.updatesub && query.updatesub === "true") {
+//     console.log(query.updatesub);
+//     updateSubscription = true;
+//   }
+//
+//   var users = [];
+//
+//   const userLists = await admin.auth().listUsers(300)
+//
+//   for (const user of userLists.users) {
+//     users.push(user)
+//   }
+//
+//   if (userLists.pageToken) {
+//     const userLists2 = await admin.auth().listUsers(1000, userLists.pageToken)
+//     if (userLists2 && userLists2.users.length > 0) {
+//       for (const user of userLists2.users) {
+//         users.push(user)
+//       }
+//     }
+//   }
+//
+//   console.log("total: ", users.length);
+//
+//   var i = 0;
+//   for (const user of users) {
+//     i += 1
+//     console.log(i);
+//     if (user.customClaims && !isEmpty(user.customClaims)) {
+//       const { subscription_id, customer_id } = user.customClaims
+//       if (subscription_id) {
+//         const subscription = await stripe.subscriptions.retrieve(
+//             subscription_id
+//         );
+//         const customerData = await stripe.customers.retrieve(
+//             customer_id
+//         );
+//
+//         try {
+//           if (subscription.status === "active") {
+//             console.log("This account is active");
+//           } else if (subscription && subscription.cancel_at_period_end === true &&
+//               (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
+//           ) {
+//             console.log("found canceled subscription: ", user.uid);
+//
+//             if (updateSubscription) {
+//               if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
+//                 await stripe.customers.update(
+//                     customer_id,
+//                     { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+//                 );
+//               }
+//
+//
+//               console.log("attempting to create sub");
+//               const newSubscription = await stripe.subscriptions.create({
+//                 customer: customer_id,
+//                 items: [{ plan: planId }],
+//                 expand: ["latest_invoice.payment_intent"],
+//                 coupon: couponIdFree,
+//               });
+//               console.log("new subscription ---", newSubscription)
+//
+//               await admin.auth().setCustomUserClaims(user.uid, {
+//                 customer_id,
+//                 subscription_id: newSubscription.id,
+//               });
+//
+//               let docRef = db.collection("users").doc(user.uid);
+//               await docRef.update({
+//                 customerId: customer_id,
+//                 subscriptionId: newSubscription.id,
+//                 subscriptionStatus: newSubscription.status
+//               });
+//             }
+//           } else if (subscription && subscription.cancel_at_period_end === true && subscription.status != "canceled") {
+//
+//             console.log("not canceled yet but set to cancel: ", user.uid);
+//
+//             if (updateSubscription) {
+//               const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+//                 cancel_at_period_end: false
+//               });
+//               console.log("updatedSubscription---", updatedSubscription)
+//
+//               let docRef = db.collection("users").doc(user.uid);
+//               await docRef.update({
+//                 subscriptionStatus: updatedSubscription.status
+//               });
+//             }
+//           } else {
+//             console.log("This account should stay canceled");
+//           }
+//
+//         } catch (error) {
+//           console.error(user.uid, "---", error)
+//         }
+//       }
+//     }
+//   }
+//   res.send({success: true});
+// });
 
 // User Portfolio
 app.get("/user-portfolio", checkAuth, dashboard.userPortfolio)
@@ -2704,6 +2947,118 @@ app.get("/user-access-report", checkAuth, async (req, res) => {
   })
 })
 
+// stripe - fetch user subscription and fix
+app.get("/fetch_user_subscription", async (req, res) => {
+  if (process.env.DISABLE_CRON == "true") {
+    res.send("disabled");
+    return;
+  }
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
+  if (query.uid && query.uid.length > 0) {
+    console.log(query.uid);
+  } else {
+    res.send("failed, no user");
+    return;
+  }
+
+  var updateSubscription = false;
+  if (query.updatesub && query.updatesub === "true") {
+    console.log(query.updatesub);
+    updateSubscription = true;
+  }
+
+  const user = await admin.auth().getUser(query.uid);
+
+  var sub;
+
+  if (user.customClaims && !isEmpty(user.customClaims)) {
+    const { subscription_id, customer_id } = user.customClaims
+    if (subscription_id) {
+      const subscription = await stripe.subscriptions.retrieve(
+          subscription_id
+      );
+      const activesub = await stripe.subscriptions.list({
+        customer: customer_id,
+      });
+      const customerData = await stripe.customers.retrieve(
+          customer_id
+      );
+
+      sub = {user: user, sub: subscription, active_sub: activesub, customer: customerData};
+
+      try {
+        if (subscription.status === "active") {
+          console.log("This account is active");
+        } else if (subscription && subscription.cancel_at_period_end === true &&
+            (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
+        ) {
+          console.log("found canceled subscription");
+
+          if (updateSubscription) {
+            if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
+              await stripe.customers.update(
+                  customer_id,
+                  { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+              );
+            }
+
+
+            console.log("attempting to create sub");
+            const newSubscription = await stripe.subscriptions.create({
+              customer: customer_id,
+              items: [{ plan: planId }],
+              expand: ["latest_invoice.payment_intent"],
+              coupon: couponIdFree,
+            });
+            console.log("new subscription ---", newSubscription)
+
+            sub = {...sub, new_sub: newSubscription}
+
+            await admin.auth().setCustomUserClaims(user.uid, {
+              customer_id,
+              subscription_id: newSubscription.id,
+            });
+
+            let docRef = db.collection("users").doc(user.uid);
+            await docRef.update({
+              customerId: customer_id,
+              subscriptionId: newSubscription.id,
+              subscriptionStatus: newSubscription.status
+            });
+          }
+        } else if (sub && sub.sub && sub.sub.cancel_at_period_end === true && sub.sub.status != "canceled") {
+
+          console.log("not canceled yet but set to cancel");
+
+          if (updateSubscription) {
+            const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+              cancel_at_period_end: false
+            });
+            console.log("updatedSubscription---", updatedSubscription)
+            sub = {...sub, updated_sub: updatedSubscription}
+
+            let docRef = db.collection("users").doc(user.uid);
+            await docRef.update({
+              subscriptionStatus: updatedSubscription.status
+            });
+          }
+        } else {
+          console.log("This account should stay canceled");
+        }
+
+      } catch (error) {
+        console.error(user.uid, "---", error)
+      }
+    }
+  }
+  res.send({sub: sub});
+});
+
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
   res.send(result);
@@ -2714,4 +3069,3 @@ app.use(middleware.errorHandler);
 app.listen(process.env.PORT, () => {
   console.log(`listening on ${process.env.PORT}`)
 });
-// debug

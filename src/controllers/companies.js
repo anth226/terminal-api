@@ -143,3 +143,18 @@ export const getCompanyByCik = async (cik) => {
     return null;
   }
 };
+
+export const getCompanyDataByCik = async (cik) => {
+  let result = await db(`
+        SELECT json_calculations, ticker
+        FROM companies
+        WHERE cik = '${cik}'
+        limit 1
+      `);
+
+  if (result.length > 0) {
+    return result[0];
+  } else {
+    return null;
+  }
+};
