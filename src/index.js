@@ -44,6 +44,7 @@ import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as institutions from "./controllers/institutions";
 import * as titans from "./controllers/titans";
+import * as trades from "./controllers/trades";
 import * as alerts from "./controllers/alerts";
 import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
@@ -2148,6 +2149,10 @@ app.post('/alert/response', function (req, res) {
   res.end(resp.toString());
 });
 
+// Update Cathie Wood Daily SMS Notification's Message every 11:30AM
+var updateDailyAlertMessage = new cronJob( '30 11 * * *', async function() {
+    let updatedDailyAlert = await alerts.updateCWDailyAlertMessage();
+},  null, true);
 
 // Sends Daily SMS Notification every 12PM
 var dailySMS = new cronJob( '0 12 * * *', async function() {
@@ -2177,6 +2182,23 @@ var dailySMS = new cronJob( '0 12 * * *', async function() {
       }
     }
 },  null, true);
+
+
+// get ARK Funds daily trades every 11AM
+var dailyTrades = new cronJob( '0 11 * * *', async function() {
+    let dailyArkTrades = await trades.getTrades();
+},  null, true);
+
+app.get("/trades/top_buy", async (req, res) => {
+  const result = await trades.getTop3Buy();
+  res.send(result);
+});
+
+app.get("/trades/top_sell", async (req, res) => {
+  const result = await trades.getTop3Sell();
+  res.send(result);
+});
+
 
 app.get("/portfolios/search/typeahead", async (req, res) => {
   const results = await search.prefetchPortfolios();
