@@ -48,8 +48,6 @@ export async function getTrades(req) {
 			date = query.date;
 		}
 	}
-	console.log("fund: "+fund);
-	console.log("direction: "+direction);
   	const result = await db(`
 		SELECT * FROM daily_trades WHERE shares > 0
 		${fund ? `AND fund = '${fund}'` : ''}
