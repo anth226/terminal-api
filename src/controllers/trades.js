@@ -4,7 +4,7 @@ import axios from "axios";
 
 const symbol = ["ARKF", "ARKG", "ARKK", "ARKQ", "ARKW"];
 
-export async function getTrades() {	
+export async function getTradesFromARK() {	
 	for(let i = 0; i < symbol.length; i++){
 		var response = await axios.get(`${process.env.ARK_API_URL}/api/v1/etf/trades?symbol=${symbol[i]}`);
 		
@@ -21,6 +21,61 @@ export async function getTrades() {
 			}
 		}
 	}
+}
+
+export async function getTrades(req) {
+	let fund,
+		direction,
+		ticker,
+		cusip,
+		date;
+	if (req && req.query) {
+		let query = req.query;
+		fund = query.fund;
+		if (query.fund) {
+			fund = query.fund;
+		}
+		if (query.direction && query.direction.length > 0) {
+			direction = query.direction;
+		}
+		if (query.ticker && query.ticker.length > 0) {
+			ticker = query.ticker;
+		}
+		if (query.cusip && query.cusip.length > 0) {
+			cusip = query.cusip;
+		}
+		if (query.date && query.date.length > 0) {
+			date = query.date;
+		}
+	}
+  	const result = await db(`
+		SELECT * FROM daily_trades WHERE shares > 0
+		${fund ? `AND fund = '${fund}'` : ''}
+		${direction ? `AND direction = '${direction}'` : ''}
+		${ticker ? `AND ticker = '${ticker}'` : ''}
+		${cusip ? `AND cusip = '${cusip}'` : ''}
+		${date ? `AND date = '${date}'` : ''}
+		ORDER BY SHARES DESC
+        `);
+  	return result;
+}
+
+export async function getPortfolioAdditions() {
+  	const result = await db(`
+		SELECT * FROM daily_trades WHERE direction = 'Buy' AND
+		date = (SELECT date FROM daily_trades ORDER BY date DESC LIMIT 1)
+		ORDER BY SHARES DESC
+        `);
+  	return result;
+}
+
+export async function getPortfolioDeletions() {
+  	const result = await db(`
+        SELECT * FROM daily_trades WHERE direction = 'Sell' AND
+		date = (SELECT date FROM daily_trades ORDER BY date DESC LIMIT 1)
+		ORDER BY SHARES DESC
+        `);
+  	return result;
 }
 
 export async function getTop3Buy() {
