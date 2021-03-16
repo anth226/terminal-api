@@ -2253,7 +2253,7 @@ var dailySMS = new cronJob( '0 12 * * *', async function() {
 
 // get ARK Funds daily trades every 11AM
 var dailyTrades = new cronJob( '0 11 * * *', async function() {
-    let dailyArkTrades = await trades.getTrades();
+    let dailyArkTrades = await trades.getTradesFromARK();
 },  null, true);
 
 app.get("/trades/top_buy", async (req, res) => {
@@ -2263,6 +2263,21 @@ app.get("/trades/top_buy", async (req, res) => {
 
 app.get("/trades/top_sell", async (req, res) => {
   const result = await trades.getTop3Sell();
+  res.send(result);
+});
+
+app.get("/trades/portfolio_additions", async (req, res) => {
+  const result = await trades.getPortfolioAdditions();
+  res.send(result);
+});
+
+app.get("/trades/portfolio_deletions", async (req, res) => {
+  const result = await trades.getPortfolioDeletions();
+  res.send(result);
+});
+
+app.get("/trades", async (req, res) => {
+  const result = await trades.getTrades(req);
   res.send(result);
 });
 
