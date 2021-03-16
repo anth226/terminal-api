@@ -2053,6 +2053,12 @@ app.post("/alerts", async (req, res) => {
 });
 
 //app.use("/alerts/:id", checkAuth);
+app.get("/alerts", async (req, res) => {
+  const result = await alerts.getAlerts(req);
+  res.send(result);
+});
+
+//app.use("/alerts/:id", checkAuth);
 app.get("/alerts/:id", async (req, res) => {
   const result = await alerts.getAlert(req.params.id);
   res.send(result);
@@ -2097,7 +2103,7 @@ app.get("/alerts/:id/subscribe", async (req, res) => {
 
 app.use("/alerts/:id/unsubscribe", checkAuth);
 app.get("/alerts/:id/unsubscribe", async (req, res) => {
-  const result = await titans.unsubscribeAlert(
+  const result = await alerts.unsubscribeAlert(
     req.body.phone,
     req.params.id
   );
@@ -2108,6 +2114,55 @@ app.get("/alerts/:id/unsubscribe", async (req, res) => {
 app.get("/daily_alerts", async (req, res) => {
   const result = await alerts.getDailyAlerts();
   res.send(result);
+});
+
+//Cathie Wood subscribe
+app.use("/cw_subscribe", checkAuth);
+app.post("/cw_subscribe", async (req, res) => {
+  await alerts.addCWAlertUser(
+    req.terminal_app.claims.uid,
+    req.body.phone
+  );
+
+  const alertResult = await alerts.getAlertByName("CW Subscribe");
+  res.header('Content-Type', 'application/json');
+  client.messages
+    .create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: req.body.phone,
+      body: alertResult[0].message
+    })
+    .then(() => {
+      res.send(JSON.stringify({ success: true }));
+    })
+    .catch(err => {
+      console.log(err);
+      res.send(JSON.stringify({ success: false }));
+    });
+});
+
+//Cathie Wood unsubscribe
+app.use("/cw_unsubscribe", checkAuth);
+app.post("/cw_unsubscribe", async (req, res) => {
+  await alerts.unsubscribeCWAlert(
+    req.body.phone
+  );
+  
+  const alertResult = await alerts.getAlertByName("CW Unsubscribe");
+  res.header('Content-Type', 'application/json');
+  client.messages
+    .create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: req.body.phone,
+      body: alertResult[0].message
+    })
+    .then(() => {
+      res.send(JSON.stringify({ success: true }));
+    })
+    .catch(err => {
+      console.log(err);
+      res.send(JSON.stringify({ success: false }));
+    });
 });
 
 
@@ -2132,17 +2187,27 @@ app.post('/alerts/send_sms', (req, res) => {
 // Receives response from
 var MessagingResponse = require('twilio').twiml.MessagingResponse;
 
-app.post('/alert/response', function (req, res) {
+app.post('/alert/response', async function (req, res) {
   var resp = new MessagingResponse();
   var responseMsg = req.body.Body.trim().toLowerCase();
   var fromNum = req.body.From;
+  var alertID;
   if (responseMsg.includes('unsubscribe')) {
-    alerts.unsubscribeAlert(fromNum, responseMsg.substring(16));
-    resp.message('You are now unscubscribed!');    
-  } else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
+    alertID = responseMsg.substring(16);
+    alerts.unsubscribeAlert(fromNum, alertID);
+      const alert = await alerts.getAlert(alertID);
+    if(alert[0].name === "CW Daily"){
+      const alertUnsub = await alerts.getAlertByName("CW Unsubscribe");
+      resp.message(alertUnsub[0].message); 
+    } else {
+      resp.message('You are now unscubscribed!'); 
+    }
+  } 
+  /*else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
     alerts.subscribeAlert(fromNum, responseMsg.substring(14));
     resp.message('Thanks for subscribing!');
-  } else {
+  } */
+  else {
     resp.message('Invalid keyword!');
   }
   res.writeHead(200, {
