@@ -2187,17 +2187,27 @@ app.post('/alerts/send_sms', (req, res) => {
 // Receives response from
 var MessagingResponse = require('twilio').twiml.MessagingResponse;
 
-app.post('/alert/response', function (req, res) {
+app.post('/alert/response', async function (req, res) {
   var resp = new MessagingResponse();
   var responseMsg = req.body.Body.trim().toLowerCase();
   var fromNum = req.body.From;
+  var alertID;
   if (responseMsg.includes('unsubscribe')) {
-    alerts.unsubscribeAlert(fromNum, responseMsg.substring(16));
-    resp.message('You are now unscubscribed!');    
-  } else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
+    alertID = responseMsg.substring(16);
+    alerts.unsubscribeAlert(fromNum, alertID);
+      const alert = await alerts.getAlert(alertID);
+    if(alert[0].name === "CW Daily"){
+      const alertUnsub = await alerts.getAlertByName("CW Unsubscribe");
+      resp.message(alertUnsub[0].message); 
+    } else {
+      resp.message('You are now unscubscribed!'); 
+    }
+  } 
+  /*else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
     alerts.subscribeAlert(fromNum, responseMsg.substring(14));
     resp.message('Thanks for subscribing!');
-  } else {
+  } */
+  else {
     resp.message('Invalid keyword!');
   }
   res.writeHead(200, {

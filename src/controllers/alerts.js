@@ -114,14 +114,11 @@ export const subscribeAlert = async (phoneNumber, alertID) => {
 };
 
 export const unsubscribeAlert = async (phoneNumber, alertID) => {
-
-  console.log(phoneNumber);
   let query = {
     text:
       "UPDATE alert_users SET active = false WHERE user_phone_number=($1) AND alert_id=($2)",
     values: [phoneNumber, alertID],
   };
-  console.log(query);
   let result = await db(query);
 
   await db(`
@@ -179,7 +176,7 @@ export const addCWAlertUser = async (userID, phoneNumber) => {
 
   let query = {
     text:
-      "INSERT INTO alert_users (user_id, alert_ID, user_phone_number, created_at) VALUES ($1, $2, $3, now())",
+      "INSERT INTO alert_users (user_id, alert_ID, user_phone_number, created_at, active) VALUES ($1, $2, $3, now(), true)",
     values: [userID, alertResult[0].id, phoneNumber],
   };
 
