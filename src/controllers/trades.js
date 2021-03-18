@@ -18,7 +18,7 @@ export async function getTradesFromARK() {
 			for(let x = 0; x < trades.length; x++) {
 				let query = {
 					text:
-						"INSERT INTO daily_trades(fund, date, direction, ticker, cusip, company, shares, etf_percent) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+						"INSERT INTO daily_trades(fund, created_at, direction, ticker, cusip, company, shares, etf_percent) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
 					values: [response.data.symbol, trades[x].date, trades[x].direction, trades[x].ticker, trades[x].cusip, trades[x].company, trades[x].shares, trades[x].etf_percent],
 				};
 				
@@ -72,7 +72,7 @@ export async function getTrades(req) {
 		direction,
 		ticker,
 		cusip,
-		date,
+		created_at,
 		response = [],
 		prices,
 		toJson;
@@ -91,8 +91,8 @@ export async function getTrades(req) {
 		if (query.cusip && query.cusip.length > 0) {
 			cusip = query.cusip;
 		}
-		if (query.date && query.date.length > 0) {
-			date = query.date;
+		if (query.created_at && query.created_at.length > 0) {
+			created_at = query.created_at;
 		}
 	}
   	const result = await db(`
@@ -101,7 +101,7 @@ export async function getTrades(req) {
 		${direction ? `AND direction = '${direction}'` : ''}
 		${ticker ? `AND ticker = '${ticker}'` : ''}
 		${cusip ? `AND cusip = '${cusip}'` : ''}
-		${date ? `AND date = '${date}'` : ''}
+		${created_at ? `AND created_at = '${created_at}'` : ''}
 		ORDER BY SHARES DESC
 		`);
 		
@@ -111,7 +111,7 @@ export async function getTrades(req) {
 
 			if(prices.last_price > 0 && prices.open_price > 0) {
 				toJson = {
-					date: result[i].date,
+					created_at: result[i].created_at,
 					fund: result[i].fund,
 					ticker: result[i].ticker,
 					direction: result[i].direction,
@@ -138,7 +138,7 @@ export async function getPortfolioAdditions() {
 		toJson;
   	const result = await db(`
 		SELECT * FROM daily_trades WHERE direction = 'Buy' AND
-		date = (SELECT date FROM daily_trades ORDER BY date DESC LIMIT 1)
+		created_at = (SELECT created_at FROM daily_trades ORDER BY created_at DESC LIMIT 1)
 		ORDER BY SHARES DESC
 		`);
 	if(result.length > 0) {
@@ -147,7 +147,7 @@ export async function getPortfolioAdditions() {
 
 			if(prices.last_price > 0 && prices.open_price > 0) {
 				toJson = {
-					date: result[i].date,
+					created_at: result[i].created_at,
 					fund: result[i].fund,
 					ticker: result[i].ticker,
 					direction: result[i].direction,
@@ -174,7 +174,7 @@ export async function getPortfolioDeletions() {
 		toJson;
   	const result = await db(`
         SELECT * FROM daily_trades WHERE direction = 'Sell' AND
-		date = (SELECT date FROM daily_trades ORDER BY date DESC LIMIT 1)
+		created_at = (SELECT created_at FROM daily_trades ORDER BY created_at DESC LIMIT 1)
 		ORDER BY SHARES DESC
 		`);
 		
@@ -184,7 +184,7 @@ export async function getPortfolioDeletions() {
 
 			if(prices.last_price > 0 && prices.open_price > 0) {
 				toJson = {
-					date: result[i].date,
+					created_at: result[i].created_at,
 					fund: result[i].fund,
 					ticker: result[i].ticker,
 					direction: result[i].direction,
