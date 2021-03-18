@@ -1,10 +1,15 @@
 import db from "../db";
 import db1 from "../db1";
 import axios from "axios";
+import * as quodd from "./quodd"
 
 const symbol = ["ARKF", "ARKG", "ARKK", "ARKQ", "ARKW"];
 
 export async function getTradesFromARK() {	
+	let checkTickerResult,
+		updateQuery,
+		updatedShares = 0,
+		updatedPercentETF = 0;
 	for(let i = 0; i < symbol.length; i++){
 		var response = await axios.get(`${process.env.ARK_API_URL}/api/v1/etf/trades?symbol=${symbol[i]}`);
 		
@@ -18,6 +23,45 @@ export async function getTradesFromARK() {
 				};
 				
 				await db(query);
+
+				checkTickerResult = await db(`SELECT * FROM ark_portfolio WHERE ticker = '${trades[x].ticker}'`);
+				
+				if(checkTickerResult.length > 0){
+					if(trades[x].direction === "Buy") {
+						updatedShares = parseFloat(checkTickerResult[0].shares) + parseFloat(trades[x].shares);
+						updatedPercentETF = parseFloat(checkTickerResult[0].etf_percent) + parseFloat(trades[x].etf_percent);
+					} else {
+						updatedShares = parseFloat(checkTickerResult[0].shares) - parseFloat(trades[x].shares);
+						updatedPercentETF = parseFloat(checkTickerResult[0].etf_percent) - parseFloat(trades[x].etf_percent);
+					}
+
+					if(updatedShares <= 0) {
+						updateQuery = {
+							text:
+							"UPDATE ark_portfolio SET shares = ($1), etf_percent = ($2), status = 'closed', closed_date = now() WHERE ticker=($3)",
+							values: [updatedShares, updatedPercentETF, trades[x].ticker],
+						};
+
+						await db(updateQuery);
+					} else {
+						updateQuery = {
+							text:
+							"UPDATE ark_portfolio SET shares = ($1), etf_percent = ($2), status = 'open' WHERE ticker=($3)",
+							values: [updatedShares, updatedPercentETF, trades[x].ticker],
+						};
+
+						await db(updateQuery);
+					}
+
+				} else {
+					let afQuery = {
+						text:
+							"INSERT INTO ark_portfolio(fund, ticker, cusip, company, shares, etf_percent, created_at, status) VALUES ($1, $2, $3, $4, $5, $6, now(), 'open')",
+						values: [response.data.symbol, trades[x].ticker, trades[x].cusip, trades[x].company, trades[x].shares, trades[x].etf_percent],
+					};
+					
+					await db(afQuery);
+				}
 			}
 		}
 	}
@@ -28,7 +72,10 @@ export async function getTrades(req) {
 		direction,
 		ticker,
 		cusip,
-		date;
+		date,
+		response = [],
+		prices,
+		toJson;
 	if (req && req.query) {
 		let query = req.query;
 		fund = query.fund;
@@ -56,26 +103,179 @@ export async function getTrades(req) {
 		${cusip ? `AND cusip = '${cusip}'` : ''}
 		${date ? `AND date = '${date}'` : ''}
 		ORDER BY SHARES DESC
-        `);
-  	return result;
+		`);
+		
+  	if(result.length > 0) {
+		for(let i = 0; i < result.length; i++) {
+			prices = await quodd.getLastPriceChange(result[i].ticker);
+
+			if(prices.last_price > 0 && prices.open_price > 0) {
+				toJson = {
+					date: result[i].date,
+					fund: result[i].fund,
+					ticker: result[i].ticker,
+					direction: result[i].direction,
+					cusip: result[i].cusip,
+					company: result[i].company,
+					shares: result[i].shares,
+					etf_percent: result[i].etf_percent,
+					current_price: prices.last_price,
+					open_price:  prices.open_price, 
+					market_value_current: prices.last_price * result[i].shares,
+					market_value_open:  prices.open_price * result[i].shares,
+					daily_performance:  prices.performance 
+				};
+				response.push(toJson);
+			}
+		}
+	}
+  	return response;
 }
 
 export async function getPortfolioAdditions() {
+	let response = [],
+		prices,
+		toJson;
   	const result = await db(`
 		SELECT * FROM daily_trades WHERE direction = 'Buy' AND
 		date = (SELECT date FROM daily_trades ORDER BY date DESC LIMIT 1)
 		ORDER BY SHARES DESC
-        `);
-  	return result;
+		`);
+	if(result.length > 0) {
+		for(let i = 0; i < result.length; i++) {
+			prices = await quodd.getLastPriceChange(result[i].ticker);
+
+			if(prices.last_price > 0 && prices.open_price > 0) {
+				toJson = {
+					date: result[i].date,
+					fund: result[i].fund,
+					ticker: result[i].ticker,
+					direction: result[i].direction,
+					cusip: result[i].cusip,
+					company: result[i].company,
+					shares: result[i].shares,
+					etf_percent: result[i].etf_percent,
+					current_price: prices.last_price,
+					open_price:  prices.open_price, 
+					market_value_current: prices.last_price * result[i].shares,
+					market_value_open:  prices.open_price * result[i].shares,
+					daily_performance:  prices.performance 
+				};
+				response.push(toJson);
+			}
+		}
+	}
+  	return response;
 }
 
 export async function getPortfolioDeletions() {
+	let response = [],
+		prices,
+		toJson;
   	const result = await db(`
         SELECT * FROM daily_trades WHERE direction = 'Sell' AND
 		date = (SELECT date FROM daily_trades ORDER BY date DESC LIMIT 1)
 		ORDER BY SHARES DESC
-        `);
-  	return result;
+		`);
+		
+	if(result.length > 0) {
+		for(let i = 0; i < result.length; i++) {
+			prices = await quodd.getLastPriceChange(result[i].ticker);
+
+			if(prices.last_price > 0 && prices.open_price > 0) {
+				toJson = {
+					date: result[i].date,
+					fund: result[i].fund,
+					ticker: result[i].ticker,
+					direction: result[i].direction,
+					cusip: result[i].cusip,
+					company: result[i].company,
+					shares: result[i].shares,
+					etf_percent: result[i].etf_percent,
+					current_price: prices.last_price,
+					open_price:  prices.open_price, 
+					market_value_current: prices.last_price * result[i].shares,
+					market_value_open:  prices.open_price * result[i].shares,
+					daily_performance:  prices.performance 
+				};
+				response.push(toJson);
+			}
+		}
+	}
+
+  	return response;
+}
+
+
+export async function getOpenPortfolio() {
+	let response = [],
+		prices,
+		toJson;
+  	const result = await db(`
+		SELECT * FROM ark_portfolio WHERE status = 'open' 
+		ORDER BY SHARES DESC
+		`);
+	if(result.length > 0) {
+		for(let i = 0; i < result.length; i++) {
+			prices = await quodd.getLastPriceChange(result[i].ticker);
+
+			if(prices.last_price > 0 && prices.open_price > 0) {
+				toJson = {
+					created_at: result[i].created_at,
+					fund: result[i].fund,
+					ticker: result[i].ticker,
+					cusip: result[i].cusip,
+					company: result[i].company,
+					shares: result[i].shares,
+					etf_percent: result[i].etf_percent,
+					status: result[i].status,
+					current_price: prices.last_price,
+					open_price:  prices.open_price, 
+					market_value_current: prices.last_price * result[i].shares,
+					market_value_open:  prices.open_price * result[i].shares,
+					daily_performance:  prices.performance 
+				};
+				response.push(toJson);
+			}
+		}
+	}
+  	return response;
+}
+
+export async function getArchivedPortfolio() {
+	let response = [],
+		prices,
+		toJson;
+  	const result = await db(`
+		SELECT * FROM ark_portfolio WHERE status = 'closed' 
+		ORDER BY SHARES DESC
+		`);
+	if(result.length > 0) {
+		for(let i = 0; i < result.length; i++) {
+			prices = await quodd.getLastPriceChange(result[i].ticker);
+
+			if(prices.last_price > 0 && prices.open_price > 0) {
+				toJson = {
+					created_at: result[i].created_at,
+					fund: result[i].fund,
+					ticker: result[i].ticker,
+					cusip: result[i].cusip,
+					company: result[i].company,
+					shares: result[i].shares,
+					etf_percent: result[i].etf_percent,
+					status: result[i].status,
+					closed_date: result[i].closed_date,
+					current_price: prices.last_price,
+					open_price:  prices.open_price, 
+					market_value_current: prices.last_price * result[i].shares,
+					market_value_open:  prices.open_price * result[i].shares,
+					daily_performance:  prices.performance 
+				};
+				response.push(toJson);
+			}
+		}
+	}
+  	return response;
 }
 
 export async function getTop3Buy() {

@@ -2276,6 +2276,16 @@ app.get("/trades/portfolio_deletions", async (req, res) => {
   res.send(result);
 });
 
+app.get("/trades/open_portfolio", async (req, res) => {
+  const result = await trades.getOpenPortfolio();
+  res.send(result);
+});
+
+app.get("/trades/archived_portfolio", async (req, res) => {
+  const result = await trades.getArchivedPortfolio();
+  res.send(result);
+});
+
 app.get("/trades", async (req, res) => {
   const result = await trades.getTrades(req);
   res.send(result);
