@@ -7,14 +7,23 @@ const symbol = ["ARKF", "ARKG", "ARKK", "ARKQ", "ARKW"];
 
 export async function getTradesFromARK() {	
 	let checkTickerResult,
+		checkDateResult,
 		updateQuery,
 		updatedShares = 0,
 		updatedPercentETF = 0;
+	
+	checkDateResult = await db(`SELECT to_char("created_at", 'YYYY-MM-DD') as latest_date FROM daily_trades ORDER by created_at DESC limit 1`);
 	for(let i = 0; i < symbol.length; i++){
 		var response = await axios.get(`${process.env.ARK_API_URL}/api/v1/etf/trades?symbol=${symbol[i]}`);
 		
 		if(response.status === 200 && response.data.trades.length > 0) {
 		let trades = response.data.trades;
+		
+		if(trades.length > 0 && checkDateResult.length > 0){
+			if (trades[0].date === checkDateResult[0].latest_date){
+				break;
+			}
+		}
 			for(let x = 0; x < trades.length; x++) {
 				let query = {
 					text:
