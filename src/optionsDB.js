@@ -10,14 +10,25 @@ types.setTypeParser(TIMESTAMP_OID, function (value) {
 
 function connectDatabase() {
     if (!db) {
-        const client = new Client({
-            database: process.env.DATABASE_NAME,
-            host: process.env.AWS_POSTGRES_DB_NASDAQ_HOST,
-            port: process.env.DATABASE_PORT,
-            user: process.env.DATABASE_USER,
-            password: process.env.DATABASE_PASSWORD
-        });
-
+        let client;
+        let useStaging = process.env.USE_STAGING_OPTIONS
+        if (useStaging && useStaging === "true") {
+            client = new Client({
+                database: process.env.DATABASE_NAME,
+                host: process.env.AWS_POSTGRES_DB_NASDAQ_STAGING_HOST,
+                port: process.env.DATABASE_PORT,
+                user: process.env.DATABASE_USER,
+                password: process.env.DATABASE_PASSWORD
+            });
+        } else {
+            client = new Client({
+                database: process.env.DATABASE_NAME,
+                host: process.env.AWS_POSTGRES_DB_NASDAQ_HOST,
+                port: process.env.DATABASE_PORT,
+                user: process.env.DATABASE_USER,
+                password: process.env.DATABASE_PASSWORD
+            });
+        }
         client.connect();
 
         db = async (sql, cb) => (await client.query(sql, cb)).rows;
