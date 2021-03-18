@@ -35,6 +35,14 @@ export async function getTradesFromARK() {
 						updatedPercentETF = parseFloat(checkTickerResult[0].etf_percent) - parseFloat(trades[x].etf_percent);
 					}
 
+					if(updatedShares < 0) {
+						updatedShares = 0;
+					}
+
+					if(updatedPercentETF < 0 || updatedShares <= 0) {
+						updatedPercentETF = 0;
+					}
+
 					if(updatedShares <= 0) {
 						updateQuery = {
 							text:
