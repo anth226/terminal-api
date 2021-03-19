@@ -2125,7 +2125,7 @@ app.get("/cw_getUser", async (req, res) => {
   try{
 
     alertUserResult = await alerts.getAlertByName("CW Daily");
-    userResult = await alerts.getAlertUser(alertUserResult[0].id, req.body.uid);
+    userResult = await alerts.getAlertUser(alertUserResult[0].id, req.query.uid);
 
     res.send(JSON.stringify({ success: true, userResult }));
   } catch (error) {
@@ -2252,12 +2252,12 @@ app.post('/alert/response', async function (req, res) {
 });
 
 // Update Cathie Wood Daily SMS Notification's Message every 11:30AM
-var updateDailyAlertMessage = new cronJob( '30 11 * * *', async function() {
+var updateDailyAlertMessage = new cronJob( '30 11 * * 1-5', async function() {
     let updatedDailyAlert = await alerts.updateCWDailyAlertMessage();
 },  null, true);
 
 // Sends Daily SMS Notification every 12PM
-var dailySMS = new cronJob( '0 12 * * *', async function() {
+var dailySMS = new cronJob( '0 12 * * 1-5', async function() {
     let dailyAlerts = await alerts.getDailyAlerts();
     var alertUsers;
 
@@ -2287,7 +2287,7 @@ var dailySMS = new cronJob( '0 12 * * *', async function() {
 
 
 // get ARK Funds daily trades every 11AM
-var dailyTrades = new cronJob( '0 11 * * *', async function() {
+var dailyTrades = new cronJob( '0 11 * * 1-5', async function() {
     let dailyArkTrades = await trades.getTradesFromARK();
 },  null, true);
 
