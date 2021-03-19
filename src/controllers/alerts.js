@@ -16,7 +16,7 @@ export const createAlert = async (name, message, isDaily) => {
 
 export async function getAlert(id) {
   const result = await db(`
-        SELECT id, name, message
+        SELECT *
         FROM alerts
         WHERE id=${id}
         `);
@@ -25,7 +25,7 @@ export async function getAlert(id) {
 
 export async function getAlertByName(name) {
   const result = await db(`
-        SELECT id, name, message
+        SELECT *
         FROM alerts
         WHERE name='${name}'
         `);
@@ -41,7 +41,7 @@ export async function getAlerts(req) {
     }
   }
   const result = await db(`
-        SELECT id, name, message
+        SELECT *
         FROM alerts
         ${name ? `WHERE name='${name}'` : ''}
         `);
@@ -50,16 +50,25 @@ export async function getAlerts(req) {
 
 export async function getAlertUsers(alertID) {
   const result = await db(`
-        SELECT alert_id, user_id, user_phone_number
+        SELECT *
         FROM alert_users
         WHERE alert_id=${alertID}
         `);
   return result;
 }
 
+export async function getAlertUser(alertID, userID) {
+  const result = await db(`
+        SELECT *
+        FROM alert_users
+        WHERE alert_id=${alertID} AND user_id='${userID}'
+        `);
+  return result;
+}
+
 export async function getAlertActiveUsers(alertID) {
   const result = await db(`
-        SELECT alert_id, user_id, user_phone_number
+        SELECT *
         FROM alert_users
         WHERE alert_id=${alertID} AND active = 'true'
         `);
