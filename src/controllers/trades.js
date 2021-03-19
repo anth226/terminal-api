@@ -21,7 +21,7 @@ export async function getTradesFromARK() {
 		
 		if(trades.length > 0 && checkDateResult.length > 0){
 			if (trades[0].date === checkDateResult[0].latest_date){
-				break;
+				continue;
 			}
 		}
 			for(let x = 0; x < trades.length; x++) {
