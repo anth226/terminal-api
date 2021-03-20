@@ -55,7 +55,7 @@ export async function getTradesFromARK() {
 					if(updatedShares <= 0) {
 						updateQuery = {
 							text:
-							"UPDATE ark_portfolio SET shares = ($1), etf_percent = ($2), status = 'closed', closed_date = now() WHERE ticker=($3)",
+							"UPDATE ark_portfolio SET shares = ($1), etf_percent = ($2), status = 'closed', closed_date = now(), updated_at = now() WHERE ticker=($3)",
 							values: [updatedShares, updatedPercentETF, trades[x].ticker],
 						};
 
@@ -63,7 +63,7 @@ export async function getTradesFromARK() {
 					} else {
 						updateQuery = {
 							text:
-							"UPDATE ark_portfolio SET shares = ($1), etf_percent = ($2), status = 'open' WHERE ticker=($3)",
+							"UPDATE ark_portfolio SET shares = ($1), etf_percent = ($2), status = 'open', updated_at = now() WHERE ticker=($3)",
 							values: [updatedShares, updatedPercentETF, trades[x].ticker],
 						};
 
@@ -73,7 +73,7 @@ export async function getTradesFromARK() {
 				} else {
 					let afQuery = {
 						text:
-							"INSERT INTO ark_portfolio(fund, ticker, cusip, company, shares, etf_percent, created_at, status) VALUES ($1, $2, $3, $4, $5, $6, now(), 'open')",
+							"INSERT INTO ark_portfolio(fund, ticker, cusip, company, shares, etf_percent, created_at, status) VALUES ($1, $2, $3, $4, $5, $6, trades[x].date, 'open')",
 						values: [response.data.symbol, trades[x].ticker, trades[x].cusip, trades[x].company, trades[x].shares, trades[x].etf_percent],
 					};
 					

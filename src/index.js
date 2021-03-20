@@ -2249,7 +2249,7 @@ app.post('/alert/response', async function (req, res) {
 
 
 // get ARK Funds daily trades every 7PM and Send SMS right after
-var dailyARKFundTrades = new cronJob( '0 19 * * *', async function() {
+var dailyARKFundTrades = new cronJob( '0 19 * * 1-5', async function() {
   try {
     let dailyArkTrades = await trades.getTradesFromARK();
 
