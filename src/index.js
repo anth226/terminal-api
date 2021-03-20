@@ -1119,12 +1119,15 @@ app.get("/user", async (req, res) => {
 
     const user = doc.data();
 
+    const userRecord = await admin.auth().getUser(req.terminal_app.claims.uid);
+
     const dashboards = await dashboard.get(req.terminal_app.claims.uid);
 
     const pinnedStocks = await dashboard.pinnedStocks(req.terminal_app.claims.uid);
 
     res.json({
       success: true,
+      userRecord,
       user,
       dashboards,
       pinnedStocks
@@ -2116,53 +2119,85 @@ app.get("/daily_alerts", async (req, res) => {
   res.send(result);
 });
 
+//app.use("/cw_getUser", checkAuth);
+app.get("/cw_getUser", async (req, res) => {
+  let userResult=[], alertUserResult=[];
+  try{
+
+    alertUserResult = await alerts.getAlertByName("CW Daily");
+    userResult = await alerts.getAlertUser(alertUserResult[0].id, req.query.uid);
+
+    res.send(JSON.stringify({ success: true, userResult }));
+  } catch (error) {
+      res.send(JSON.stringify({ success: false, error, userResult }));
+    }
+  
+});
+
 //Cathie Wood subscribe
 app.use("/cw_subscribe", checkAuth);
 app.post("/cw_subscribe", async (req, res) => {
-  await alerts.addCWAlertUser(
-    req.terminal_app.claims.uid,
-    req.body.phone
-  );
+  let alertResult, userResult, alertUserResult;
+  try {
+    await alerts.addCWAlertUser(
+      req.terminal_app.claims.uid,
+      req.body.phone
+    );
 
-  const alertResult = await alerts.getAlertByName("CW Subscribe");
-  res.header('Content-Type', 'application/json');
-  client.messages
-    .create({
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: req.body.phone,
-      body: alertResult[0].message
-    })
-    .then(() => {
-      res.send(JSON.stringify({ success: true }));
-    })
-    .catch(err => {
-      console.log(err);
-      res.send(JSON.stringify({ success: false }));
-    });
+    alertResult = await alerts.getAlertByName("CW Subscribe");
+    alertUserResult = await alerts.getAlertByName("CW Daily");
+
+    userResult = await alerts.getAlertUser(alertUserResult[0].id, req.terminal_app.claims.uid);
+    
+    res.header('Content-Type', 'application/json');
+    client.messages
+      .create({
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: req.body.phone,
+        body: alertResult[0].message
+      })
+      .then(() => {
+        res.send(JSON.stringify({ success: true, userResult }));
+      })
+      .catch(err => {
+        console.log(err);
+        res.send(JSON.stringify({ success: false, userResult }));
+      });
+    } catch (error) {
+      res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
+    }
 });
 
 //Cathie Wood unsubscribe
 app.use("/cw_unsubscribe", checkAuth);
 app.post("/cw_unsubscribe", async (req, res) => {
-  await alerts.unsubscribeCWAlert(
-    req.body.phone
-  );
-  
-  const alertResult = await alerts.getAlertByName("CW Unsubscribe");
-  res.header('Content-Type', 'application/json');
-  client.messages
-    .create({
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: req.body.phone,
-      body: alertResult[0].message
-    })
-    .then(() => {
-      res.send(JSON.stringify({ success: true }));
-    })
-    .catch(err => {
-      console.log(err);
-      res.send(JSON.stringify({ success: false }));
-    });
+  let alertResult, userResult, alertUserResult;
+  try {
+    await alerts.unsubscribeCWAlert(
+      req.body.phone
+    );
+    
+    alertResult = await alerts.getAlertByName("CW Unsubscribe");
+    alertUserResult = await alerts.getAlertByName("CW Daily");
+
+    userResult = await alerts.getAlertUser(alertUserResult[0].id, req.terminal_app.claims.uid);
+    res.header('Content-Type', 'application/json');
+    client.messages
+      .create({
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: req.body.phone,
+        body: alertResult[0].message
+      })
+      .then(() => {
+        res.send(JSON.stringify({ success: true, userResult }));
+      })
+      .catch(err => {
+        console.log(err);
+        res.send(JSON.stringify({ success: false, userResult }));
+      });
+  } catch (error) {
+      res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
+    }
 });
 
 
@@ -2217,12 +2252,12 @@ app.post('/alert/response', async function (req, res) {
 });
 
 // Update Cathie Wood Daily SMS Notification's Message every 11:30AM
-var updateDailyAlertMessage = new cronJob( '30 11 * * *', async function() {
+var updateDailyAlertMessage = new cronJob( '30 11 * * 1-5', async function() {
     let updatedDailyAlert = await alerts.updateCWDailyAlertMessage();
 },  null, true);
 
 // Sends Daily SMS Notification every 12PM
-var dailySMS = new cronJob( '0 12 * * *', async function() {
+var dailySMS = new cronJob( '0 12 * * 1-5', async function() {
     let dailyAlerts = await alerts.getDailyAlerts();
     var alertUsers;
 
@@ -2252,7 +2287,7 @@ var dailySMS = new cronJob( '0 12 * * *', async function() {
 
 
 // get ARK Funds daily trades every 11AM
-var dailyTrades = new cronJob( '0 11 * * *', async function() {
+var dailyTrades = new cronJob( '0 11 * * 1-5', async function() {
     let dailyArkTrades = await trades.getTradesFromARK();
 },  null, true);
 
@@ -2267,22 +2302,22 @@ app.get("/trades/top_sell", async (req, res) => {
 });
 
 app.get("/trades/portfolio_additions", async (req, res) => {
-  const result = await trades.getPortfolioAdditions();
+  const result = await trades.getPortfolioAdditions(req.query.top5);
   res.send(result);
 });
 
 app.get("/trades/portfolio_deletions", async (req, res) => {
-  const result = await trades.getPortfolioDeletions();
+  const result = await trades.getPortfolioDeletions(req.query.top5);
   res.send(result);
 });
 
 app.get("/trades/open_portfolio", async (req, res) => {
-  const result = await trades.getOpenPortfolio();
+  const result = await trades.getOpenPortfolio(req.query.top5);
   res.send(result);
 });
 
 app.get("/trades/archived_portfolio", async (req, res) => {
-  const result = await trades.getArchivedPortfolio();
+  const result = await trades.getArchivedPortfolio(req.query.top5);
   res.send(result);
 });
 
