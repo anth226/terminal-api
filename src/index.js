@@ -2226,17 +2226,13 @@ app.post('/alert/response', async function (req, res) {
   var resp = new MessagingResponse();
   var responseMsg = req.body.Body.trim().toLowerCase();
   var fromNum = req.body.From;
-  var alertID;
-  if (responseMsg.includes('unsubscribe')) {
-    alertID = responseMsg.substring(16);
-    alerts.unsubscribeAlert(fromNum, alertID);
-      const alert = await alerts.getAlert(alertID);
-    if(alert[0].name === "CW Daily"){
-      const alertUnsub = await alerts.getAlertByName("CW Unsubscribe");
-      resp.message(alertUnsub[0].message); 
-    } else {
-      resp.message('You are now unscubscribed!'); 
-    }
+  if (responseMsg.includes('unsub')) {
+
+    alerts.unsubscribeCWAlert(fromNum);
+
+    const alertUnsub = await alerts.getAlertByName("CW Unsubscribe");
+    resp.message(alertUnsub[0].message); 
+
   } 
   /*else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
     alerts.subscribeAlert(fromNum, responseMsg.substring(14));
