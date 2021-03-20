@@ -2107,9 +2107,8 @@ app.get("/alerts/:id/subscribe", async (req, res) => {
 app.use("/alerts/:id/unsubscribe", checkAuth);
 app.get("/alerts/:id/unsubscribe", async (req, res) => {
   const result = await alerts.unsubscribeAlert(
-    req.query.phone,
-    req.params.id,
-    req.query.uid
+    req.body.phone,
+    req.params.id
   );
   res.send(result);
 });
@@ -2175,8 +2174,7 @@ app.post("/cw_unsubscribe", async (req, res) => {
   let alertResult, userResult, alertUserResult;
   try {
     await alerts.unsubscribeCWAlert(
-      req.body.phone, 
-      req.terminal_app.claims.uid
+      req.body.phone
     );
     
     alertResult = await alerts.getAlertByName("CW Unsubscribe");

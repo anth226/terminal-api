@@ -122,11 +122,11 @@ export const subscribeAlert = async (phoneNumber, alertID) => {
   return result;
 };
 
-export const unsubscribeAlert = async (phoneNumber, alertID, userID) => {
+export const unsubscribeAlert = async (phoneNumber, alertID) => {
   let query = {
     text:
-      "DELETE FROM alert_users WHERE user_phone_number=($1) AND alert_id=($2) AND user_id=($3)",
-    values: [phoneNumber, alertID, userID],
+      "UPDATE alert_users SET active = false WHERE user_phone_number=($1) AND alert_id=($2)",
+    values: [phoneNumber, alertID],
   };
   let result = await db(query);
 
@@ -177,19 +177,50 @@ export async function updateCWDailyAlertMessage() {
 }
 
 export const addCWAlertUser = async (userID, phoneNumber) => {
+  let query;
   const alertResult = await db(`
         SELECT id, name, message
         FROM alerts
         WHERE name='CW Daily'
         `);
 
-  let query = {
-    text:
-      "INSERT INTO alert_users (user_id, alert_ID, user_phone_number, created_at, active) VALUES ($1, $2, $3, now(), true)",
-    values: [userID, alertResult[0].id, phoneNumber],
-  };
+  const checkUserResult = await db(`
+        SELECT *
+        FROM alert_users
+        WHERE alert_id=${alertResult[0].id} AND user_id='${userID}' AND user_phone_number='${phoneNumber}'
+        `);
 
-  return await db(query);
+  if(checkUserResult.length > 0) {
+    if(!checkUserResult[0].active) {
+      query = {
+        text:
+          "UPDATE alert_users SET active = true WHERE user_phone_number=($1) AND alert_id=($2)",
+        values: [phoneNumber, alertResult[0].id],
+      };
+
+      let result = await db(query);
+
+      await db(`
+        UPDATE alerts
+        SET subscriber_count = subscriber_count - 1
+        WHERE id = '${alertResult[0].id}'
+      `);
+
+      return result;
+    }
+
+  } else {
+    query = {
+      text:
+        "INSERT INTO alert_users (user_id, alert_ID, user_phone_number, created_at, active) VALUES ($1, $2, $3, now(), true)",
+      values: [userID, alertResult[0].id, phoneNumber],
+    };
+
+    return await db(query);
+  }
+
+        
+  
 };
 
 export const subscribeCWAlert = async (phoneNumber) => {
@@ -216,7 +247,7 @@ export const subscribeCWAlert = async (phoneNumber) => {
   return result;
 };
 
-export const unsubscribeCWAlert = async (phoneNumber, userID) => {
+export const unsubscribeCWAlert = async (phoneNumber) => {
   const alertResult = await db(`
         SELECT id, name, message
         FROM alerts
@@ -225,8 +256,8 @@ export const unsubscribeCWAlert = async (phoneNumber, userID) => {
 
   let query = {
     text:
-      "DELETE FROM alert_users WHERE user_phone_number=($1) AND alert_id=($2) AND user_id=($3)",
-    values: [phoneNumber, alertResult[0].id, userID],
+      "UPDATE alert_users SET active = false WHERE user_phone_number=($1) AND alert_id=($2)",
+    values: [phoneNumber, alertResult[0].id],
   };
 
   let result = await db(query);
