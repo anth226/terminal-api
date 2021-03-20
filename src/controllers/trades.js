@@ -145,11 +145,14 @@ export async function getTrades(req) {
 				response.push(toJson);
 			}
 		}
+		response.sort(function(a, b){
+			return b.market_value_current - a.market_value_current;
+		});
 	}
   	return response;
 }
 
-export async function getPortfolioAdditions() {
+export async function getPortfolioAdditions(top5Only) {
 	let response = [],
 		prices,
 		toJson;
@@ -181,11 +184,19 @@ export async function getPortfolioAdditions() {
 				response.push(toJson);
 			}
 		}
+		response.sort(function(a, b){
+			return b.market_value_current - a.market_value_current;
+		});
 	}
+
+	if(top5Only) {
+		return response.slice(0, 5);
+	}
+
   	return response;
 }
 
-export async function getPortfolioDeletions() {
+export async function getPortfolioDeletions(top5Only) {
 	let response = [],
 		prices,
 		toJson;
@@ -218,13 +229,21 @@ export async function getPortfolioDeletions() {
 				response.push(toJson);
 			}
 		}
+
+		response.sort(function(a, b){
+			return b.market_value_current - a.market_value_current;
+		});
+	}
+
+	if(top5Only) {
+		return response.slice(0, 5);
 	}
 
   	return response;
 }
 
 
-export async function getOpenPortfolio() {
+export async function getOpenPortfolio(top5Only) {
 	let response = [],
 		prices,
 		toJson;
@@ -255,16 +274,24 @@ export async function getOpenPortfolio() {
 				response.push(toJson);
 			}
 		}
+		response.sort(function(a, b){
+			return b.market_value_current - a.market_value_current;
+		});
 	}
+
+	if(top5Only) {
+		return response.slice(0, 5);
+	}
+
   	return response;
 }
 
-export async function getArchivedPortfolio() {
+export async function getArchivedPortfolio(top5Only) {
 	let response = [],
 		prices,
 		toJson;
   	const result = await db(`
-		SELECT * FROM ark_portfolio WHERE status = 'closed' 
+		SELECT * FROM ark_portfolio WHERE status = 'closed' AND closed_date > NOW() - INTERVAL '30 days'
 		ORDER BY SHARES DESC
 		`);
 	if(result.length > 0) {
@@ -291,7 +318,15 @@ export async function getArchivedPortfolio() {
 				response.push(toJson);
 			}
 		}
+		response.sort(function(a, b){
+			return b.market_value_current - a.market_value_current;
+		});
 	}
+
+	if(top5Only) {
+		return response.slice(0, 5);
+	}
+
   	return response;
 }
 

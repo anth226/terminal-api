@@ -2302,22 +2302,22 @@ app.get("/trades/top_sell", async (req, res) => {
 });
 
 app.get("/trades/portfolio_additions", async (req, res) => {
-  const result = await trades.getPortfolioAdditions();
+  const result = await trades.getPortfolioAdditions(req.query.top5);
   res.send(result);
 });
 
 app.get("/trades/portfolio_deletions", async (req, res) => {
-  const result = await trades.getPortfolioDeletions();
+  const result = await trades.getPortfolioDeletions(req.query.top5);
   res.send(result);
 });
 
 app.get("/trades/open_portfolio", async (req, res) => {
-  const result = await trades.getOpenPortfolio();
+  const result = await trades.getOpenPortfolio(req.query.top5);
   res.send(result);
 });
 
 app.get("/trades/archived_portfolio", async (req, res) => {
-  const result = await trades.getArchivedPortfolio();
+  const result = await trades.getArchivedPortfolio(req.query.top5);
   res.send(result);
 });
 
