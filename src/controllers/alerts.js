@@ -163,7 +163,7 @@ export async function updateCWDailyAlertMessage() {
   for(let x = 0; x < sellResult.length; x++) {
     message += "\n" + sellResult[x].ticker + " " + sellResult[x].shares + " " + sellResult[x].etf_percent + " ";
   }
-  message += "\n\nIf you no longer wish to receive these messages, please reply \"unsub\" to unsubscribe' WHERE name='CW Daily'";
+  message += "\n\nIf you no longer wish to receive these messages, please reply \"END ALERT\" to unsubscribe' WHERE name='CW Daily'";
 
   let query = {
     text:
