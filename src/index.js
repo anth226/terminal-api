@@ -2226,17 +2226,13 @@ app.post('/alert/response', async function (req, res) {
   var resp = new MessagingResponse();
   var responseMsg = req.body.Body.trim().toLowerCase();
   var fromNum = req.body.From;
-  var alertID;
-  if (responseMsg.includes('unsubscribe')) {
-    alertID = responseMsg.substring(16);
-    alerts.unsubscribeAlert(fromNum, alertID);
-      const alert = await alerts.getAlert(alertID);
-    if(alert[0].name === "CW Daily"){
-      const alertUnsub = await alerts.getAlertByName("CW Unsubscribe");
-      resp.message(alertUnsub[0].message); 
-    } else {
-      resp.message('You are now unscubscribed!'); 
-    }
+  if (responseMsg.includes('end alert')) {
+
+    alerts.unsubscribeCWAlert(fromNum);
+
+    const alertUnsub = await alerts.getAlertByName("CW Unsubscribe");
+    resp.message(alertUnsub[0].message); 
+
   } 
   /*else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
     alerts.subscribeAlert(fromNum, responseMsg.substring(14));
@@ -2251,13 +2247,14 @@ app.post('/alert/response', async function (req, res) {
   res.end(resp.toString());
 });
 
-// Update Cathie Wood Daily SMS Notification's Message every 11:30AM
-var updateDailyAlertMessage = new cronJob( '30 11 * * 1-5', async function() {
-    let updatedDailyAlert = await alerts.updateCWDailyAlertMessage();
-},  null, true);
 
-// Sends Daily SMS Notification every 12PM
-var dailySMS = new cronJob( '0 12 * * 1-5', async function() {
+// get ARK Funds daily trades every 7PM and Send SMS right after
+var dailyARKFundTrades = new cronJob( '0 19 * * 1-5', async function() {
+  try {
+    let dailyArkTrades = await trades.getTradesFromARK();
+
+    let updatedDailyAlert = await alerts.updateCWDailyAlertMessage();
+
     let dailyAlerts = await alerts.getDailyAlerts();
     var alertUsers;
 
@@ -2283,13 +2280,10 @@ var dailySMS = new cronJob( '0 12 * * 1-5', async function() {
         }
       }
     }
-},  null, true);
-
-
-// get ARK Funds daily trades every 11AM
-var dailyTrades = new cronJob( '0 11 * * 1-5', async function() {
-    let dailyArkTrades = await trades.getTradesFromARK();
-},  null, true);
+  } catch (error) {
+    console.log(error);
+  }  
+},  null, true, "America/Los_Angeles");
 
 app.get("/trades/top_buy", async (req, res) => {
   const result = await trades.getTop3Buy();
