@@ -2226,7 +2226,7 @@ app.post('/alert/response', async function (req, res) {
   var resp = new MessagingResponse();
   var responseMsg = req.body.Body.trim().toLowerCase();
   var fromNum = req.body.From;
-  if (responseMsg.includes('unsub')) {
+  if (responseMsg.includes('end alert')) {
 
     alerts.unsubscribeCWAlert(fromNum);
 
@@ -2283,7 +2283,7 @@ var dailyARKFundTrades = new cronJob( '0 19 * * 1-5', async function() {
   } catch (error) {
     console.log(error);
   }  
-},  null, true, America/Los_Angeles);
+},  null, true, "America/Los_Angeles");
 
 app.get("/trades/top_buy", async (req, res) => {
   const result = await trades.getTop3Buy();
