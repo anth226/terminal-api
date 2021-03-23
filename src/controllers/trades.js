@@ -140,7 +140,7 @@ export async function getTrades(req) {
 					open_price:  prices.open_price, 
 					market_value_current: prices.last_price * result[i].shares,
 					market_value_open:  prices.open_price * result[i].shares,
-					total_gain :  ((prices.last_price / prices.open_price) - 1) * 100
+					daily_performance:  prices.performance 
 				};
 				response.push(toJson);
 			}
@@ -179,7 +179,7 @@ export async function getPortfolioAdditions(top5Only) {
 					open_price:  prices.open_price, 
 					market_value_current: prices.last_price * result[i].shares,
 					market_value_open:  prices.open_price * result[i].shares,
-					total_gain:  ((prices.last_price / prices.open_price) - 1) * 100
+					daily_performance:  prices.performance 
 				};
 				response.push(toJson);
 			}
@@ -224,7 +224,7 @@ export async function getPortfolioDeletions(top5Only) {
 					open_price:  prices.open_price, 
 					market_value_current: prices.last_price * result[i].shares,
 					market_value_open:  prices.open_price * result[i].shares,
-					total_gain:  ((prices.last_price / prices.open_price) - 1) * 100
+					daily_performance:  prices.performance 
 				};
 				response.push(toJson);
 			}
@@ -269,7 +269,7 @@ export async function getOpenPortfolio(top5Only) {
 					open_price:  prices.open_price, 
 					market_value_current: prices.last_price * result[i].shares,
 					market_value_open:  prices.open_price * result[i].shares,
-					total_gain:  ((prices.last_price / prices.open_price) - 1) * 100
+					daily_performance:  prices.performance 
 				};
 				response.push(toJson);
 			}
@@ -313,13 +313,13 @@ export async function getArchivedPortfolio(top5Only) {
 					open_price:  prices.open_price, 
 					market_value_current: prices.last_price * result[i].shares,
 					market_value_open:  prices.open_price * result[i].shares,
-					total_gain:  ((prices.last_price / prices.open_price) - 1) * 100
+					daily_performance:  prices.performance 
 				};
 				response.push(toJson);
 			}
 		}
 		response.sort(function(a, b){
-			return b.total_gain - a.total_gain;
+			return b.market_value_current - a.market_value_current;
 		});
 	}
 
