@@ -78,7 +78,7 @@ import Shopify from "shopify-api-node";
 
 const shopify = new Shopify({
   shopName: "portfolio-insider",
-  apiKey: "26774218d929d0a2e7ad7d46a4cfde09", 
+  apiKey: "26774218d929d0a2e7ad7d46a4cfde09",
   password: "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",
 });
 
@@ -1653,7 +1653,7 @@ app.get("/sec-last-price/:symbol", async (req, res) => {
   res.send(lastPrice);
 });
 
-//app.use("/sec-price-change/:symbol", checkAuth);
+app.use("/sec-price-change/:symbol", checkAuth);
 app.get("/sec-price-change/:symbol", async (req, res) => {
   const lastPrice = await quodd.getLastPriceChange(req.params.symbol);
   res.send(lastPrice);
