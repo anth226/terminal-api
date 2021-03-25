@@ -298,7 +298,7 @@ export async function getArchivedPortfolio(top5Only) {
 			}
 		}
 		response.sort(function(a, b){
-			return b.total_gain - a.total_gain;
+			return b.market_value_current - a.market_value_current;
 		});
 	}
 
