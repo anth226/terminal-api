@@ -78,7 +78,7 @@ import Shopify from "shopify-api-node";
 
 const shopify = new Shopify({
   shopName: "portfolio-insider",
-  apiKey: "26774218d929d0a2e7ad7d46a4cfde09",
+  apiKey: "26774218d929d0a2e7ad7d46a4cfde09", 
   password: "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",
 });
 
@@ -87,8 +87,6 @@ const client = require('twilio')(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
-
-var cronJob = require('cron').CronJob;
 
 var crypto = require('crypto');
 var bugsnag = require("@bugsnag/js");
@@ -1655,7 +1653,7 @@ app.get("/sec-last-price/:symbol", async (req, res) => {
   res.send(lastPrice);
 });
 
-app.use("/sec-price-change/:symbol", checkAuth);
+//app.use("/sec-price-change/:symbol", checkAuth);
 app.get("/sec-price-change/:symbol", async (req, res) => {
   const lastPrice = await quodd.getLastPriceChange(req.params.symbol);
   res.send(lastPrice);
@@ -2043,82 +2041,6 @@ app.get("/titans", async (req, res) => {
   res.send(result);
 });
 
-// Alerts
-
-// app.use("/alerts", checkAuth);
-app.post("/alerts", async (req, res) => {
-  const result = await alerts.createAlert(
-    req.body.name,
-    req.body.message,
-    req.body.isDaily
-  );
-  res.send(result);
-});
-
-//app.use("/alerts/:id", checkAuth);
-app.get("/alerts", async (req, res) => {
-  const result = await alerts.getAlerts(req);
-  res.send(result);
-});
-
-//app.use("/alerts/:id", checkAuth);
-app.get("/alerts/:id", async (req, res) => {
-  const result = await alerts.getAlert(req.params.id);
-  res.send(result);
-});
-
-//app.use("/alerts/:id/users", checkAuth);
-app.get("/alerts/:id/users", async (req, res) => {
-  const result = await alerts.getAlertUsers(req.params.id);
-  res.send(result);
-});
-
-//app.use("/alerts/:id/activate", checkAuth);
-app.get("/alerts/:id/activate", async (req, res) => {
-  const result = await alerts.activateAlert(req.params.id);
-  res.send(result);
-});
-
-//app.use("/alerts/:id/deactivate", checkAuth);
-app.get("/alerts/:id/deactivate", async (req, res) => {
-  const result = await alerts.deactivateAlert(req.params.id);
-  res.send(result);
-});
-
- app.use("/alerts/:id/addUser", checkAuth);
-app.get("/alerts/:id/addUser", async (req, res) => {
-  const result = await alerts.addAlertUser(
-    req.terminal_app.claims.uid,
-    req.params.id,
-    req.body.phone
-  );
-  res.send(result);
-});
-
-app.use("/alerts/:id/subscribe", checkAuth);
-app.get("/alerts/:id/subscribe", async (req, res) => {
-  const result = await alerts.subscribeAlert(
-    req.body.phone,
-    req.params.id
-  );
-  res.send(result);
-});
-
-app.use("/alerts/:id/unsubscribe", checkAuth);
-app.get("/alerts/:id/unsubscribe", async (req, res) => {
-  const result = await alerts.unsubscribeAlert(
-    req.body.phone,
-    req.params.id
-  );
-  res.send(result);
-});
-
-//app.use("/daily_alerts", checkAuth);
-app.get("/daily_alerts", async (req, res) => {
-  const result = await alerts.getDailyAlerts();
-  res.send(result);
-});
-
 //app.use("/cw_getUser", checkAuth);
 app.get("/cw_getUser", async (req, res) => {
   let userResult=[], alertUserResult=[];
@@ -2234,10 +2156,6 @@ app.post('/alert/response', async function (req, res) {
     resp.message(alertUnsub[0].message); 
 
   } 
-  /*else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
-    alerts.subscribeAlert(fromNum, responseMsg.substring(14));
-    resp.message('Thanks for subscribing!');
-  } */
   else {
     resp.message('Invalid keyword!');
   }
@@ -2246,44 +2164,6 @@ app.post('/alert/response', async function (req, res) {
   });
   res.end(resp.toString());
 });
-
-
-// get ARK Funds daily trades every 7PM and Send SMS right after
-var dailyARKFundTrades = new cronJob( '0 19 * * 1-5', async function() {
-  try {
-    let dailyArkTrades = await trades.getTradesFromARK();
-
-    let updatedDailyAlert = await alerts.updateCWDailyAlertMessage();
-
-    let dailyAlerts = await alerts.getDailyAlerts();
-    var alertUsers;
-
-    if(dailyAlerts.length > 0) {
-      for( var i = 0; i < dailyAlerts.length; i++ ) {
-        alertUsers = await alerts.getAlertActiveUsers(dailyAlerts[i].id);
-        if(alertUsers.length > 0) {
-          for( var x = 0; x < alertUsers.length; x++ ) {
-            client.messages
-            .create({
-              from: process.env.TWILIO_PHONE_NUMBER,
-              to: alertUsers[x].user_phone_number,
-              body: dailyAlerts[i].message
-            })
-            .then(() => {
-              console.log(JSON.stringify({ success: true }));
-            })
-            .catch(err => {
-              console.log(err);
-              console.log(JSON.stringify({ success: false }));
-            });
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.log(error);
-  }  
-},  null, true, "America/Los_Angeles");
 
 app.get("/trades/top_buy", async (req, res) => {
   const result = await trades.getTop3Buy();
