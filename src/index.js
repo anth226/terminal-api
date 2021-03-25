@@ -88,8 +88,6 @@ const client = require('twilio')(
   process.env.TWILIO_AUTH_TOKEN
 );
 
-var cronJob = require('cron').CronJob;
-
 var crypto = require('crypto');
 var bugsnag = require("@bugsnag/js");
 var bugsnagExpress = require("@bugsnag/plugin-express");
@@ -2234,10 +2232,6 @@ app.post('/alert/response', async function (req, res) {
     resp.message(alertUnsub[0].message); 
 
   } 
-  /*else if(responseMsg.includes('subscribe') && !responseMsg.includes('unsubscribe')) {
-    alerts.subscribeAlert(fromNum, responseMsg.substring(14));
-    resp.message('Thanks for subscribing!');
-  } */
   else {
     resp.message('Invalid keyword!');
   }
@@ -2246,44 +2240,6 @@ app.post('/alert/response', async function (req, res) {
   });
   res.end(resp.toString());
 });
-
-
-// get ARK Funds daily trades every 7PM and Send SMS right after
-var dailyARKFundTrades = new cronJob( '0 19 * * 1-5', async function() {
-  try {
-    let dailyArkTrades = await trades.getTradesFromARK();
-
-    let updatedDailyAlert = await alerts.updateCWDailyAlertMessage();
-
-    let dailyAlerts = await alerts.getDailyAlerts();
-    var alertUsers;
-
-    if(dailyAlerts.length > 0) {
-      for( var i = 0; i < dailyAlerts.length; i++ ) {
-        alertUsers = await alerts.getAlertActiveUsers(dailyAlerts[i].id);
-        if(alertUsers.length > 0) {
-          for( var x = 0; x < alertUsers.length; x++ ) {
-            client.messages
-            .create({
-              from: process.env.TWILIO_PHONE_NUMBER,
-              to: alertUsers[x].user_phone_number,
-              body: dailyAlerts[i].message
-            })
-            .then(() => {
-              console.log(JSON.stringify({ success: true }));
-            })
-            .catch(err => {
-              console.log(err);
-              console.log(JSON.stringify({ success: false }));
-            });
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.log(error);
-  }  
-},  null, true, "America/Los_Angeles");
 
 app.get("/trades/top_buy", async (req, res) => {
   const result = await trades.getTop3Buy();
