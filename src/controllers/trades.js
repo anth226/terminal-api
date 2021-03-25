@@ -256,7 +256,10 @@ export async function getOpenPortfolio(top5Only) {
 export async function getArchivedPortfolio(top5Only) {
 	let response = [],
 		prices,
-		toJson;
+		toJson,
+		openMarketValueResult,
+		closedMarketValueResult;
+		
   	const result = await db(`
 		SELECT * FROM ark_portfolio WHERE status = 'closed' AND
 		created_at = (SELECT created_at FROM ark_portfolio ORDER BY created_at DESC LIMIT 1)
@@ -264,6 +267,16 @@ export async function getArchivedPortfolio(top5Only) {
 		`);
 	if(result.length > 0) {
 		for(let i = 0; i < result.length; i++) {
+			openMarketValueResult = await db(`
+				SELECT * FROM daily_trades WHERE created_at > NOW() - INTERVAL '30 days' AND ticker = '${tickers30Days[z].ticker}' AND direction = 'Buy'
+				ORDER BY created_at LIMIT 1
+				`);
+
+			closedMarketValueResult = await db(`
+				SELECT * FROM daily_trades WHERE created_at > NOW() - INTERVAL '30 days' AND ticker = '${tickers30Days[z].ticker}' AND direction = 'Sell'
+				ORDER BY created_at DESC LIMIT 1
+				`);
+
 			prices = await quodd.getLastPriceChange(result[i].ticker);
 
 			if(prices.last_price > 0 && prices.open_price > 0) {
@@ -275,11 +288,11 @@ export async function getArchivedPortfolio(top5Only) {
 					shares: result[i].shares,
 					etf_percent: result[i].etf_percent,
 					status: result[i].status,
-					current_price: prices.last_price,
-					open_price:  prices.open_price, 
-					market_value_current: prices.last_price * result[i].shares,
+					oo_open_price: openMarketValueResult[0].open_price,
+					nc_open_price:  closedMarketValueResult[0].open_price, 
 					open_market_value:  result[i].open_market_value,
-					total_gain:  ((prices.last_price / prices.open_price) - 1) * 100
+					close_market_value:  result[i].close_market_value,
+					total_gain:  result[i].total_gain
 				};
 				response.push(toJson);
 			}
