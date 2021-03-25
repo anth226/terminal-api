@@ -2041,6 +2041,82 @@ app.get("/titans", async (req, res) => {
   res.send(result);
 });
 
+// Alerts
+
+// app.use("/alerts", checkAuth);
+app.post("/alerts", async (req, res) => {
+  const result = await alerts.createAlert(
+    req.body.name,
+    req.body.message,
+    req.body.isDaily
+  );
+  res.send(result);
+});
+
+//app.use("/alerts/:id", checkAuth);
+app.get("/alerts", async (req, res) => {
+  const result = await alerts.getAlerts(req);
+  res.send(result);
+});
+
+//app.use("/alerts/:id", checkAuth);
+app.get("/alerts/:id", async (req, res) => {
+  const result = await alerts.getAlert(req.params.id);
+  res.send(result);
+});
+
+//app.use("/alerts/:id/users", checkAuth);
+app.get("/alerts/:id/users", async (req, res) => {
+  const result = await alerts.getAlertUsers(req.params.id);
+  res.send(result);
+});
+
+//app.use("/alerts/:id/activate", checkAuth);
+app.get("/alerts/:id/activate", async (req, res) => {
+  const result = await alerts.activateAlert(req.params.id);
+  res.send(result);
+});
+
+//app.use("/alerts/:id/deactivate", checkAuth);
+app.get("/alerts/:id/deactivate", async (req, res) => {
+  const result = await alerts.deactivateAlert(req.params.id);
+  res.send(result);
+});
+
+ app.use("/alerts/:id/addUser", checkAuth);
+app.get("/alerts/:id/addUser", async (req, res) => {
+  const result = await alerts.addAlertUser(
+    req.terminal_app.claims.uid,
+    req.params.id,
+    req.body.phone
+  );
+  res.send(result);
+});
+
+app.use("/alerts/:id/subscribe", checkAuth);
+app.get("/alerts/:id/subscribe", async (req, res) => {
+  const result = await alerts.subscribeAlert(
+    req.body.phone,
+    req.params.id
+  );
+  res.send(result);
+});
+
+app.use("/alerts/:id/unsubscribe", checkAuth);
+app.get("/alerts/:id/unsubscribe", async (req, res) => {
+  const result = await alerts.unsubscribeAlert(
+    req.body.phone,
+    req.params.id
+  );
+  res.send(result);
+});
+
+//app.use("/daily_alerts", checkAuth);
+app.get("/daily_alerts", async (req, res) => {
+  const result = await alerts.getDailyAlerts();
+  res.send(result);
+});
+
 //app.use("/cw_getUser", checkAuth);
 app.get("/cw_getUser", async (req, res) => {
   let userResult=[], alertUserResult=[];
