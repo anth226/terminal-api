@@ -2308,6 +2308,9 @@ app.get("/hooks/zip_billionaire_performances", async (req, res) => {
   res.send(result);
 });
 
+app.use("/zacks/securities", checkAuth);
+app.get("/zacks/securities", zacks.getZacksRank);
+
 // Zacks EPS Surprises
 app.use("/zacks/eps_surprises", checkAuth);
 app.get("/zacks/eps_surprises", async (req, res) => {
