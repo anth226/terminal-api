@@ -137,7 +137,7 @@ export async function getOptions(req) {
       last_time = parseInt(query.last_time);
     }
     if (query.sort_column && query.sort_column.length > 0) {
-      sort_column = query.sort_column;
+      sort_column = query.sort_column.toLowerCase();
     }
     if (sort_column) {
       order_direction = query.order_direction || 'DESC'
@@ -156,6 +156,11 @@ export async function getOptions(req) {
     offset = (page - 1) * limit;
   }
 
+  let orderQuery = `${(sort_column && order_direction) ? `ORDER BY ${sort_column} ${order_direction}` : 'ORDER BY time DESC'}`;
+  if (sort_column && sort_column != "time") {
+    orderQuery = `ORDER BY ${sort_column} ${order_direction}, time DESC`
+  }
+
   const result = await optionsDB(`
         SELECT id, time, ticker, exp, strike, cp, spot, contract_quantity, price_per_contract, type, prem
         FROM options
@@ -163,7 +168,7 @@ export async function getOptions(req) {
         ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
         ${last_time ? `AND time < ${last_time}` : ''}
         ${exp ? `AND exp = '${exp}'` : ''}
-        ${(sort_column && order_direction) ? `ORDER BY ${sort_column} ${order_direction}` : 'ORDER BY time DESC'}
+        ${orderQuery}
         ${limit ? `LIMIT ${limit} OFFSET ${offset}` : ''}
         `);
   return result;
