@@ -1,35 +1,41 @@
 import optionsDB from './../optionsDB';
-import {CACHED_PRICE_15MIN} from "../redis";
+import { CACHED_PRICE_15MIN } from "../redis";
 import redis from "redis";
 import asyncRedis from "async-redis";
 
 export async function getSnapshot(req) {
   let ticker,
-      putSum,
-      putFlow,
-      putPremTotal,
-      callSum,
-      callFlow,
-      callPremTotal,
-      totalSum,
-      putToCall,
-      flowSentiment;
+    putSum,
+    putFlow,
+    putPremTotal,
+    callSum,
+    callFlow,
+    callPremTotal,
+    totalSum,
+    putToCall,
+    flowSentiment,
+    exp;
 
 
   let { query } = req;
   if (query.ticker && query.ticker.length > 0) {
     ticker = query.ticker.toLowerCase();
   }
+  if (query.expiry) {
+    exp = query.expiry;
+  }
 
   let snapshotQuery = `
       (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'C' AS cp FROM options WHERE cp = 'C'
       AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options)
       ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
+      ${exp ? `AND exp = '${exp}'` : ''}
       )
       UNION
       (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'P' AS cp FROM options WHERE cp = 'P'
       AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options)
       ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
+      ${exp ? `AND exp = '${exp}'` : ''}
       )
       ORDER BY cp ASC
       `
@@ -71,8 +77,8 @@ export async function getSnapshot(req) {
   // }
 
   if (totalSum) {
-  let putSumToTotalSum = Number(putSum || 0).toFixed(2) / totalSum;
-  flowSentiment = 1 - (putSumToTotalSum || 0);
+    let putSumToTotalSum = Number(putSum || 0).toFixed(2) / totalSum;
+    flowSentiment = 1 - (putSumToTotalSum || 0);
   }
 
 
@@ -109,11 +115,12 @@ export async function getSidebar() {
 
 export async function getOptions(req) {
   let limit,
-      page = 1,
-      ticker,
-      last_time,
-      order_direction,
-      sort_column;
+    page = 1,
+    ticker,
+    last_time,
+    order_direction,
+    exp,
+    sort_column;
 
   if (req && req.query) {
     let query = req.query
@@ -135,6 +142,9 @@ export async function getOptions(req) {
     if (sort_column) {
       order_direction = query.order_direction || 'DESC'
     }
+    if (query.expiry) {
+      exp = query.expiry;
+    }
   }
 
   if (page < 1) {
@@ -152,6 +162,7 @@ export async function getOptions(req) {
         WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
         ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
         ${last_time ? `AND time < ${last_time}` : ''}
+        ${exp ? `AND exp = '${exp}'` : ''}
         ${(sort_column && order_direction) ? `ORDER BY ${sort_column} ${order_direction}` : 'ORDER BY time DESC'}
         ${limit ? `LIMIT ${limit} OFFSET ${offset}` : ''}
         `);
@@ -224,5 +235,5 @@ export async function fillSpotPrice() {
     }
   }
 
-  return {success: true}
+  return { success: true }
 }
