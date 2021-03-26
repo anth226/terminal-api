@@ -8,8 +8,10 @@ export async function searchCompanies(query) {
       text: `
         SELECT ticker, name, type 
         FROM securities
-        WHERE ticker ILIKE '%' || $1 || '%'
-        OR name ILIKE '%' || $1 || '%'
+        WHERE delisted = false AND (
+          ticker ILIKE '%' || $1 || '%'
+          OR name ILIKE '%' || $1 || '%'
+        )  
       `,
       values: [query],
     }),
