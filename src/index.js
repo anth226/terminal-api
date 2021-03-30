@@ -2514,6 +2514,11 @@ app.get("/darkpool/options", async (req, res) => {
   res.send(result);
 });
 
+app.get("/darkpool/expDates", async (req, res) => {
+  const result = await darkpool.getExpDates(req);
+  res.send(result);
+});
+
 app.get("/darkpool/option/:id", async (req, res) => {
   const result = await darkpool.getOption(req.params.id);
   res.send(result);
