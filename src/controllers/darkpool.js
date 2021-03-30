@@ -174,6 +174,15 @@ export async function getOptions(req) {
   return result;
 };
 
+export async function getExpDates() {
+  const result = await optionsDB(`
+        SELECT distinct exp
+        FROM options
+        WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
+        ORDER BY exp ASC`);
+  return result;
+};
+
 export async function getOption(id) {
   const result = await optionsDB(`
         SELECT id, time, ticker, exp, strike, cp, spot, contract_quantity, price_per_contract, type, prem
