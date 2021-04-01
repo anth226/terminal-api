@@ -137,7 +137,8 @@ export async function getOpenPortfolio(top5Only) {
 		prices,
 		toJson;
   	const result = await db(`
-		SELECT * FROM ark_portfolio WHERE status = 'open'
+		SELECT * FROM ark_portfolio WHERE status = 'open' AND
+		created_at = (SELECT created_at FROM ark_portfolio ORDER BY created_at DESC LIMIT 1)
 		ORDER BY SHARES DESC
 		`);
 	if(result.length > 0) {
@@ -182,6 +183,7 @@ export async function getArchivedPortfolio(top5Only) {
 		
   	const result = await db(`
 		SELECT * FROM ark_portfolio WHERE status = 'closed' AND
+		created_at = (SELECT created_at FROM ark_portfolio ORDER BY created_at DESC LIMIT 1)
 		ORDER BY SHARES DESC
 		`);
 	if(result.length > 0) {

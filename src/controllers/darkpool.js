@@ -2,6 +2,7 @@ import optionsDB from './../optionsDB';
 import { CACHED_PRICE_15MIN } from "../redis";
 import redis from "redis";
 import asyncRedis from "async-redis";
+import moment from "moment";
 
 export async function getSnapshot(req) {
   let ticker,
@@ -14,31 +15,31 @@ export async function getSnapshot(req) {
     totalSum,
     putToCall,
     flowSentiment,
-    exp;
+    exps;
 
 
   let { query } = req;
   if (query.ticker && query.ticker.length > 0) {
     ticker = query.ticker.toLowerCase();
   }
-  if (query.expiry) {
-    exp = query.expiry;
+  if (query.expiry && query.expiry.length > 0) {
+    exps = query.expiry;
   }
 
   let snapshotQuery = `
       (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'C' AS cp FROM options WHERE cp = 'C'
       AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options)
       ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
-      ${exp ? `AND exp = '${exp}'` : ''}
+      ${exps ? `AND exp = ANY('{${exps}}')` : ''}
       )
       UNION
       (SELECT SUM(contract_quantity) AS flow_count, SUM(prem) AS total_premium, 'P' AS cp FROM options WHERE cp = 'P'
       AND to_timestamp(time)::date = (SELECT to_timestamp(MAX(time))::date FROM options)
       ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
-      ${exp ? `AND exp = '${exp}'` : ''}
+      ${exps ? `AND exp = ANY('{${exps}}')` : ''}
       )
       ORDER BY cp ASC
-      `
+      `;
 
   const result = await optionsDB(snapshotQuery)
 
@@ -119,7 +120,7 @@ export async function getOptions(req) {
     ticker,
     last_time,
     order_direction,
-    exp,
+    exps,
     sort_column;
 
   if (req && req.query) {
@@ -142,8 +143,8 @@ export async function getOptions(req) {
     if (sort_column) {
       order_direction = query.order_direction || 'DESC'
     }
-    if (query.expiry) {
-      exp = query.expiry;
+    if (query.expiry && query.expiry.length > 0) {
+      exps = query.expiry;
     }
   }
 
@@ -167,19 +168,46 @@ export async function getOptions(req) {
         WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
         ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
         ${last_time ? `AND time < ${last_time}` : ''}
-        ${exp ? `AND exp = '${exp}'` : ''}
+        ${exps ? `AND exp = ANY('{${exps}}')` : ''}
         ${orderQuery}
         ${limit ? `LIMIT ${limit} OFFSET ${offset}` : ''}
         `);
   return result;
 };
 
-export async function getExpDates() {
+function validateDate(date) {
+  let formats = ['MM-DD-YYYY', 'MM-DD-YY', 'YYYY-MM-DD', 'YY-MM-DD'];
+  for (let format of formats) {
+    let validDate = moment(date, format,true).isValid();
+    if (validDate) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export async function getExpDates(req) {
+  let searchClause, orderQuery;
+  let { query } = req;
+
+  if (query) {
+    if (query.search && query.search.length > 0) {
+      let search = query.search.replace(new RegExp('/', 'g'), '-').toLowerCase(); // replace / for - to match timestamp format for the like match
+      let validDate = validateDate(search);
+      searchClause = `AND (exp::text like '%${search}%' OR LOWER(to_char(exp, 'Month')) like '%${search}%'`;
+      searchClause += validDate ? ` OR exp = '${search}')` : `)`;
+    }
+    let orderDirection = query.order_direction || 'ASC'
+    orderQuery = `ORDER BY exp ${orderDirection}`;
+  }
+
   const result = await optionsDB(`
-        SELECT distinct exp
+        SELECT distinct exp::date
         FROM options
         WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
-        ORDER BY exp ASC`);
+        ${searchClause ? searchClause : ''}
+        ${orderQuery ? orderQuery : 'ORDER BY exp ASC'}
+        `);
   return result;
 };
 

@@ -54,6 +54,13 @@ export const lookup = async (companyAPI, identifier, userID) => {
     );
   }
 
+  let security = await db(`
+    SELECT delisted
+    FROM securities
+    WHERE ticker = '${identifier}'
+    LIMIT 1
+  `);
+
   console.timeLog("lookup");
 
   console.timeEnd("lookup");
@@ -64,6 +71,7 @@ export const lookup = async (companyAPI, identifier, userID) => {
     mutual_fund: mutualFundResult.length > 0 ? mutualFundResult[0] : null,
     etf: etfResult.length > 0 ? etfResult[0] : null,
     security: null,
+    delisted: security[0] && security[0].delisted
   };
 
   return response;
@@ -132,6 +140,7 @@ export const getTopStocks = async () => {
     AND today_performance != 'NaN'
     AND price_percent_change_7_days > 0
     AND json_metrics IS NOT NULL
+    AND delisted = false
     ORDER BY today_performance DESC
     LIMIT 20
   `);
