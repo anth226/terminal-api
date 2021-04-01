@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express, { response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import axios from "axios";
@@ -73,7 +73,7 @@ import {
   planId,
   yearlyPlanId,
 } from "./services/stripe";
-import { listAllUsers } from "./controllers/user";
+import { listAllUsers, updateUserAccess} from "./controllers/user";
 import Shopify from "shopify-api-node";
 
 const shopify = new Shopify({
@@ -1138,49 +1138,47 @@ app.get("/user", async (req, res) => {
   }
 });
 
-app.use("/updateAccess", checkAuth);
-app.put("/updateAccess", async (req, res) => {
+app.get("/checkUser", async (req, res) => {
   try {
-    let accessType = ["basic", "pro"],
-        newAccess = req.body.access.trim().toLowerCase(),
-        date = new Date(),
-        planPeriod,
-        expiry;
-    console.log(newAccess);
+    const doc = await db
+      .collection("users")
+      .doc(req.body.uid)
+      .get();
 
-    if(accessType.indexOf(newAccess) === -1) {
-      res.json({
-        success: false,
-        error: "Invalid access type!",
-      });
-    }
+    const user = doc.data();
 
-    if(newAccess === "pro") {
-      planPeriod = req.body.plan.trim().toLowerCase();
-
-      if (planPeriod === "monthly") {
-        expiry = new Date(date.setMonth(date.getMonth() + 1));
-      } else if (planPeriod === "yearly"){
-        expiry = new Date(date.setFullYear(date.getFullYear() + 1));
-      } else {
-        res.json({
-          success: false,
-          error: "Invalid plan type!",
-        });
-      }
-      await admin.auth().setCustomUserClaims(req.body.uid, { access: newAccess, expiry: expiry });
-    } else {
-      await admin.auth().setCustomUserClaims(req.body.uid, { access: newAccess, expiry: "none" });
-    }
-
-    
     const userRecord = await admin.auth().getUser(req.body.uid);
 
+    const dashboards = await dashboard.get(req.body.uid);
+
+    const pinnedStocks = await dashboard.pinnedStocks(req.body.uid);
+
+
+    console.log(userRecord);
+    console.log(user);
+    console.log(dashboards);
+    console.log(pinnedStocks);
     res.json({
       success: true,
       userRecord,
+      user,
+      dashboards,
+      pinnedStocks
     });
+  } catch (error) {
+    res.json({
+      success: false,
+      error,
+    });
+  }
+});
 
+//app.use("/updateAccess", checkAuth);
+app.put("/updateAccess", async (req, res) => {
+  try {
+    const userRecord = await updateUserAccess(req.body.uid, req.body.access, req.body.plan);
+
+    res.send(userRecord);
   } catch (error) {
     res.json({
       success: false,
@@ -1381,7 +1379,9 @@ app.post("/complete-signup", async (req, res) => {
       charges: chargesAmount,
     };
 
-    res.json({ success: true, userMeta });
+    const userRecord = await updateUserAccess(authUser.uid, req.body.access, req.body.plan);
+
+    res.json({ success: true, userMeta, userRecord });
   } catch (error) {
     res.json({
       error:

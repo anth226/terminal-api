@@ -23,3 +23,48 @@ export const listAllUsers = async (nextPageToken) => {
 
   return users
 };
+
+
+export const updateUserAccess = async (uid, access, plan) => {
+  let accessType = ["basic", "pro"],
+        newAccess = access.trim().toLowerCase(),
+        date = new Date(),
+        planPeriod,
+        expiry;
+
+    if(accessType.indexOf(newAccess) === -1) {
+      return {
+        success: false,
+        error: "Invalid access type!",
+      };
+    }
+
+    if(newAccess === "pro") {
+      planPeriod = plan.trim().toLowerCase();
+
+      if (planPeriod === "monthly") {
+        expiry = new Date(date.setMonth(date.getMonth() + 1));
+      } else if (planPeriod === "annually"){
+        expiry = new Date(date.setFullYear(date.getFullYear() + 1));
+      } else {
+        return {
+          success: false,
+          error: "Invalid plan type!",
+        };
+      }
+
+      await admin.auth().setCustomUserClaims(uid, { access: newAccess, plan: planPeriod, expiry: expiry });
+    } else {
+      await admin.auth().setCustomUserClaims(uid, { access: newAccess, plan: "none", expiry: "none" });
+    }
+
+    
+    const userRecord = await admin.auth().getUser(uid);
+
+    console.log(userRecord);
+
+    return {
+      success: true,
+      userRecord,
+    };
+};
