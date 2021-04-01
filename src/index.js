@@ -1138,6 +1138,57 @@ app.get("/user", async (req, res) => {
   }
 });
 
+app.use("/updateAccess", checkAuth);
+app.put("/updateAccess", async (req, res) => {
+  try {
+    let accessType = ["basic", "pro"],
+        newAccess = req.body.access.trim().toLowerCase(),
+        date = new Date(),
+        planPeriod,
+        expiry;
+    console.log(newAccess);
+
+    if(accessType.indexOf(newAccess) === -1) {
+      res.json({
+        success: false,
+        error: "Invalid access type!",
+      });
+    }
+
+    if(newAccess === "pro") {
+      planPeriod = req.body.plan.trim().toLowerCase();
+
+      if (planPeriod === "monthly") {
+        expiry = new Date(date.setMonth(date.getMonth() + 1));
+      } else if (planPeriod === "yearly"){
+        expiry = new Date(date.setFullYear(date.getFullYear() + 1));
+      } else {
+        res.json({
+          success: false,
+          error: "Invalid plan type!",
+        });
+      }
+      await admin.auth().setCustomUserClaims(req.body.uid, { access: newAccess, expiry: expiry });
+    } else {
+      await admin.auth().setCustomUserClaims(req.body.uid, { access: newAccess, expiry: "none" });
+    }
+
+    
+    const userRecord = await admin.auth().getUser(req.body.uid);
+
+    res.json({
+      success: true,
+      userRecord,
+    });
+
+  } catch (error) {
+    res.json({
+      success: false,
+      error,
+    });
+  }
+});
+
 app.use("/pinned-stocks", checkAuth);
 app.get("/pinned-stocks", async (req, res) => {
 
