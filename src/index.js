@@ -296,11 +296,13 @@ app.post(
             { merge: true }
           );
 
+          const userRecord = await admin.auth().getUser(userId);
+
           // Set custom auth claims with Firebase
-          await admin.auth().setCustomUserClaims(userId, {
+          await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.customClaims, {
             customer_id: customerId,
             subscription_id: subscriptionId,
-          });
+          }));
 
           sendEmail.sendSignupEmail(email);
           await klaviyo.subscribeToList(email);
@@ -836,6 +838,8 @@ app.post("/authenticate", async (req, res) => {
 
     let customerId;
     let userData;
+    const userRecord = await admin.auth().getUser(decodedToken.uid);
+
     if (decodedToken.customer_id) {
       // check if customer id is in decoded claims
       console.log("customer is in decoded claims!!!");
@@ -846,10 +850,10 @@ app.post("/authenticate", async (req, res) => {
       userData = doc.data();
 
       if (userData.isAdmin) {
-        await admin.auth().setCustomUserClaims(decodedToken.uid, {
+        await admin.auth().setCustomUserClaims(decodedToken.uid, Object.assign(userRecord.customClaims, {
           isAdmin: true,
           customer_id: customerId,
-        });
+        }));
       }
     } else {
       // if not pull from database
@@ -870,9 +874,9 @@ app.post("/authenticate", async (req, res) => {
       // retrieve customer data from stripe using customer id from firestore
       customerId = userData.customerId;
       // set claim in firestore auth
-      await admin.auth().setCustomUserClaims(decodedToken.uid, {
-        customer_id: customerId,
-      });
+      await admin.auth().setCustomUserClaims(decodedToken.uid, Object.assign(userRecord.customClaims, {
+          customer_id: customerId,
+        }));
     }
     if (!customerId) {
       // Customer ID not in decoded claims or firestore
@@ -1039,11 +1043,13 @@ app.post("/payment", async (req, res) => {
       email: email,
     });
 
+    const userRecord = await admin.auth().getUser(userId);
+
     // Set custom auth claims with Firebase
-    await admin.auth().setCustomUserClaims(userId, {
+    await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.customClaims, {
       customer_id: customer.id,
       subscription_id: subscription.id,
-    });
+    }));
 
     res.json({ success: true });
   } catch (err) {
@@ -1369,17 +1375,19 @@ app.post("/complete-signup", async (req, res) => {
       { merge: true }
     );
 
-    await admin.auth().setCustomUserClaims(authUser.uid, {
+    const userRecord = await updateUserAccess(authUser.uid, req.body.access, req.body.plan);
+
+    await admin.auth().setCustomUserClaims(authUser.uid, Object.assign(userRecord.customClaims, {
       customer_id: customerId,
       subscription_id: subscriptionId,
-    });
+    }));
 
     const userMeta = {
       firstName,
       charges: chargesAmount,
     };
 
-    const userRecord = await updateUserAccess(authUser.uid, req.body.access, req.body.plan);
+    
 
     res.json({ success: true, userMeta, userRecord });
   } catch (error) {
@@ -2848,10 +2856,12 @@ app.get("/fetch_user_subscription", async (req, res) => {
 
             sub = {...sub, new_sub: newSubscription}
 
-            await admin.auth().setCustomUserClaims(user.uid, {
+            const userRecord = await admin.auth().getUser(user.uid);
+
+            await admin.auth().setCustomUserClaims(user.uid, Object.assign(userRecord.customClaims, {
               customer_id,
               subscription_id: newSubscription.id,
-            });
+            }));
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
@@ -3147,10 +3157,12 @@ app.get("/fetch_user_subscription", async (req, res) => {
 
             sub = {...sub, new_sub: newSubscription}
 
-            await admin.auth().setCustomUserClaims(user.uid, {
+            const userRecord = await admin.auth().getUser(user.uid);
+
+            await admin.auth().setCustomUserClaims(user.uid, Object.assign(userRecord.customClaims, {
               customer_id,
               subscription_id: newSubscription.id,
-            });
+            }));
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({

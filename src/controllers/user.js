@@ -39,6 +39,8 @@ export const updateUserAccess = async (uid, access, plan) => {
       };
     }
 
+    const userRecord = await admin.auth().getUser(uid);
+
     if(newAccess === "pro") {
       planPeriod = plan.trim().toLowerCase();
 
@@ -53,13 +55,13 @@ export const updateUserAccess = async (uid, access, plan) => {
         };
       }
 
-      await admin.auth().setCustomUserClaims(uid, { access: newAccess, plan: planPeriod, expiry: expiry });
+      await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims, { access: newAccess, plan: planPeriod, expiry: expiry }));
     } else {
-      await admin.auth().setCustomUserClaims(uid, { access: newAccess, plan: "none", expiry: "none" });
+      await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims,{ access: newAccess, plan: "none", expiry: "none" }));
     }
 
     
-    const userRecord = await admin.auth().getUser(uid);
+   
 
     console.log(userRecord);
 
