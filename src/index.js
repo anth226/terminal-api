@@ -1184,6 +1184,8 @@ app.put("/updateAccess", async (req, res) => {
   try {
     const userRecord = await updateUserAccess(req.body.uid, req.body.type, req.body.plan);
 
+    const docRef = db.collection("users").doc(req.body.uid);
+
     await docRef.set({
       user_type: userRecord.userRecord.customClaims.user_type,
       plan: userRecord.userRecord.customClaims.plan,

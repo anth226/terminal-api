@@ -26,7 +26,7 @@ export const listAllUsers = async (nextPageToken) => {
 
 
 export const updateUserAccess = async (uid, userType, plan) => {
-  let userTypes = ["basic", "pro"],
+  let userTypes = ["basic", "prime"],
         newUserType = userType.trim().toLowerCase(),
         date = new Date(),
         planPeriod,
@@ -41,7 +41,7 @@ export const updateUserAccess = async (uid, userType, plan) => {
 
     let userRecord = await admin.auth().getUser(uid);
     
-    if(newUserType === "pro") {
+    if(newUserType === "prime") {
       planPeriod = plan.trim().toLowerCase();
 
       if (planPeriod === "monthly") {
@@ -54,7 +54,7 @@ export const updateUserAccess = async (uid, userType, plan) => {
           error: "Invalid plan type!",
         };
       }
-      
+
       if(userRecord.customClaims) {
         await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims, { user_type: newUserType, plan: planPeriod, expiry: expiry }));
       } else {
