@@ -1182,7 +1182,14 @@ app.get("/checkUser", async (req, res) => {
 //app.use("/updateAccess", checkAuth);
 app.put("/updateAccess", async (req, res) => {
   try {
-    const userRecord = await updateUserAccess(req.body.uid, req.body.access, req.body.plan);
+    const userRecord = await updateUserAccess(req.body.uid, req.body.type, req.body.plan);
+
+    await docRef.set({
+      user_type: userRecord.userRecord.customClaims.user_type,
+      plan: userRecord.userRecord.customClaims.plan,
+      expiry: userRecord.userRecord.customClaims.expiry,
+    },
+    { merge: true });
 
     res.send(userRecord);
   } catch (error) {
@@ -1361,6 +1368,8 @@ app.post("/complete-signup", async (req, res) => {
       disabled: false,
     });
 
+    const userRecord = await updateUserAccess(authUser.uid, req.body.type, req.body.plan);
+
     const docRef = db.collection("users").doc(authUser.uid);
     await docRef.set(
       {
@@ -1371,11 +1380,12 @@ app.post("/complete-signup", async (req, res) => {
         firstName,
         lastName: "",
         phoneNumber: customers.data[0].phone,
+        user_type: userRecord.userRecord.customClaims.user_type,
+        plan: userRecord.userRecord.customClaims.plan,
+        expiry: userRecord.userRecord.customClaims.expiry,
       },
       { merge: true }
     );
-
-    const userRecord = await updateUserAccess(authUser.uid, req.body.access, req.body.plan);
 
     await admin.auth().setCustomUserClaims(authUser.uid, Object.assign(userRecord.customClaims, {
       customer_id: customerId,

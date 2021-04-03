@@ -25,23 +25,23 @@ export const listAllUsers = async (nextPageToken) => {
 };
 
 
-export const updateUserAccess = async (uid, access, plan) => {
-  let accessType = ["basic", "pro"],
-        newAccess = access.trim().toLowerCase(),
+export const updateUserAccess = async (uid, userType, plan) => {
+  let userTypes = ["basic", "pro"],
+        newUserType = userType.trim().toLowerCase(),
         date = new Date(),
         planPeriod,
         expiry;
 
-    if(accessType.indexOf(newAccess) === -1) {
+    if(userTypes.indexOf(newUserType) === -1) {
       return {
         success: false,
         error: "Invalid access type!",
       };
     }
 
-    const userRecord = await admin.auth().getUser(uid);
-
-    if(newAccess === "pro") {
+    let userRecord = await admin.auth().getUser(uid);
+    
+    if(newUserType === "pro") {
       planPeriod = plan.trim().toLowerCase();
 
       if (planPeriod === "monthly") {
@@ -54,17 +54,22 @@ export const updateUserAccess = async (uid, access, plan) => {
           error: "Invalid plan type!",
         };
       }
-
-      await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims, { access: newAccess, plan: planPeriod, expiry: expiry }));
+      
+      if(userRecord.customClaims) {
+        await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims, { user_type: newUserType, plan: planPeriod, expiry: expiry }));
+      } else {
+        await admin.auth().setCustomUserClaims(uid, { user_type: newUserType, plan: planPeriod, expiry: expiry });
+      }
     } else {
-      await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims,{ access: newAccess, plan: "none", expiry: "none" }));
+      if(userRecord.customClaims) {
+        await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims,{ user_type: newUserType, plan: "none", expiry: "none" }));
+      } else {
+        await admin.auth().setCustomUserClaims(uid, { user_type: newUserType, plan: "none", expiry: "none" });
+      }
     }
 
-    
-   
-
+    userRecord = await admin.auth().getUser(uid);
     console.log(userRecord);
-
     return {
       success: true,
       userRecord,
