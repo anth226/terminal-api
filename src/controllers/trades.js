@@ -213,7 +213,7 @@ export async function getArchivedPortfolio(top5Only) {
 					nc_open_price:  closedMarketValueResult[0].open_price, 
 					open_market_value:  result[i].open_market_value,
 					close_market_value:  result[i].close_market_value,
-					total_gain:  result[i].total_gain
+					total_gain:  ((prices.last_price / (result[i].close_market_value / result[i].shares)) - 1) * 100
 				};
 				response.push(toJson);
 			}
