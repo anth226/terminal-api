@@ -137,7 +137,7 @@ export async function getOpenPortfolio(top5Only) {
 		prices,
 		toJson;
   	const result = await db(`
-		SELECT * FROM ark_portfolio WHERE status = 'open' AND
+		SELECT * FROM ark_portfolio WHERE status = 'open' AND 
 		created_at = (SELECT created_at FROM ark_portfolio ORDER BY created_at DESC LIMIT 1)
 		ORDER BY SHARES DESC
 		`);
@@ -147,7 +147,8 @@ export async function getOpenPortfolio(top5Only) {
 
 			if(prices.last_price > 0 && prices.open_price > 0) {
 				toJson = {
-					created_at: result[i].created_at,
+					created_at: result[i].created_at,					
+					trade_date: result[i].trade_date,
 					fund: result[i].fund,
 					ticker: result[i].ticker,
 					cusip: result[i].cusip,
@@ -182,7 +183,7 @@ export async function getArchivedPortfolio(top5Only) {
 		closedMarketValueResult;
 		
   	const result = await db(`
-		SELECT * FROM ark_portfolio WHERE status = 'closed' AND
+		SELECT * FROM ark_portfolio WHERE status = 'closed' AND 
 		created_at = (SELECT created_at FROM ark_portfolio ORDER BY created_at DESC LIMIT 1)
 		ORDER BY SHARES DESC
 		`);
@@ -203,6 +204,7 @@ export async function getArchivedPortfolio(top5Only) {
 			if(prices.last_price > 0 && prices.open_price > 0) {
 				toJson = {
 					created_at: result[i].created_at,
+					trade_date: result[i].trade_date,
 					ticker: result[i].ticker,
 					cusip: result[i].cusip,
 					company: result[i].company,
