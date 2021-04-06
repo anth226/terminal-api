@@ -1417,11 +1417,16 @@ app.post("/signup", async (req, res) => {
     const { userId, email, firstName, lastName, phoneNumber } = req.body;
 
     const docRef = db.collection("users").doc(userId);
+    const userRecord = await updateUserAccess(userId, "basic");
+
     await docRef.set({
       email,
       firstName,
       lastName,
       phoneNumber,
+      user_type: userRecord.userRecord.customClaims.user_type,
+      plan: userRecord.userRecord.customClaims.plan,
+      expiry: userRecord.userRecord.customClaims.expiry,
     });
 
     res.send({ success: true });
