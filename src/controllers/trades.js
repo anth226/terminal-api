@@ -137,7 +137,8 @@ export async function getOpenPortfolio(top5Only) {
 		prices,
 		toJson;
   	const result = await db(`
-		SELECT * FROM ark_portfolio WHERE status = 'open'
+		SELECT * FROM ark_portfolio WHERE status = 'open' AND 
+		created_at = (SELECT created_at FROM ark_portfolio ORDER BY created_at DESC LIMIT 1)
 		ORDER BY SHARES DESC
 		`);
 	if(result.length > 0) {
@@ -146,7 +147,8 @@ export async function getOpenPortfolio(top5Only) {
 
 			if(prices.last_price > 0 && prices.open_price > 0) {
 				toJson = {
-					created_at: result[i].created_at,
+					created_at: result[i].created_at,					
+					trade_date: result[i].trade_date,
 					fund: result[i].fund,
 					ticker: result[i].ticker,
 					cusip: result[i].cusip,
@@ -181,7 +183,8 @@ export async function getArchivedPortfolio(top5Only) {
 		closedMarketValueResult;
 		
   	const result = await db(`
-		SELECT * FROM ark_portfolio WHERE status = 'closed' AND
+		SELECT * FROM ark_portfolio WHERE status = 'closed' AND 
+		created_at = (SELECT created_at FROM ark_portfolio ORDER BY created_at DESC LIMIT 1)
 		ORDER BY SHARES DESC
 		`);
 	if(result.length > 0) {
@@ -201,6 +204,7 @@ export async function getArchivedPortfolio(top5Only) {
 			if(prices.last_price > 0 && prices.open_price > 0) {
 				toJson = {
 					created_at: result[i].created_at,
+					trade_date: result[i].trade_date,
 					ticker: result[i].ticker,
 					cusip: result[i].cusip,
 					company: result[i].company,
@@ -211,7 +215,7 @@ export async function getArchivedPortfolio(top5Only) {
 					nc_open_price:  closedMarketValueResult[0].open_price, 
 					open_market_value:  result[i].open_market_value,
 					close_market_value:  result[i].close_market_value,
-					total_gain:  result[i].total_gain
+					total_gain:  ((prices.last_price / (result[i].close_market_value / result[i].shares)) - 1) * 100
 				};
 				response.push(toJson);
 			}
@@ -230,14 +234,14 @@ export async function getArchivedPortfolio(top5Only) {
 
 export async function getTop3Buy() {
   	const result = await db(`
-        SELECT * FROM daily_trades WHERE direction = 'Buy' AND created_at = (SELECT created_at FROM public.daily_trades ORDER by created_at DESC limit 1) ORDER BY SHARES DESC Limit 3
+        SELECT * FROM daily_trades WHERE direction = 'Buy' AND created_at = (SELECT created_at FROM public.daily_trades ORDER by created_at DESC limit 1) ORDER BY market_value DESC Limit 3
         `);
   	return result;
 }
 
 export async function getTop3Sell() {
   	const result = await db(`
-        SELECT * FROM daily_trades WHERE direction = 'Sell' AND created_at = (SELECT created_at FROM public.daily_trades ORDER by created_at DESC limit 1) ORDER BY SHARES DESC Limit 3
+        SELECT * FROM daily_trades WHERE direction = 'Sell' AND created_at = (SELECT created_at FROM public.daily_trades ORDER by created_at DESC limit 1) ORDER BY market_value DESC Limit 3
         `);
   	return result;
 }

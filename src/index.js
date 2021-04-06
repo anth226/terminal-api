@@ -75,6 +75,7 @@ import {
 } from "./services/stripe";
 import { listAllUsers, updateUserAccess} from "./controllers/user";
 import Shopify from "shopify-api-node";
+import { fetchBullishOptions } from "./controllers/options";
 
 const shopify = new Shopify({
   shopName: "portfolio-insider",
@@ -2585,7 +2586,7 @@ app.get("/darkpool/options", async (req, res) => {
   res.send(result);
 });
 
-app.get("/darkpool/expDates", async (req, res) => {
+app.get("/darkpool/exp_dates", async (req, res) => {
   const result = await darkpool.getExpDates(req);
   res.send(result);
 });
@@ -3209,6 +3210,12 @@ app.get("/fetch_user_subscription", async (req, res) => {
     }
   }
   res.send({sub: sub});
+});
+
+// Options analytics data
+app.get("/options-analytics/bullish", checkAuth, async (req, res) => {
+  const result = await fetchBullishOptions();
+  return res.json(result)
 });
 
 app.get("/test", async (req, res) => {
