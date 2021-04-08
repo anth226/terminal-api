@@ -75,7 +75,7 @@ import {
 } from "./services/stripe";
 import { listAllUsers } from "./controllers/user";
 import Shopify from "shopify-api-node";
-import { fetchBullishOptions } from "./controllers/options";
+import { fetchBullishOptions, fetchBearishOptions } from "./controllers/options";
 
 const shopify = new Shopify({
   shopName: "portfolio-insider",
@@ -3142,6 +3142,12 @@ app.get("/options-analytics/bullish", checkAuth, async (req, res) => {
   const result = await fetchBullishOptions();
   return res.json(result)
 });
+
+app.get("/options-analytics/bearish", checkAuth, async (req, res) => {
+  const result = await fetchBearishOptions();
+  return res.json(result)
+});
+
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
