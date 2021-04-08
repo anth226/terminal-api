@@ -879,23 +879,29 @@ app.post("/authenticate", async (req, res) => {
           customer_id: customerId,
         }));
     }
-    if (!customerId && userRecord.customClaims.user_type === "prime") {
-      // Customer ID not in decoded claims or firestore
-      // this actually might be unnecessary code, impossible to hit?
-      throw {
-        terminal_error: true,
-        error_code: "PAYMENT_INCOMPLETE",
-        message: "Please complete your payment",
-      };
-    }
+    console.log(userRecord);
+    console.log("userRecord.customClaims.user_type");
+    console.log(userRecord.customClaims.user_type);
+    if(userRecord.customClaims.user_type === "prime") {
+      if (!customerId) {
+        // Customer ID not in decoded claims or firestore
+        // this actually might be unnecessary code, impossible to hit?
+        throw {
+          terminal_error: true,
+          error_code: "PAYMENT_INCOMPLETE",
+          message: "Please complete your payment",
+        };
+      }
 
-    // retrieve customer data from stripe using customer id from firestore
-    const customer = await stripe.customers.retrieve(customerId);
-    console.log("\nCUSTOMER OBJ\n");
-    console.log(customer);
-    console.log("\nSUBSCRIPTION\n");
-    console.log(customer.subscriptions);
-    console.log("\nEND\n");
+      
+      // retrieve customer data from stripe using customer id from firestore
+      const customer = await stripe.customers.retrieve(customerId);
+      console.log("\nCUSTOMER OBJ\n");
+      console.log(customer);
+      console.log("\nSUBSCRIPTION\n");
+      console.log(customer.subscriptions);
+      console.log("\nEND\n");
+    }
 
     // temporarily ignore stripe check
     //TODO: Bring back stripe check after subscription
