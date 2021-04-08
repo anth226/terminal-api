@@ -879,7 +879,7 @@ app.post("/authenticate", async (req, res) => {
           customer_id: customerId,
         }));
     }
-    if (!customerId) {
+    if (!customerId && userRecord.customClaims.user_type === "prime") {
       // Customer ID not in decoded claims or firestore
       // this actually might be unnecessary code, impossible to hit?
       throw {
@@ -1035,24 +1035,33 @@ app.post("/payment", async (req, res) => {
   // FIREBASE + FIRESTORE
   try {
     // Add user data to db
-
     let docRef = db.collection("users").doc(userId);
-    let setUser = await docRef.update({
-      userId: userId,
-      customerId: customer.id,
-      subscriptionId: subscription.id,
-      email: email,
-    });
 
-    const userRecord = await admin.auth().getUser(userId);
-
+    //Update User access
+    const userRecord = await updateUserAccess(userId, req.body.type, req.body.plan);
+    
     // Set custom auth claims with Firebase
     await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.customClaims, {
       customer_id: customer.id,
       subscription_id: subscription.id,
     }));
 
-    res.json({ success: true });
+    let setUser = await docRef.update({
+      userId: userId,
+      customerId: customer.id,
+      subscriptionId: subscription.id,
+      email: email,
+      user_type: userRecord.userRecord.customClaims.user_type,
+      plan: userRecord.userRecord.customClaims.plan,
+      expiry: userRecord.userRecord.customClaims.expiry,
+    });
+
+    res.json({ 
+      success: true,
+      userRecord,
+      customer
+    });
+
   } catch (err) {
     // error with firebase and firestore
     console.log("/Payment Error: ", err);
@@ -1080,7 +1089,9 @@ app.post("/upgrade-subscription", async (req, res) => {
   let price;
   if (type == "yearly") {
     price = "price_1HPxX3BNiHwzGq61fr2QyoPX";
-  } else if (type == "lifetyime") {
+  } else if (type == "monthly") {
+    price = "price_1HPxXyBNiHwzGq61XYt5TgOO";
+  } else if (type == "lifetime") {
     price = "price_1HPxXyBNiHwzGq61XYt5TgOO";
   } else {
     res.json({
