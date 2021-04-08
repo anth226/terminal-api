@@ -1237,54 +1237,68 @@ app.get("/profile", async (req, res) => {
 
   const user = doc.data();
 
-  const customer = await stripe.customers.retrieve(
-    req.terminal_app.claims.customer_id,
-    {
-      expand: [
-        "subscriptions.data.default_payment_method",
-        "invoice_settings.default_payment_method",
-      ],
+  if(user.user_type === "prime") {
+    const customer = await stripe.customers.retrieve(
+      req.terminal_app.claims.customer_id,
+      {
+        expand: [
+          "subscriptions.data.default_payment_method",
+          "invoice_settings.default_payment_method",
+        ],
+      }
+    );
+
+    const charges = await stripe.charges.list({
+      customer: customer.id,
+    });
+
+    const chargesAmount = [];
+
+    charges.data.map((charge) => {
+      chargesAmount.push(charge.amount);
+    });
+
+    //TODO: Handle no subscription when accessing settings. ternary for subscription object is temp fix
+    let subscription = customer.subscriptions.data[0]
+
+    let paymentMethod;
+    if (subscription) {
+      paymentMethod = subscription.default_payment_method;
     }
-  );
-
-  const charges = await stripe.charges.list({
-    customer: customer.id,
-  });
-
-  const chargesAmount = [];
-
-  charges.data.map((charge) => {
-    chargesAmount.push(charge.amount);
-  });
-
-  //TODO: Handle no subscription when accessing settings. ternary for subscription object is temp fix
-  let subscription = customer.subscriptions.data[0]
-
-  let paymentMethod;
-  if (subscription) {
-    paymentMethod = subscription.default_payment_method;
+    if (paymentMethod == null) {
+      paymentMethod = customer.invoice_settings.default_payment_method;
+    }
+    res.json({
+      email: customer.email,
+      delinquent: customer.delinquent,
+      card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
+      card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
+      customer_id: req.terminal_app.claims.customer_id,
+      subscription_id: subscription ? subscription.id : "",
+      customer_since: subscription ? subscription.created : "0",
+      amount: subscription ? subscription.plan.amount / 100.0 : 0,
+      trial_end: subscription ? subscription.trial_end : "0",
+      next_payment: subscription ? subscription.current_period_end : "0",
+      firstName: user.firstName ? user.firstName : "",
+      lastName: user.lastName ? user.lastName : "",
+      city: user.city ? user.city : "",
+      user_type: user.user_type ? user.user_type : "",
+      plan: user.plan ? user.plan : "",
+      profileImage: user.profileImage ? user.profileImage : "",
+      ...user,
+      charges: chargesAmount,
+    });
+  } else {
+    res.json({
+      email: user.email,
+      firstName: user.firstName ? user.firstName : "",
+      lastName: user.lastName ? user.lastName : "",
+      city: user.city ? user.city : "",
+      user_type: user.user_type ? user.user_type : "",
+      profileImage: user.profileImage ? user.profileImage : "",
+      ...user,
+    });
   }
-  if (paymentMethod == null) {
-    paymentMethod = customer.invoice_settings.default_payment_method;
-  }
-  res.json({
-    email: customer.email,
-    delinquent: customer.delinquent,
-    card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
-    card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
-    customer_id: req.terminal_app.claims.customer_id,
-    subscription_id: subscription ? subscription.id : "",
-    customer_since: subscription ? subscription.created : "0",
-    amount: subscription ? subscription.plan.amount / 100.0 : 0,
-    trial_end: subscription ? subscription.trial_end : "0",
-    next_payment: subscription ? subscription.current_period_end : "0",
-    firstName: user.firstName ? user.firstName : "",
-    lastName: user.lastName ? user.lastName : "",
-    city: user.city ? user.city : "",
-    profileImage: user.profileImage ? user.profileImage : "",
-    ...user,
-    charges: chargesAmount,
-  });
 });
 
 const storage = multer.memoryStorage();
