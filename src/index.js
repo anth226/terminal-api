@@ -1252,7 +1252,7 @@ app.get("/profile", async (req, res) => {
 
   if(user.user_type === "prime") {
     const customer = await stripe.customers.retrieve(
-      req.terminal_app.claims.customer_id,
+      user.customerId,
       {
         expand: [
           "subscriptions.data.default_payment_method",
@@ -1286,8 +1286,6 @@ app.get("/profile", async (req, res) => {
       delinquent: customer.delinquent,
       card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
       card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
-      customer_id: req.terminal_app.claims.customer_id,
-      subscription_id: subscription ? subscription.id : "",
       customer_since: subscription ? subscription.created : "0",
       amount: subscription ? subscription.plan.amount / 100.0 : 0,
       trial_end: subscription ? subscription.trial_end : "0",
@@ -1295,8 +1293,6 @@ app.get("/profile", async (req, res) => {
       firstName: user.firstName ? user.firstName : "",
       lastName: user.lastName ? user.lastName : "",
       city: user.city ? user.city : "",
-      user_type: user.user_type ? user.user_type : "",
-      plan: user.plan ? user.plan : "",
       profileImage: user.profileImage ? user.profileImage : "",
       ...user,
       charges: chargesAmount,
@@ -1307,7 +1303,6 @@ app.get("/profile", async (req, res) => {
       firstName: user.firstName ? user.firstName : "",
       lastName: user.lastName ? user.lastName : "",
       city: user.city ? user.city : "",
-      user_type: user.user_type ? user.user_type : "",
       profileImage: user.profileImage ? user.profileImage : "",
       ...user,
     });
@@ -1501,39 +1496,59 @@ app.use("/cancellation-request", checkAuth);
 app.post("/cancellation-request", async (req, res) => {
   const { cancelReason } = req.body;
 
-  const doc = await db
+  let doc = await db
     .collection("users")
     .doc(req.terminal_app.claims.uid)
     .get();
 
   const user = doc.data();
 
-  const customer = await stripe.customers.retrieve(
-    req.terminal_app.claims.customer_id
-  );
-
   const getSubscription = await stripe.subscriptions.retrieve(
     user.subscriptionId
   );
 
-  // Prevent cancelation request if a user is a prime user or if the subscription is already canceled
-  if (getSubscription.status !== "canceled" && user && user.isPrime !== true) {
+  var expiryDate = new Date(0);
+  expiryDate.setUTCSeconds(getSubscription.current_period_end);
+
+  var userRecord = await admin.auth().getUser(req.terminal_app.claims.uid);
+
+  // Update Expiry of the user access
+  await admin.auth().setCustomUserClaims(req.terminal_app.claims.uid, Object.assign(userRecord.customClaims, {
+    expiry: expiryDate
+  }));
+
+  let docRef = db.collection("users").doc(req.terminal_app.claims.uid);
+  let setUser = await docRef.update({
+    expiry: userRecord.customClaims.expiry
+  });
+
+  doc = await db
+    .collection("users")
+    .doc(req.body.uid)
+    .get();
+
+  // Prevent cancelation request if a user is a not prime user or if the subscription is already canceled
+  if (getSubscription.status !== "canceled" && user && user.user_type === "prime") {
     await stripe.subscriptions.update(user.subscriptionId, {
       cancel_at_period_end: true,
     });
   }
+  
 
-  let email = customer.email;
+  let email = user.email;
 
   sendEmail.sendCancellationRequest(
     `${user.firstName} ${user.lastName}`,
     "n/a",
     email,
     cancelReason,
-    req.terminal_app.claims.customer_id
+    user.customerId
   );
 
-  res.send("success");
+  res.json({ 
+      success: true,
+      user,
+    });
 });
 
 // Securities
