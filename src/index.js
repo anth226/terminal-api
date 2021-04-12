@@ -993,13 +993,15 @@ app.post("/authenticate", async (req, res) => {
 
 app.post("/payment", async (req, res) => {
   logger.info("/payment");
-  const userId = req.body.user_id;
+
+  let { name, email, address, type, plan, payment_method } = req.body;
+  const userId = req.terminal_app.claims.uid;
+
   if (!userId) {
     res.status(403).send("Unauthorized");
     return;
   }
 
-  const email = req.body.email;
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
@@ -1010,16 +1012,18 @@ app.post("/payment", async (req, res) => {
 
   let customer;
   let subscription;
-  let plan;
+  let planTypeId;
 
   // STRIPE CUSTOMER + SUBSCRIPTION
   try {
     // Create Stripe customer from payment method created on frontend
     customer = await stripe.customers.create({
-      payment_method: req.body.payment_method,
-      email: req.body.email,
+      payment_method: payment_method,
+      name: name,
+      email: email,
+      //address: address,
       invoice_settings: {
-        default_payment_method: req.body.payment_method,
+        default_payment_method: payment_method,
       },
     });
 
@@ -1027,14 +1031,14 @@ app.post("/payment", async (req, res) => {
     console.log(customer);
 
     // Create Stripe subscription connected to new customer
-    if(req.body.plan === "monthly") {
-      plan = monthlyPlanId;
-    } else if (req.body.plan === "annually") {
-      plan = yearlyPlanId;
+    if(plan === "monthly") {
+      planTypeId = monthlyPlanId;
+    } else if (plan === "annually") {
+      planTypeId = yearlyPlanId;
     }
     subscription = await stripe.subscriptions.create({
       customer: customer.id,
-      items: [{ plan: plan }],
+      items: [{ plan: planTypeId }],
       expand: ["latest_invoice.payment_intent"],
     });
     console.log("THE SUBSCRIPTION");
@@ -1051,7 +1055,7 @@ app.post("/payment", async (req, res) => {
     let docRef = db.collection("users").doc(userId);
 
     //Update User access
-    let userRecord = await updateUserAccess(userId, req.body.type, req.body.plan);
+    let userRecord = await updateUserAccess(userId, type, plan);
     
 
     // Set custom auth claims with Firebase
@@ -1082,6 +1086,7 @@ app.post("/payment", async (req, res) => {
     res.json({
       error_code: "USER_PAYMENT_AUTH_ERROR",
       message: "Unable to validate your payment.",
+      error: err,
     });
   }
 });
