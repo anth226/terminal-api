@@ -1281,6 +1281,7 @@ app.get("/profile", async (req, res) => {
     if (paymentMethod == null) {
       paymentMethod = customer.invoice_settings.default_payment_method;
     }
+
     res.json({
       email: customer.email,
       delinquent: customer.delinquent,
@@ -1288,6 +1289,8 @@ app.get("/profile", async (req, res) => {
       card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
       customer_since: subscription ? subscription.created : "0",
       amount: subscription ? subscription.plan.amount / 100.0 : 0,
+      subscription_status: subscription.cancel_at_period_end ? "canceled": "active",
+      cancel_at: subscription.cancel_at ? subscription.cancel_at: null,
       trial_end: subscription ? subscription.trial_end : "0",
       next_payment: subscription ? subscription.current_period_end : "0",
       firstName: user.firstName ? user.firstName : "",
