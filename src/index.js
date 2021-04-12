@@ -50,10 +50,12 @@ import * as alerts from "./controllers/alerts";
 import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
+import * as crypto_api from "./controllers/crypto"
 import * as cannon from "./controllers/cannon";
 import * as klaviyo from "./controllers/klaviyo";
 import * as watchlist from "./controllers/watchlist";
 import * as sendEmail from "./sendEmail";
+import ChartsController from './controllers/charts';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
@@ -75,7 +77,7 @@ import {
 } from "./services/stripe";
 import { listAllUsers } from "./controllers/user";
 import Shopify from "shopify-api-node";
-import { fetchBullishOptions } from "./controllers/options";
+import { fetchBullishOptions, fetchBearishOptions } from "./controllers/options";
 
 const shopify = new Shopify({
   shopName: "portfolio-insider",
@@ -148,7 +150,7 @@ const app = express();
 
 // configure CORS
 var corsOptions = {
-  origin: [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`],
+  origin: true,
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true,
 };
@@ -1417,6 +1419,9 @@ app.post("/cancellation-request", async (req, res) => {
 });
 
 // Securities
+app.use("/security/:symbol/charts", checkAuth);
+app.get("/security/:symbol/charts", ChartsController.getSymbolChart);
+
 app.use("/security/:symbol", checkAuth);
 app.get("/security/:symbol", async (req, res) => {
   const result = await securities.lookup(
@@ -2956,10 +2961,13 @@ app.get("/fetch_user_subscription", async (req, res) => {
 // });
 
 // User Portfolio
-app.get("/user-portfolio", checkAuth, dashboard.userPortfolio)
+app.get("/user-portfolio", checkAuth, dashboard.userPortfolio);
 
 // User Performance
-app.get("/user-performance", checkAuth, dashboard.userPerformance)
+app.get("/user-performance", checkAuth, dashboard.userPerformance);
+
+// User Performance vs SNP
+app.get("/user-performance-vs-snp", checkAuth, dashboard.userPerformanceVsSNP);
 
 // Stock PIN/ UNPIN
 app.use("/stock/pin", checkAuth);
@@ -3142,6 +3150,24 @@ app.get("/options-analytics/bullish", checkAuth, async (req, res) => {
   const result = await fetchBullishOptions();
   return res.json(result)
 });
+
+app.get("/options-analytics/bearish", checkAuth, async (req, res) => {
+  const result = await fetchBearishOptions();
+  return res.json(result)
+});
+
+// Crypto
+app.use("/crypto/news", checkAuth);
+app.get("/crypto/news", crypto_api.getCryptoNews);
+
+// app.use("/crypto/currencies/:ticker", checkAuth);
+app.get("/crypto/currencies/:ticker", crypto_api.getCryptoTickerCurrency);
+
+// app.use("/crypto/trades/:ticker", checkAuth);
+app.get("/crypto/trades/:ticker", crypto_api.getCryptoTickerTrades);
+
+// app.use("/crypto/candles/:ticker", checkAuth);
+app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();

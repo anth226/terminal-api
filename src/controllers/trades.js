@@ -147,7 +147,7 @@ export async function getOpenPortfolio(top5Only) {
 
 			if(prices.last_price > 0 && prices.open_price > 0) {
 				toJson = {
-					created_at: result[i].created_at,					
+					created_at: result[i].created_at,
 					trade_date: result[i].trade_date,
 					fund: result[i].fund,
 					ticker: result[i].ticker,

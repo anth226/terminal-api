@@ -55,10 +55,10 @@ export const lookup = async (companyAPI, identifier, userID) => {
   }
 
   let security = await db(`
-    SELECT delisted
-    FROM securities
-    WHERE ticker = '${identifier}'
-    LIMIT 1
+      SELECT delisted
+      FROM securities
+      WHERE ticker = '${identifier}'
+      LIMIT 1
   `);
 
   console.timeLog("lookup");
@@ -138,7 +138,6 @@ export const getTopStocks = async () => {
     FROM securities
     where today_performance IS NOT NULL 
     AND today_performance != 'NaN'
-    AND price_percent_change_7_days > 0
     AND json_metrics IS NOT NULL
     AND delisted = false
     ORDER BY today_performance DESC
