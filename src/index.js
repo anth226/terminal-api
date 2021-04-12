@@ -72,6 +72,7 @@ import {
   couponIdFree,
   planId,
   yearlyPlanId,
+  monthlyPlanId,
 } from "./services/stripe";
 import { listAllUsers, updateUserAccess} from "./controllers/user";
 import Shopify from "shopify-api-node";
@@ -1009,6 +1010,8 @@ app.post("/payment", async (req, res) => {
 
   let customer;
   let subscription;
+  let plan;
+
   // STRIPE CUSTOMER + SUBSCRIPTION
   try {
     // Create Stripe customer from payment method created on frontend
@@ -1024,11 +1027,15 @@ app.post("/payment", async (req, res) => {
     console.log(customer);
 
     // Create Stripe subscription connected to new customer
+    if(req.body.plan === "monthly") {
+      plan = monthlyPlanId;
+    } else if (req.body.plan === "annually") {
+      plan = yearlyPlanId;
+    }
     subscription = await stripe.subscriptions.create({
       customer: customer.id,
-      items: [{ plan: planId }],
+      items: [{ plan: plan }],
       expand: ["latest_invoice.payment_intent"],
-      coupon: couponId,
     });
     console.log("THE SUBSCRIPTION");
     console.log(subscription);
@@ -1044,10 +1051,11 @@ app.post("/payment", async (req, res) => {
     let docRef = db.collection("users").doc(userId);
 
     //Update User access
-    const userRecord = await updateUserAccess(userId, req.body.type, req.body.plan);
+    let userRecord = await updateUserAccess(userId, req.body.type, req.body.plan);
     
+
     // Set custom auth claims with Firebase
-    await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.customClaims, {
+    await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.userRecord.customClaims, {
       customer_id: customer.id,
       subscription_id: subscription.id,
     }));
