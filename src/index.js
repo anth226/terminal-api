@@ -995,7 +995,7 @@ app.post("/payment", async (req, res) => {
   logger.info("/payment");
 
   let { name, email, address, type, plan, payment_method } = req.body;
-  const userId = req.terminal_app.claims.uid;
+  const userId = req.body.uid;
 
   if (!userId) {
     res.status(403).send("Unauthorized");
