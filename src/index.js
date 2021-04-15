@@ -1178,42 +1178,7 @@ app.get("/user", async (req, res) => {
   }
 });
 
-app.get("/checkUser", async (req, res) => {
-  try {
-    const doc = await db
-      .collection("users")
-      .doc(req.body.uid)
-      .get();
-
-    const user = doc.data();
-
-    const userRecord = await admin.auth().getUser(req.body.uid);
-
-    const dashboards = await dashboard.get(req.body.uid);
-
-    const pinnedStocks = await dashboard.pinnedStocks(req.body.uid);
-
-    console.log(userRecord);
-    console.log(user);
-    console.log(dashboards);
-    console.log(pinnedStocks);
-
-    res.json({
-      success: true,
-      userRecord,
-      user,
-      dashboards,
-      pinnedStocks
-    });
-  } catch (error) {
-    res.json({
-      success: false,
-      error,
-    });
-  }
-});
-
-//app.use("/updateAccess", checkAuth);
+app.use("/updateAccess", checkAuth);
 app.put("/updateAccess", async (req, res) => {
   try {
     const userRecord = await updateUserAccess(req.body.uid, req.body.type, req.body.plan, req.body.crypto_addon);
