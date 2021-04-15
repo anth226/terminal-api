@@ -6,12 +6,17 @@ export async function searchCompanies(query) {
   const [securities, mutualFunds] = await Promise.all([
     db({
       text: `
+        (
         SELECT ticker, name, type 
         FROM securities
-        WHERE delisted = false AND (
-          ticker ILIKE '%' || $1 || '%'
-          OR name ILIKE '%' || $1 || '%'
-        )  
+        WHERE delisted = false AND (ticker ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%')
+        )
+        UNION
+        (
+        SELECT ticker, name, 'crypto'
+        FROM cryptos
+        WHERE (ticker ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%')
+        )
       `,
       values: [query],
     }),
@@ -98,4 +103,4 @@ const getMatchScore = (security, query) => {
   }
 
   return 4;
-}
+};

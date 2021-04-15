@@ -187,10 +187,13 @@ function validateDate(date) {
 }
 
 export async function getExpDates(req) {
-  let searchClause, orderQuery;
+  let searchClause, orderQuery, tickerClause;
   let { query } = req;
 
   if (query) {
+    if (query.tickers && query.tickers.length > 0) {
+      tickerClause = `AND ticker = ANY('{${query.tickers}}')`
+    }
     if (query.search && query.search.length > 0) {
       let search = query.search.replace(new RegExp('/', 'g'), '-').toLowerCase(); // replace / for - to match timestamp format for the like match
       let validDate = validateDate(search);
@@ -202,10 +205,11 @@ export async function getExpDates(req) {
   }
 
   const result = await optionsDB(`
-        SELECT distinct exp::date
+        SELECT distinct exp
         FROM options
         WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
         ${searchClause ? searchClause : ''}
+        ${tickerClause ? tickerClause : ''}
         ${orderQuery ? orderQuery : 'ORDER BY exp ASC'}
         `);
   return result;
