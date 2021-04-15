@@ -25,12 +25,13 @@ export const listAllUsers = async (nextPageToken) => {
 };
 
 
-export const updateUserAccess = async (uid, userType, plan) => {
+export const updateUserAccess = async (uid, userType, plan, cryptoAddon) => {
   let userTypes = ["basic", "prime"],
         newUserType = userType.trim().toLowerCase(),
         date = new Date(),
         planPeriod,
-        expiry;
+        expiry,
+        newCryptoAddon = false;
 
     if(userTypes.indexOf(newUserType) === -1) {
       return {
@@ -55,16 +56,29 @@ export const updateUserAccess = async (uid, userType, plan) => {
         };
       }
 
-      if(userRecord.customClaims) {
-        await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims, { user_type: newUserType, plan: planPeriod, expiry: expiry }));
+      if (cryptoAddon === "true" || cryptoAddon === "false") {
+        if (cryptoAddon === "true") {
+          newCryptoAddon = true;
+        }
+
+        if(userRecord.customClaims) {
+          await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims, { user_type: newUserType, plan: planPeriod, expiry: expiry, crypto_addon: newCryptoAddon }));
+        } else {
+          await admin.auth().setCustomUserClaims(uid, { user_type: newUserType, plan: planPeriod, expiry: expiry, crypto_addon: newCryptoAddon });
+        }
       } else {
-        await admin.auth().setCustomUserClaims(uid, { user_type: newUserType, plan: planPeriod, expiry: expiry });
+        return {
+          success: false,
+          error: "Invalid crypto_addon value!",
+        };
       }
+
+      
     } else {
       if(userRecord.customClaims) {
-        await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims,{ user_type: newUserType, plan: "none", expiry: "none" }));
+        await admin.auth().setCustomUserClaims(uid, Object.assign(userRecord.customClaims,{ user_type: newUserType, plan: "none", expiry: "none", crypto_addon: false }));
       } else {
-        await admin.auth().setCustomUserClaims(uid, { user_type: newUserType, plan: "none", expiry: "none" });
+        await admin.auth().setCustomUserClaims(uid, { user_type: newUserType, plan: "none", expiry: "none", crypto_addon: false });
       }
     }
 

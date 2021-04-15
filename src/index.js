@@ -996,7 +996,7 @@ app.post("/authenticate", async (req, res) => {
 app.post("/payment", async (req, res) => {
   logger.info("/payment");
 
-  let { name, email, address, type, plan, payment_method } = req.body;
+  let { name, email, address, type, plan, crypto_addon, payment_method } = req.body;
   const userId = req.body.uid;
 
   if (!userId) {
@@ -1057,7 +1057,7 @@ app.post("/payment", async (req, res) => {
     let docRef = db.collection("users").doc(userId);
 
     //Update User access
-    let userRecord = await updateUserAccess(userId, type, plan);
+    let userRecord = await updateUserAccess(userId, type, plan, crypto_addon);
     
 
     // Set custom auth claims with Firebase
@@ -1073,6 +1073,7 @@ app.post("/payment", async (req, res) => {
       email: email,
       user_type: userRecord.userRecord.customClaims.user_type,
       plan: userRecord.userRecord.customClaims.plan,
+      crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
       expiry: userRecord.userRecord.customClaims.expiry,
     });
 
@@ -1215,13 +1216,14 @@ app.get("/checkUser", async (req, res) => {
 //app.use("/updateAccess", checkAuth);
 app.put("/updateAccess", async (req, res) => {
   try {
-    const userRecord = await updateUserAccess(req.body.uid, req.body.type, req.body.plan);
+    const userRecord = await updateUserAccess(req.body.uid, req.body.type, req.body.plan, req.body.crypto_addon);
 
     const docRef = db.collection("users").doc(req.body.uid);
 
     await docRef.set({
       user_type: userRecord.userRecord.customClaims.user_type,
       plan: userRecord.userRecord.customClaims.plan,
+      crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
       expiry: userRecord.userRecord.customClaims.expiry,
     },
     { merge: true });
@@ -1415,7 +1417,7 @@ app.post("/complete-signup", async (req, res) => {
       disabled: false,
     });
 
-    const userRecord = await updateUserAccess(authUser.uid, req.body.type, req.body.plan);
+    const userRecord = await updateUserAccess(authUser.uid, req.body.type, req.body.plan, req.body.crypto_addon);
 
     const docRef = db.collection("users").doc(authUser.uid);
     await docRef.set(
@@ -1429,6 +1431,7 @@ app.post("/complete-signup", async (req, res) => {
         phoneNumber: customers.data[0].phone,
         user_type: userRecord.userRecord.customClaims.user_type,
         plan: userRecord.userRecord.customClaims.plan,
+        crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
         expiry: userRecord.userRecord.customClaims.expiry,
       },
       { merge: true }
@@ -1470,6 +1473,7 @@ app.post("/signup", async (req, res) => {
       phoneNumber,
       user_type: userRecord.userRecord.customClaims.user_type,
       plan: userRecord.userRecord.customClaims.plan,
+      crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
       expiry: userRecord.userRecord.customClaims.expiry,
     });
 
