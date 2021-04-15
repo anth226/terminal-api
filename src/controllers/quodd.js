@@ -25,6 +25,7 @@ import {
   CACHED_PRICE_15MIN,
   KEY_SECURITY_PERFORMANCE,
   CACHED_PRICE_CLOSE,
+  CACHED_PRICE_OPEN
 } from "../redis";
 
 let dbs = {};
@@ -424,7 +425,13 @@ export async function getLastPriceChange(ticker) {
       (cachedPrice_15 && cachedPrice_15 / 100) ||
       (intrinioResponse && intrinioResponse.last_price) ||
       0;
-    const open_price = (intrinioResponse && intrinioResponse.open_price) || 0;
+
+    const cached_open = await sharedCache.get(`${CACHED_PRICE_OPEN}${qTicker}`);
+
+    const open_price =
+      (cached_open && cached_open / 100) ||
+      (intrinioResponse && intrinioResponse.open_price) ||
+      0;
 
     console.log("last_price", last_price);
     console.log("open_price", open_price);

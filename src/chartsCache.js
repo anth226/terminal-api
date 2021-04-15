@@ -25,3 +25,4 @@ export default connectDatabase();
 
 export const C_CHART = "CHART:";
 export const C_CHART_LD = "LD:CHART:";
+export const C_CHART_CURRENT = "CURRENT:";
