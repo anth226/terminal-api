@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express, { response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import axios from "axios";
@@ -74,8 +74,9 @@ import {
   couponIdFree,
   planId,
   yearlyPlanId,
+  monthlyPlanId,
 } from "./services/stripe";
-import { listAllUsers } from "./controllers/user";
+import { listAllUsers, updateUserAccess} from "./controllers/user";
 import Shopify from "shopify-api-node";
 import { fetchBullishOptions, fetchBearishOptions } from "./controllers/options";
 
@@ -299,11 +300,13 @@ app.post(
             { merge: true }
           );
 
+          const userRecord = await admin.auth().getUser(userId);
+
           // Set custom auth claims with Firebase
-          await admin.auth().setCustomUserClaims(userId, {
+          await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.customClaims, {
             customer_id: customerId,
             subscription_id: subscriptionId,
-          });
+          }));
 
           sendEmail.sendSignupEmail(email);
           await klaviyo.subscribeToList(email);
@@ -839,6 +842,8 @@ app.post("/authenticate", async (req, res) => {
 
     let customerId;
     let userData;
+    const userRecord = await admin.auth().getUser(decodedToken.uid);
+
     if (decodedToken.customer_id) {
       // check if customer id is in decoded claims
       console.log("customer is in decoded claims!!!");
@@ -849,10 +854,10 @@ app.post("/authenticate", async (req, res) => {
       userData = doc.data();
 
       if (userData.isAdmin) {
-        await admin.auth().setCustomUserClaims(decodedToken.uid, {
+        await admin.auth().setCustomUserClaims(decodedToken.uid, Object.assign(userRecord.customClaims, {
           isAdmin: true,
           customer_id: customerId,
-        });
+        }));
       }
     } else {
       // if not pull from database
@@ -873,27 +878,33 @@ app.post("/authenticate", async (req, res) => {
       // retrieve customer data from stripe using customer id from firestore
       customerId = userData.customerId;
       // set claim in firestore auth
-      await admin.auth().setCustomUserClaims(decodedToken.uid, {
-        customer_id: customerId,
-      });
+      await admin.auth().setCustomUserClaims(decodedToken.uid, Object.assign(userRecord.customClaims, {
+          customer_id: customerId,
+        }));
     }
-    if (!customerId) {
-      // Customer ID not in decoded claims or firestore
-      // this actually might be unnecessary code, impossible to hit?
-      throw {
-        terminal_error: true,
-        error_code: "PAYMENT_INCOMPLETE",
-        message: "Please complete your payment",
-      };
-    }
+    console.log(userRecord);
+    console.log("userRecord.customClaims.user_type");
+    console.log(userRecord.customClaims.user_type);
+    if(userRecord.customClaims.user_type === "prime") {
+      if (!customerId) {
+        // Customer ID not in decoded claims or firestore
+        // this actually might be unnecessary code, impossible to hit?
+        throw {
+          terminal_error: true,
+          error_code: "PAYMENT_INCOMPLETE",
+          message: "Please complete your payment",
+        };
+      }
 
-    // retrieve customer data from stripe using customer id from firestore
-    const customer = await stripe.customers.retrieve(customerId);
-    console.log("\nCUSTOMER OBJ\n");
-    console.log(customer);
-    console.log("\nSUBSCRIPTION\n");
-    console.log(customer.subscriptions);
-    console.log("\nEND\n");
+      
+      // retrieve customer data from stripe using customer id from firestore
+      const customer = await stripe.customers.retrieve(customerId);
+      console.log("\nCUSTOMER OBJ\n");
+      console.log(customer);
+      console.log("\nSUBSCRIPTION\n");
+      console.log(customer.subscriptions);
+      console.log("\nEND\n");
+    }
 
     // temporarily ignore stripe check
     //TODO: Bring back stripe check after subscription
@@ -984,13 +995,15 @@ app.post("/authenticate", async (req, res) => {
 
 app.post("/payment", async (req, res) => {
   logger.info("/payment");
-  const userId = req.body.user_id;
+
+  let { name, email, address, type, plan, crypto_addon, payment_method } = req.body;
+  const userId = req.body.uid;
+
   if (!userId) {
     res.status(403).send("Unauthorized");
     return;
   }
 
-  const email = req.body.email;
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
@@ -1001,14 +1014,18 @@ app.post("/payment", async (req, res) => {
 
   let customer;
   let subscription;
+  let planTypeId;
+
   // STRIPE CUSTOMER + SUBSCRIPTION
   try {
     // Create Stripe customer from payment method created on frontend
     customer = await stripe.customers.create({
-      payment_method: req.body.payment_method,
-      email: req.body.email,
+      payment_method: payment_method,
+      name: name,
+      email: email,
+      //address: address,
       invoice_settings: {
-        default_payment_method: req.body.payment_method,
+        default_payment_method: payment_method,
       },
     });
 
@@ -1016,11 +1033,15 @@ app.post("/payment", async (req, res) => {
     console.log(customer);
 
     // Create Stripe subscription connected to new customer
+    if(plan === "monthly") {
+      planTypeId = monthlyPlanId;
+    } else if (plan === "annually") {
+      planTypeId = yearlyPlanId;
+    }
     subscription = await stripe.subscriptions.create({
       customer: customer.id,
-      items: [{ plan: planId }],
+      items: [{ plan: planTypeId }],
       expand: ["latest_invoice.payment_intent"],
-      coupon: couponId,
     });
     console.log("THE SUBSCRIPTION");
     console.log(subscription);
@@ -1033,28 +1054,42 @@ app.post("/payment", async (req, res) => {
   // FIREBASE + FIRESTORE
   try {
     // Add user data to db
-
     let docRef = db.collection("users").doc(userId);
+
+    //Update User access
+    let userRecord = await updateUserAccess(userId, type, plan, crypto_addon);
+    
+
+    // Set custom auth claims with Firebase
+    await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.userRecord.customClaims, {
+      customer_id: customer.id,
+      subscription_id: subscription.id,
+    }));
+
     let setUser = await docRef.update({
       userId: userId,
       customerId: customer.id,
       subscriptionId: subscription.id,
       email: email,
+      user_type: userRecord.userRecord.customClaims.user_type,
+      plan: userRecord.userRecord.customClaims.plan,
+      crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
+      expiry: userRecord.userRecord.customClaims.expiry,
     });
 
-    // Set custom auth claims with Firebase
-    await admin.auth().setCustomUserClaims(userId, {
-      customer_id: customer.id,
-      subscription_id: subscription.id,
+    res.json({ 
+      success: true,
+      userRecord,
+      customer
     });
 
-    res.json({ success: true });
   } catch (err) {
     // error with firebase and firestore
     console.log("/Payment Error: ", err);
     res.json({
       error_code: "USER_PAYMENT_AUTH_ERROR",
       message: "Unable to validate your payment.",
+      error: err,
     });
   }
 });
@@ -1076,7 +1111,9 @@ app.post("/upgrade-subscription", async (req, res) => {
   let price;
   if (type == "yearly") {
     price = "price_1HPxX3BNiHwzGq61fr2QyoPX";
-  } else if (type == "lifetyime") {
+  } else if (type == "monthly") {
+    price = "price_1HPxXyBNiHwzGq61XYt5TgOO";
+  } else if (type == "lifetime") {
     price = "price_1HPxXyBNiHwzGq61XYt5TgOO";
   } else {
     res.json({
@@ -1141,6 +1178,30 @@ app.get("/user", async (req, res) => {
   }
 });
 
+app.use("/updateAccess", checkAuth);
+app.put("/updateAccess", async (req, res) => {
+  try {
+    const userRecord = await updateUserAccess(req.body.uid, req.body.type, req.body.plan, req.body.crypto_addon);
+
+    const docRef = db.collection("users").doc(req.body.uid);
+
+    await docRef.set({
+      user_type: userRecord.userRecord.customClaims.user_type,
+      plan: userRecord.userRecord.customClaims.plan,
+      crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
+      expiry: userRecord.userRecord.customClaims.expiry,
+    },
+    { merge: true });
+
+    res.send(userRecord);
+  } catch (error) {
+    res.json({
+      success: false,
+      error,
+    });
+  }
+});
+
 app.use("/pinned-stocks", checkAuth);
 app.get("/pinned-stocks", async (req, res) => {
 
@@ -1158,54 +1219,66 @@ app.get("/profile", async (req, res) => {
 
   const user = doc.data();
 
-  const customer = await stripe.customers.retrieve(
-    req.terminal_app.claims.customer_id,
-    {
-      expand: [
-        "subscriptions.data.default_payment_method",
-        "invoice_settings.default_payment_method",
-      ],
+  if(user.user_type === "prime") {
+    const customer = await stripe.customers.retrieve(
+      user.customerId,
+      {
+        expand: [
+          "subscriptions.data.default_payment_method",
+          "invoice_settings.default_payment_method",
+        ],
+      }
+    );
+
+    const charges = await stripe.charges.list({
+      customer: customer.id,
+    });
+
+    const chargesAmount = [];
+
+    charges.data.map((charge) => {
+      chargesAmount.push(charge.amount);
+    });
+
+    //TODO: Handle no subscription when accessing settings. ternary for subscription object is temp fix
+    let subscription = customer.subscriptions.data[0]
+
+    let paymentMethod;
+    if (subscription) {
+      paymentMethod = subscription.default_payment_method;
     }
-  );
+    if (paymentMethod == null) {
+      paymentMethod = customer.invoice_settings.default_payment_method;
+    }
 
-  const charges = await stripe.charges.list({
-    customer: customer.id,
-  });
-
-  const chargesAmount = [];
-
-  charges.data.map((charge) => {
-    chargesAmount.push(charge.amount);
-  });
-
-  //TODO: Handle no subscription when accessing settings. ternary for subscription object is temp fix
-  let subscription = customer.subscriptions.data[0]
-
-  let paymentMethod;
-  if (subscription) {
-    paymentMethod = subscription.default_payment_method;
+    res.json({
+      email: customer.email,
+      delinquent: customer.delinquent,
+      card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
+      card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
+      customer_since: subscription ? subscription.created : "0",
+      amount: subscription ? subscription.plan.amount / 100.0 : 0,
+      subscription_status: subscription.cancel_at_period_end ? "canceled": "active",
+      cancel_at: subscription.cancel_at ? subscription.cancel_at: null,
+      trial_end: subscription ? subscription.trial_end : "0",
+      next_payment: subscription ? subscription.current_period_end : "0",
+      firstName: user.firstName ? user.firstName : "",
+      lastName: user.lastName ? user.lastName : "",
+      city: user.city ? user.city : "",
+      profileImage: user.profileImage ? user.profileImage : "",
+      ...user,
+      charges: chargesAmount,
+    });
+  } else {
+    res.json({
+      email: user.email,
+      firstName: user.firstName ? user.firstName : "",
+      lastName: user.lastName ? user.lastName : "",
+      city: user.city ? user.city : "",
+      profileImage: user.profileImage ? user.profileImage : "",
+      ...user,
+    });
   }
-  if (paymentMethod == null) {
-    paymentMethod = customer.invoice_settings.default_payment_method;
-  }
-  res.json({
-    email: customer.email,
-    delinquent: customer.delinquent,
-    card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
-    card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
-    customer_id: req.terminal_app.claims.customer_id,
-    subscription_id: subscription ? subscription.id : "",
-    customer_since: subscription ? subscription.created : "0",
-    amount: subscription ? subscription.plan.amount / 100.0 : 0,
-    trial_end: subscription ? subscription.trial_end : "0",
-    next_payment: subscription ? subscription.current_period_end : "0",
-    firstName: user.firstName ? user.firstName : "",
-    lastName: user.lastName ? user.lastName : "",
-    city: user.city ? user.city : "",
-    profileImage: user.profileImage ? user.profileImage : "",
-    ...user,
-    charges: chargesAmount,
-  });
 });
 
 const storage = multer.memoryStorage();
@@ -1309,6 +1382,8 @@ app.post("/complete-signup", async (req, res) => {
       disabled: false,
     });
 
+    const userRecord = await updateUserAccess(authUser.uid, req.body.type, req.body.plan, req.body.crypto_addon);
+
     const docRef = db.collection("users").doc(authUser.uid);
     await docRef.set(
       {
@@ -1319,21 +1394,27 @@ app.post("/complete-signup", async (req, res) => {
         firstName,
         lastName: "",
         phoneNumber: customers.data[0].phone,
+        user_type: userRecord.userRecord.customClaims.user_type,
+        plan: userRecord.userRecord.customClaims.plan,
+        crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
+        expiry: userRecord.userRecord.customClaims.expiry,
       },
       { merge: true }
     );
 
-    await admin.auth().setCustomUserClaims(authUser.uid, {
+    await admin.auth().setCustomUserClaims(authUser.uid, Object.assign(userRecord.customClaims, {
       customer_id: customerId,
       subscription_id: subscriptionId,
-    });
+    }));
 
     const userMeta = {
       firstName,
       charges: chargesAmount,
     };
 
-    res.json({ success: true, userMeta });
+    
+
+    res.json({ success: true, userMeta, userRecord });
   } catch (error) {
     res.json({
       error:
@@ -1348,11 +1429,17 @@ app.post("/signup", async (req, res) => {
     const { userId, email, firstName, lastName, phoneNumber } = req.body;
 
     const docRef = db.collection("users").doc(userId);
+    const userRecord = await updateUserAccess(userId, "basic");
+
     await docRef.set({
       email,
       firstName,
       lastName,
       phoneNumber,
+      user_type: userRecord.userRecord.customClaims.user_type,
+      plan: userRecord.userRecord.customClaims.plan,
+      crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
+      expiry: userRecord.userRecord.customClaims.expiry,
     });
 
     res.send({ success: true });
@@ -1383,43 +1470,63 @@ app.use("/cancellation-request", checkAuth);
 app.post("/cancellation-request", async (req, res) => {
   const { cancelReason } = req.body;
 
-  const doc = await db
+  let doc = await db
     .collection("users")
     .doc(req.terminal_app.claims.uid)
     .get();
 
   const user = doc.data();
 
-  const customer = await stripe.customers.retrieve(
-    req.terminal_app.claims.customer_id
-  );
-
   const getSubscription = await stripe.subscriptions.retrieve(
     user.subscriptionId
   );
 
-  // Prevent cancelation request if a user is a prime user or if the subscription is already canceled
-  if (getSubscription.status !== "canceled" && user && user.isPrime !== true) {
+  var expiryDate = new Date(0);
+  expiryDate.setUTCSeconds(getSubscription.current_period_end);
+
+  var userRecord = await admin.auth().getUser(req.terminal_app.claims.uid);
+
+  // Update Expiry of the user access
+  await admin.auth().setCustomUserClaims(req.terminal_app.claims.uid, Object.assign(userRecord.customClaims, {
+    expiry: expiryDate
+  }));
+
+  let docRef = db.collection("users").doc(req.terminal_app.claims.uid);
+  let setUser = await docRef.update({
+    expiry: userRecord.customClaims.expiry
+  });
+
+  doc = await db
+    .collection("users")
+    .doc(req.body.uid)
+    .get();
+
+  // Prevent cancelation request if a user is a not prime user or if the subscription is already canceled
+  if (getSubscription.status !== "canceled" && user && user.user_type === "prime") {
     await stripe.subscriptions.update(user.subscriptionId, {
       cancel_at_period_end: true,
     });
   }
+  
 
-  let email = customer.email;
+  let email = user.email;
 
   sendEmail.sendCancellationRequest(
     `${user.firstName} ${user.lastName}`,
     "n/a",
     email,
     cancelReason,
-    req.terminal_app.claims.customer_id
+    user.customerId
   );
 
-  res.send("success");
+  res.json({ 
+      success: true,
+      user,
+    });
 });
 
 // Securities
-// app.use("/security/:symbol/charts", checkAuth);
+app.use("/security/:symbol/charts", checkAuth);
 app.get("/security/:symbol/charts", ChartsController.getSymbolChart);
 
 app.use("/security/:symbol", checkAuth);
@@ -2803,10 +2910,12 @@ app.get("/fetch_user_subscription", async (req, res) => {
 
             sub = {...sub, new_sub: newSubscription}
 
-            await admin.auth().setCustomUserClaims(user.uid, {
+            const userRecord = await admin.auth().getUser(user.uid);
+
+            await admin.auth().setCustomUserClaims(user.uid, Object.assign(userRecord.customClaims, {
               customer_id,
               subscription_id: newSubscription.id,
-            });
+            }));
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
@@ -3105,10 +3214,12 @@ app.get("/fetch_user_subscription", async (req, res) => {
 
             sub = {...sub, new_sub: newSubscription}
 
-            await admin.auth().setCustomUserClaims(user.uid, {
+            const userRecord = await admin.auth().getUser(user.uid);
+
+            await admin.auth().setCustomUserClaims(user.uid, Object.assign(userRecord.customClaims, {
               customer_id,
               subscription_id: newSubscription.id,
-            });
+            }));
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
