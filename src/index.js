@@ -1650,14 +1650,12 @@ app.get("/similar/:ticker", async (req, res) => {
 });
 
 // SEARCH
-app.use("/search/:query", checkAuth);
 app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
   res.send(results);
 });
 
-app.use("/search-sec/:query", checkAuth);
 app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
@@ -1729,7 +1727,7 @@ app.get("/naviga-news/titan/:titan_uri", checkAuth, naviga.getTitanNews);
 app.get("/naviga-news/strong-buy", checkAuth, naviga.getStrongBuyNews);
 app.get("/naviga-news/earning", checkAuth, naviga.getEarningNews);
 app.get("/naviga-news/for-you", checkAuth, news.getUserSpecificNews);
-app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
+app.get("/naviga-news/:ticker", naviga.getCompanyNews);
 
 // app.use("/news/trending-ticker", checkAuth);
 app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
