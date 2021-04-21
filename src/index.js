@@ -1628,13 +1628,13 @@ app.get("/sec-intraday-prices/:symbol", async (req, res) => {
   );
 });
 
-app.use("/sec-last-price/:symbol", checkAuth);
+//app.use("/sec-last-price/:symbol", checkAuth);
 app.get("/sec-last-price/:symbol", async (req, res) => {
   const lastPrice = await quodd.getLastPrice(req.params.symbol);
   res.send(lastPrice);
 });
 
-app.use("/sec-price-change/:symbol", checkAuth);
+//app.use("/sec-price-change/:symbol", checkAuth);
 app.get("/sec-price-change/:symbol", async (req, res) => {
   const lastPrice = await quodd.getLastPriceChange(req.params.symbol);
   res.send(lastPrice);
@@ -1651,6 +1651,14 @@ app.get("/similar/:ticker", async (req, res) => {
 
 // SEARCH
 app.get("/search/:query", async (req, res) => {
+  let search_count = req.cookies.search_count;
+  if(search_count) {
+    search_count = parseInt(search_count) + 1;
+  } else {
+    search_count = 1;
+  }
+
+  res.cookie('search_count',search_count, { maxAge: 900000, httpOnly: true });
   const query = req.params.query;
   const results = await search.searchCompanies(query);
   res.send(results);
