@@ -34,6 +34,7 @@ export let CACHED_PRICE_REALTIME = "C_R";
 export let CACHED_PRICE_15MIN = "C_15";
 export let KEY_SECURITY_PERFORMANCE = "KEY_SEC_PERF";
 export let CACHED_PRICE_CLOSE = "C_PC";
+export let CACHED_PRICE_OPEN = "C_O";
 
 function connectDatabase() {
   let credentials = {

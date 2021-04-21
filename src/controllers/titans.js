@@ -287,6 +287,56 @@ export const getSummary = async (uri, userId) => {
   return data;
 };
 
+export const getTitansCikData = async (uri, userId) => {
+  const query = {
+    text:
+      "INSERT INTO titans (user_id, titan_uri, created_at) VALUES ($1, $2, now())",
+    values: [userId, uri],
+  };
+  await db1(query);
+
+  let data;
+
+  let result = await db(`
+    SELECT b.name, bc.cik AS cik, b.id, b.uri,
+    b.net_worth,
+    b.description,
+    b.institution_name,
+    b.photo_url,
+    b.industry,
+    b.use_company_performance_fallback,
+    i.json::json->>'fund_size' AS fund_size,
+    i.json::json->>'performance_quarter' AS performance_quarter, 
+    i.json::json->>'performance_one_year'AS performance_one_year,
+    i.json::json->>'performance_five_year' AS performance_five_year,
+    h.json_snapshot,
+    h.json_allocations,
+    h.json_top_10
+    FROM billionaires b
+    LEFT JOIN billionaire_ciks bc ON bc.titan_id = b.id AND bc.is_primary = TRUE
+    LEFT JOIN cik_holdings h on h.cik = bc.cik
+    LEFT JOIN institutions i on i.cik = bc.cik
+    WHERE bc.cik != '0000000000' AND bc.cik IS NOT NULL
+    AND b.uri = '${uri}'
+  `);
+
+  let company;
+  if (result && result.length > 0) {
+    data = result[0];
+    let { cik, use_company_performance_fallback } = result[0];
+    if (use_company_performance_fallback) {
+      company = await companies.getCompanyDataByCik(cik);
+      data = {...data, company};
+    }
+    data = {
+      ...data,
+      watching: await watchlist.isWatching_Billionaire(result[0].id, userId),
+    };
+  }
+
+  return data;
+};
+
 export const getPage = async ({
   sort = [],
   page = 0,

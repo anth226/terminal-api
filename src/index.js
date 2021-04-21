@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express, { response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import axios from "axios";
@@ -36,6 +36,7 @@ import * as dashboard from "./controllers/dashboard";
 import * as securities from "./controllers/securities";
 import * as pages from "./controllers/pages";
 import { questionnaireSubmission } from "./controllers/questionnaire";
+import * as holdings from "./controllers/holdings";
 
 import * as darkpool from "./controllers/darkpool";
 import * as quodd from "./controllers/quodd";
@@ -44,13 +45,17 @@ import * as edgar from "./controllers/edgar";
 import * as search from "./controllers/search";
 import * as institutions from "./controllers/institutions";
 import * as titans from "./controllers/titans";
+import * as trades from "./controllers/trades";
+import * as alerts from "./controllers/alerts";
 import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
+import * as crypto_api from "./controllers/crypto"
 import * as cannon from "./controllers/cannon";
 import * as klaviyo from "./controllers/klaviyo";
 import * as watchlist from "./controllers/watchlist";
 import * as sendEmail from "./sendEmail";
+import ChartsController from './controllers/charts';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
@@ -66,17 +71,26 @@ import {
   stripe,
   endpointSecret,
   couponId,
+  couponIdFree,
   planId,
   yearlyPlanId,
+  monthlyPlanId,
 } from "./services/stripe";
-import { listAllUsers } from "./controllers/user";
+import { listAllUsers, updateUserAccess} from "./controllers/user";
 import Shopify from "shopify-api-node";
+import { fetchBullishOptions, fetchBearishOptions } from "./controllers/options";
 
 const shopify = new Shopify({
   shopName: "portfolio-insider",
   apiKey: "26774218d929d0a2e7ad7d46a4cfde09",
   password: "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",
 });
+
+const pino = require('express-pino-logger')();
+const client = require('twilio')(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 var crypto = require('crypto');
 var bugsnag = require("@bugsnag/js");
@@ -137,7 +151,7 @@ const app = express();
 
 // configure CORS
 var corsOptions = {
-  origin: [`${apiProtocol}${apiURL}`, `${apiProtocol}www.${apiURL}`],
+  origin: true,
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true,
 };
@@ -166,6 +180,12 @@ app.use((req, res, next) => {
 });
 
 app.use(middleware.requestHandler);
+
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use(pino);
+
 /*
 ~~~~~~Utils~~~~~~
 */
@@ -280,11 +300,13 @@ app.post(
             { merge: true }
           );
 
+          const userRecord = await admin.auth().getUser(userId);
+
           // Set custom auth claims with Firebase
-          await admin.auth().setCustomUserClaims(userId, {
+          await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.customClaims, {
             customer_id: customerId,
             subscription_id: subscriptionId,
-          });
+          }));
 
           sendEmail.sendSignupEmail(email);
           await klaviyo.subscribeToList(email);
@@ -820,6 +842,8 @@ app.post("/authenticate", async (req, res) => {
 
     let customerId;
     let userData;
+    const userRecord = await admin.auth().getUser(decodedToken.uid);
+
     if (decodedToken.customer_id) {
       // check if customer id is in decoded claims
       console.log("customer is in decoded claims!!!");
@@ -830,10 +854,10 @@ app.post("/authenticate", async (req, res) => {
       userData = doc.data();
 
       if (userData.isAdmin) {
-        await admin.auth().setCustomUserClaims(decodedToken.uid, {
+        await admin.auth().setCustomUserClaims(decodedToken.uid, Object.assign(userRecord.customClaims, {
           isAdmin: true,
           customer_id: customerId,
-        });
+        }));
       }
     } else {
       // if not pull from database
@@ -854,27 +878,33 @@ app.post("/authenticate", async (req, res) => {
       // retrieve customer data from stripe using customer id from firestore
       customerId = userData.customerId;
       // set claim in firestore auth
-      await admin.auth().setCustomUserClaims(decodedToken.uid, {
-        customer_id: customerId,
-      });
+      await admin.auth().setCustomUserClaims(decodedToken.uid, Object.assign(userRecord.customClaims, {
+          customer_id: customerId,
+        }));
     }
-    if (!customerId) {
-      // Customer ID not in decoded claims or firestore
-      // this actually might be unnecessary code, impossible to hit?
-      throw {
-        terminal_error: true,
-        error_code: "PAYMENT_INCOMPLETE",
-        message: "Please complete your payment",
-      };
-    }
+    console.log(userRecord);
+    console.log("userRecord.customClaims.user_type");
+    console.log(userRecord.customClaims.user_type);
+    if(userRecord.customClaims.user_type === "prime") {
+      if (!customerId) {
+        // Customer ID not in decoded claims or firestore
+        // this actually might be unnecessary code, impossible to hit?
+        throw {
+          terminal_error: true,
+          error_code: "PAYMENT_INCOMPLETE",
+          message: "Please complete your payment",
+        };
+      }
 
-    // retrieve customer data from stripe using customer id from firestore
-    const customer = await stripe.customers.retrieve(customerId);
-    console.log("\nCUSTOMER OBJ\n");
-    console.log(customer);
-    console.log("\nSUBSCRIPTION\n");
-    console.log(customer.subscriptions);
-    console.log("\nEND\n");
+      
+      // retrieve customer data from stripe using customer id from firestore
+      const customer = await stripe.customers.retrieve(customerId);
+      console.log("\nCUSTOMER OBJ\n");
+      console.log(customer);
+      console.log("\nSUBSCRIPTION\n");
+      console.log(customer.subscriptions);
+      console.log("\nEND\n");
+    }
 
     // temporarily ignore stripe check
     //TODO: Bring back stripe check after subscription
@@ -965,13 +995,15 @@ app.post("/authenticate", async (req, res) => {
 
 app.post("/payment", async (req, res) => {
   logger.info("/payment");
-  const userId = req.body.user_id;
+
+  let { name, email, address, type, plan, crypto_addon, payment_method } = req.body;
+  const userId = req.body.uid;
+
   if (!userId) {
     res.status(403).send("Unauthorized");
     return;
   }
 
-  const email = req.body.email;
   if (!email) {
     res.json({
       error_code: "USER_EMAIL_INVALID",
@@ -982,14 +1014,18 @@ app.post("/payment", async (req, res) => {
 
   let customer;
   let subscription;
+  let planTypeId;
+
   // STRIPE CUSTOMER + SUBSCRIPTION
   try {
     // Create Stripe customer from payment method created on frontend
     customer = await stripe.customers.create({
-      payment_method: req.body.payment_method,
-      email: req.body.email,
+      payment_method: payment_method,
+      name: name,
+      email: email,
+      //address: address,
       invoice_settings: {
-        default_payment_method: req.body.payment_method,
+        default_payment_method: payment_method,
       },
     });
 
@@ -997,11 +1033,15 @@ app.post("/payment", async (req, res) => {
     console.log(customer);
 
     // Create Stripe subscription connected to new customer
+    if(plan === "monthly") {
+      planTypeId = monthlyPlanId;
+    } else if (plan === "annually") {
+      planTypeId = yearlyPlanId;
+    }
     subscription = await stripe.subscriptions.create({
       customer: customer.id,
-      items: [{ plan: planId }],
+      items: [{ plan: planTypeId }],
       expand: ["latest_invoice.payment_intent"],
-      coupon: couponId,
     });
     console.log("THE SUBSCRIPTION");
     console.log(subscription);
@@ -1014,28 +1054,42 @@ app.post("/payment", async (req, res) => {
   // FIREBASE + FIRESTORE
   try {
     // Add user data to db
-
     let docRef = db.collection("users").doc(userId);
+
+    //Update User access
+    let userRecord = await updateUserAccess(userId, type, plan, crypto_addon);
+    
+
+    // Set custom auth claims with Firebase
+    await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.userRecord.customClaims, {
+      customer_id: customer.id,
+      subscription_id: subscription.id,
+    }));
+
     let setUser = await docRef.update({
       userId: userId,
       customerId: customer.id,
       subscriptionId: subscription.id,
       email: email,
+      user_type: userRecord.userRecord.customClaims.user_type,
+      plan: userRecord.userRecord.customClaims.plan,
+      crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
+      expiry: userRecord.userRecord.customClaims.expiry,
     });
 
-    // Set custom auth claims with Firebase
-    await admin.auth().setCustomUserClaims(userId, {
-      customer_id: customer.id,
-      subscription_id: subscription.id,
+    res.json({ 
+      success: true,
+      userRecord,
+      customer
     });
 
-    res.json({ success: true });
   } catch (err) {
     // error with firebase and firestore
     console.log("/Payment Error: ", err);
     res.json({
       error_code: "USER_PAYMENT_AUTH_ERROR",
       message: "Unable to validate your payment.",
+      error: err,
     });
   }
 });
@@ -1057,7 +1111,9 @@ app.post("/upgrade-subscription", async (req, res) => {
   let price;
   if (type == "yearly") {
     price = "price_1HPxX3BNiHwzGq61fr2QyoPX";
-  } else if (type == "lifetyime") {
+  } else if (type == "monthly") {
+    price = "price_1HPxXyBNiHwzGq61XYt5TgOO";
+  } else if (type == "lifetime") {
     price = "price_1HPxXyBNiHwzGq61XYt5TgOO";
   } else {
     res.json({
@@ -1101,16 +1157,43 @@ app.get("/user", async (req, res) => {
 
     const user = doc.data();
 
+    const userRecord = await admin.auth().getUser(req.terminal_app.claims.uid);
+
     const dashboards = await dashboard.get(req.terminal_app.claims.uid);
 
     const pinnedStocks = await dashboard.pinnedStocks(req.terminal_app.claims.uid);
 
     res.json({
       success: true,
+      userRecord,
       user,
       dashboards,
       pinnedStocks
     });
+  } catch (error) {
+    res.json({
+      success: false,
+      error,
+    });
+  }
+});
+
+app.use("/updateAccess", checkAuth);
+app.put("/updateAccess", async (req, res) => {
+  try {
+    const userRecord = await updateUserAccess(req.body.uid, req.body.type, req.body.plan, req.body.crypto_addon);
+
+    const docRef = db.collection("users").doc(req.body.uid);
+
+    await docRef.set({
+      user_type: userRecord.userRecord.customClaims.user_type,
+      plan: userRecord.userRecord.customClaims.plan,
+      crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
+      expiry: userRecord.userRecord.customClaims.expiry,
+    },
+    { merge: true });
+
+    res.send(userRecord);
   } catch (error) {
     res.json({
       success: false,
@@ -1136,54 +1219,66 @@ app.get("/profile", async (req, res) => {
 
   const user = doc.data();
 
-  const customer = await stripe.customers.retrieve(
-    req.terminal_app.claims.customer_id,
-    {
-      expand: [
-        "subscriptions.data.default_payment_method",
-        "invoice_settings.default_payment_method",
-      ],
+  if(user.user_type === "prime") {
+    const customer = await stripe.customers.retrieve(
+      user.customerId,
+      {
+        expand: [
+          "subscriptions.data.default_payment_method",
+          "invoice_settings.default_payment_method",
+        ],
+      }
+    );
+
+    const charges = await stripe.charges.list({
+      customer: customer.id,
+    });
+
+    const chargesAmount = [];
+
+    charges.data.map((charge) => {
+      chargesAmount.push(charge.amount);
+    });
+
+    //TODO: Handle no subscription when accessing settings. ternary for subscription object is temp fix
+    let subscription = customer.subscriptions.data[0]
+
+    let paymentMethod;
+    if (subscription) {
+      paymentMethod = subscription.default_payment_method;
     }
-  );
+    if (paymentMethod == null) {
+      paymentMethod = customer.invoice_settings.default_payment_method;
+    }
 
-  const charges = await stripe.charges.list({
-    customer: customer.id,
-  });
-
-  const chargesAmount = [];
-
-  charges.data.map((charge) => {
-    chargesAmount.push(charge.amount);
-  });
-
-  //TODO: Handle no subscription when accessing settings. ternary for subscription object is temp fix
-  let subscription = customer.subscriptions.data[0]
-
-  let paymentMethod;
-  if (subscription) {
-    paymentMethod = subscription.default_payment_method;
+    res.json({
+      email: customer.email,
+      delinquent: customer.delinquent,
+      card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
+      card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
+      customer_since: subscription ? subscription.created : "0",
+      amount: subscription ? subscription.plan.amount / 100.0 : 0,
+      subscription_status: subscription.cancel_at_period_end ? "canceled": "active",
+      cancel_at: subscription.cancel_at ? subscription.cancel_at: null,
+      trial_end: subscription ? subscription.trial_end : "0",
+      next_payment: subscription ? subscription.current_period_end : "0",
+      firstName: user.firstName ? user.firstName : "",
+      lastName: user.lastName ? user.lastName : "",
+      city: user.city ? user.city : "",
+      profileImage: user.profileImage ? user.profileImage : "",
+      ...user,
+      charges: chargesAmount,
+    });
+  } else {
+    res.json({
+      email: user.email,
+      firstName: user.firstName ? user.firstName : "",
+      lastName: user.lastName ? user.lastName : "",
+      city: user.city ? user.city : "",
+      profileImage: user.profileImage ? user.profileImage : "",
+      ...user,
+    });
   }
-  if (paymentMethod == null) {
-    paymentMethod = customer.invoice_settings.default_payment_method;
-  }
-  res.json({
-    email: customer.email,
-    delinquent: customer.delinquent,
-    card_brand: paymentMethod ? paymentMethod.card.brand : "demo",
-    card_last4: paymentMethod ? paymentMethod.card.last4 : "demo",
-    customer_id: req.terminal_app.claims.customer_id,
-    subscription_id: subscription ? subscription.id : "",
-    customer_since: subscription ? subscription.created : "0",
-    amount: subscription ? subscription.plan.amount / 100.0 : 0,
-    trial_end: subscription ? subscription.trial_end : "0",
-    next_payment: subscription ? subscription.current_period_end : "0",
-    firstName: user.firstName ? user.firstName : "",
-    lastName: user.lastName ? user.lastName : "",
-    city: user.city ? user.city : "",
-    profileImage: user.profileImage ? user.profileImage : "",
-    ...user,
-    charges: chargesAmount,
-  });
 });
 
 const storage = multer.memoryStorage();
@@ -1287,6 +1382,8 @@ app.post("/complete-signup", async (req, res) => {
       disabled: false,
     });
 
+    const userRecord = await updateUserAccess(authUser.uid, req.body.type, req.body.plan, req.body.crypto_addon);
+
     const docRef = db.collection("users").doc(authUser.uid);
     await docRef.set(
       {
@@ -1297,21 +1394,27 @@ app.post("/complete-signup", async (req, res) => {
         firstName,
         lastName: "",
         phoneNumber: customers.data[0].phone,
+        user_type: userRecord.userRecord.customClaims.user_type,
+        plan: userRecord.userRecord.customClaims.plan,
+        crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
+        expiry: userRecord.userRecord.customClaims.expiry,
       },
       { merge: true }
     );
 
-    await admin.auth().setCustomUserClaims(authUser.uid, {
+    await admin.auth().setCustomUserClaims(authUser.uid, Object.assign(userRecord.customClaims, {
       customer_id: customerId,
       subscription_id: subscriptionId,
-    });
+    }));
 
     const userMeta = {
       firstName,
       charges: chargesAmount,
     };
 
-    res.json({ success: true, userMeta });
+    
+
+    res.json({ success: true, userMeta, userRecord });
   } catch (error) {
     res.json({
       error:
@@ -1326,11 +1429,17 @@ app.post("/signup", async (req, res) => {
     const { userId, email, firstName, lastName, phoneNumber } = req.body;
 
     const docRef = db.collection("users").doc(userId);
+    const userRecord = await updateUserAccess(userId, "basic");
+
     await docRef.set({
       email,
       firstName,
       lastName,
       phoneNumber,
+      user_type: userRecord.userRecord.customClaims.user_type,
+      plan: userRecord.userRecord.customClaims.plan,
+      crypto_addon: userRecord.userRecord.customClaims.crypto_addon,
+      expiry: userRecord.userRecord.customClaims.expiry,
     });
 
     res.send({ success: true });
@@ -1361,42 +1470,65 @@ app.use("/cancellation-request", checkAuth);
 app.post("/cancellation-request", async (req, res) => {
   const { cancelReason } = req.body;
 
-  const doc = await db
+  let doc = await db
     .collection("users")
     .doc(req.terminal_app.claims.uid)
     .get();
 
   const user = doc.data();
 
-  const customer = await stripe.customers.retrieve(
-    req.terminal_app.claims.customer_id
-  );
-
   const getSubscription = await stripe.subscriptions.retrieve(
     user.subscriptionId
   );
 
-  // Prevent cancelation request if a user is a prime user or if the subscription is already canceled
-  if (getSubscription.status !== "canceled" && user && user.isPrime !== true) {
+  var expiryDate = new Date(0);
+  expiryDate.setUTCSeconds(getSubscription.current_period_end);
+
+  var userRecord = await admin.auth().getUser(req.terminal_app.claims.uid);
+
+  // Update Expiry of the user access
+  await admin.auth().setCustomUserClaims(req.terminal_app.claims.uid, Object.assign(userRecord.customClaims, {
+    expiry: expiryDate
+  }));
+
+  let docRef = db.collection("users").doc(req.terminal_app.claims.uid);
+  let setUser = await docRef.update({
+    expiry: userRecord.customClaims.expiry
+  });
+
+  doc = await db
+    .collection("users")
+    .doc(req.body.uid)
+    .get();
+
+  // Prevent cancelation request if a user is a not prime user or if the subscription is already canceled
+  if (getSubscription.status !== "canceled" && user && user.user_type === "prime") {
     await stripe.subscriptions.update(user.subscriptionId, {
       cancel_at_period_end: true,
     });
   }
+  
 
-  let email = customer.email;
+  let email = user.email;
 
   sendEmail.sendCancellationRequest(
     `${user.firstName} ${user.lastName}`,
     "n/a",
     email,
     cancelReason,
-    req.terminal_app.claims.customer_id
+    user.customerId
   );
 
-  res.send("success");
+  res.json({ 
+      success: true,
+      user,
+    });
 });
 
 // Securities
+app.use("/security/:symbol/charts", checkAuth);
+app.get("/security/:symbol/charts", ChartsController.getSymbolChart);
+
 app.use("/security/:symbol", checkAuth);
 app.get("/security/:symbol", async (req, res) => {
   const result = await securities.lookup(
@@ -2028,6 +2160,242 @@ app.get("/titans", async (req, res) => {
   res.send(result);
 });
 
+// Alerts
+
+// app.use("/alerts", checkAuth);
+app.post("/alerts", async (req, res) => {
+  const result = await alerts.createAlert(
+    req.body.name,
+    req.body.message,
+    req.body.isDaily
+  );
+  res.send(result);
+});
+
+//app.use("/alerts/:id", checkAuth);
+app.get("/alerts", async (req, res) => {
+  const result = await alerts.getAlerts(req);
+  res.send(result);
+});
+
+//app.use("/alerts/:id", checkAuth);
+app.get("/alerts/:id", async (req, res) => {
+  const result = await alerts.getAlert(req.params.id);
+  res.send(result);
+});
+
+//app.use("/alerts/:id/users", checkAuth);
+app.get("/alerts/:id/users", async (req, res) => {
+  const result = await alerts.getAlertUsers(req.params.id);
+  res.send(result);
+});
+
+//app.use("/alerts/:id/activate", checkAuth);
+app.get("/alerts/:id/activate", async (req, res) => {
+  const result = await alerts.activateAlert(req.params.id);
+  res.send(result);
+});
+
+//app.use("/alerts/:id/deactivate", checkAuth);
+app.get("/alerts/:id/deactivate", async (req, res) => {
+  const result = await alerts.deactivateAlert(req.params.id);
+  res.send(result);
+});
+
+ app.use("/alerts/:id/addUser", checkAuth);
+app.get("/alerts/:id/addUser", async (req, res) => {
+  const result = await alerts.addAlertUser(
+    req.terminal_app.claims.uid,
+    req.params.id,
+    req.body.phone
+  );
+  res.send(result);
+});
+
+app.use("/alerts/:id/subscribe", checkAuth);
+app.get("/alerts/:id/subscribe", async (req, res) => {
+  const result = await alerts.subscribeAlert(
+    req.body.phone,
+    req.params.id
+  );
+  res.send(result);
+});
+
+app.use("/alerts/:id/unsubscribe", checkAuth);
+app.get("/alerts/:id/unsubscribe", async (req, res) => {
+  const result = await alerts.unsubscribeAlert(
+    req.body.phone,
+    req.params.id
+  );
+  res.send(result);
+});
+
+//app.use("/daily_alerts", checkAuth);
+app.get("/daily_alerts", async (req, res) => {
+  const result = await alerts.getDailyAlerts();
+  res.send(result);
+});
+
+//app.use("/cw_getUser", checkAuth);
+app.get("/cw_getUser", async (req, res) => {
+  let userResult=[], alertUserResult=[];
+  try{
+
+    alertUserResult = await alerts.getAlertByName("CW Daily");
+    userResult = await alerts.getAlertUser(alertUserResult[0].id, req.query.uid);
+
+    res.send(JSON.stringify({ success: true, userResult }));
+  } catch (error) {
+      res.send(JSON.stringify({ success: false, error, userResult }));
+    }
+  
+});
+
+//Cathie Wood subscribe
+app.use("/cw_subscribe", checkAuth);
+app.post("/cw_subscribe", async (req, res) => {
+  let alertResult, userResult, alertUserResult;
+  try {
+    await alerts.addCWAlertUser(
+      req.terminal_app.claims.uid,
+      req.body.phone
+    );
+
+    alertResult = await alerts.getAlertByName("CW Subscribe");
+    alertUserResult = await alerts.getAlertByName("CW Daily");
+
+    userResult = await alerts.getAlertUser(alertUserResult[0].id, req.terminal_app.claims.uid);
+    
+    res.header('Content-Type', 'application/json');
+    client.messages
+      .create({
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: req.body.phone,
+        body: alertResult[0].message
+      })
+      .then(() => {
+        res.send(JSON.stringify({ success: true, userResult }));
+      })
+      .catch(err => {
+        console.log(err);
+        res.send(JSON.stringify({ success: false, userResult }));
+      });
+    } catch (error) {
+      res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
+    }
+});
+
+//Cathie Wood unsubscribe
+app.use("/cw_unsubscribe", checkAuth);
+app.post("/cw_unsubscribe", async (req, res) => {
+  let alertResult, userResult, alertUserResult;
+  try {
+    await alerts.unsubscribeCWAlert(
+      req.body.phone
+    );
+    
+    alertResult = await alerts.getAlertByName("CW Unsubscribe");
+    alertUserResult = await alerts.getAlertByName("CW Daily");
+
+    userResult = await alerts.getAlertUser(alertUserResult[0].id, req.terminal_app.claims.uid);
+    res.header('Content-Type', 'application/json');
+    client.messages
+      .create({
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: req.body.phone,
+        body: alertResult[0].message
+      })
+      .then(() => {
+        res.send(JSON.stringify({ success: true, userResult }));
+      })
+      .catch(err => {
+        console.log(err);
+        res.send(JSON.stringify({ success: false, userResult }));
+      });
+  } catch (error) {
+      res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
+    }
+});
+
+
+// Twilio SMS
+app.post('/alerts/send_sms', (req, res) => {
+  res.header('Content-Type', 'application/json');
+  client.messages
+    .create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: req.body.to,
+      body: req.body.message
+    })
+    .then(() => {
+      res.send(JSON.stringify({ success: true }));
+    })
+    .catch(err => {
+      console.log(err);
+      res.send(JSON.stringify({ success: false }));
+    });
+});
+
+// Receives response from
+var MessagingResponse = require('twilio').twiml.MessagingResponse;
+
+app.post('/alert/response', async function (req, res) {
+  var resp = new MessagingResponse();
+  var responseMsg = req.body.Body.trim().toLowerCase();
+  var fromNum = req.body.From;
+  if (responseMsg.includes('end alert')) {
+
+    alerts.unsubscribeCWAlert(fromNum);
+
+    const alertUnsub = await alerts.getAlertByName("CW Unsubscribe");
+    resp.message(alertUnsub[0].message); 
+
+  } 
+  else {
+    resp.message('Invalid keyword!');
+  }
+  res.writeHead(200, {
+    'Content-Type':'text/xml'
+  });
+  res.end(resp.toString());
+});
+
+app.get("/trades/top_buy", async (req, res) => {
+  const result = await trades.getTop3Buy();
+  res.send(result);
+});
+
+app.get("/trades/top_sell", async (req, res) => {
+  const result = await trades.getTop3Sell();
+  res.send(result);
+});
+
+app.get("/trades/portfolio_additions", async (req, res) => {
+  const result = await trades.getPortfolioAdditions(req.query.top5);
+  res.send(result);
+});
+
+app.get("/trades/portfolio_deletions", async (req, res) => {
+  const result = await trades.getPortfolioDeletions(req.query.top5);
+  res.send(result);
+});
+
+app.get("/trades/open_portfolio", async (req, res) => {
+  const result = await trades.getOpenPortfolio(req.query.top5);
+  res.send(result);
+});
+
+app.get("/trades/archived_portfolio", async (req, res) => {
+  const result = await trades.getArchivedPortfolio(req.query.top5);
+  res.send(result);
+});
+
+app.get("/trades", async (req, res) => {
+  const result = await trades.getTrades(req);
+  res.send(result);
+});
+
+
 app.get("/portfolios/search/typeahead", async (req, res) => {
   const results = await search.prefetchPortfolios();
   res.send(results);
@@ -2058,6 +2426,9 @@ app.get("/hooks/zip_billionaire_performances", async (req, res) => {
   const result = await hooks.zipPerformances_Billionaires(req.body);
   res.send(result);
 });
+
+app.use("/zacks/securities", checkAuth);
+app.get("/zacks/securities", zacks.getZacksRank);
 
 // Zacks EPS Surprises
 app.use("/zacks/eps_surprises", checkAuth);
@@ -2262,6 +2633,11 @@ app.get("/darkpool/options", async (req, res) => {
   res.send(result);
 });
 
+app.get("/darkpool/exp_dates", async (req, res) => {
+  const result = await darkpool.getExpDates(req);
+  res.send(result);
+});
+
 app.get("/darkpool/option/:id", async (req, res) => {
   const result = await darkpool.getOption(req.params.id);
   res.send(result);
@@ -2306,6 +2682,29 @@ app.get(
     res.send(result);
   }
 );
+
+// ciks endpoints
+app.use("/ciks/:cik", checkAuth);
+app.get("/ciks/:cik", async (req, res) => {
+    const result = await holdings.getHoldingsByCik(req.params.cik);
+    res.send(result);
+  }
+);
+
+app.use("/ciks/institutions/data", checkAuth);
+app.get("/ciks/institutions/data", async (req, res) => {
+  const result = await institutions.getInstitutionsCikData(req);
+  res.send(result);
+});
+
+app.use("/ciks/titans/:uri", checkAuth);
+app.get("/ciks/titans/:uri", async (req, res) => {
+  const result = await titans.getTitansCikData(
+    req.params.uri,
+    req.terminal_app.claims.uid
+  );
+  res.send(result);
+});
 
 app.use("/billionaire/:identifier/ciks/:rank/promote", checkAuth);
 app.get(
@@ -2378,8 +2777,13 @@ app.get(
 // Questionnaire Submission
 app.post("/questionnaire-submission", checkAuth, questionnaireSubmission);
 
-// subscription fixing
-app.get("/subscription_fixing", async (req, res) => {
+// stripe - fetch subscriptions
+app.get("/fetch_subscriptions", async (req, res) => {
+  if (process.env.RELEASE_STAGE == "production") {
+    res.send("fail");
+    return;
+  }
+
   if (process.env.DISABLE_CRON == "true") {
     res.send("disabled");
     return;
@@ -2389,45 +2793,135 @@ app.get("/subscription_fixing", async (req, res) => {
     res.send("fail");
     return;
   }
+
+  var users = [];
+
   const userLists = await admin.auth().listUsers(1000)
+
   for (const user of userLists.users) {
-    try {
-      if (user.customClaims && !isEmpty(user.customClaims)) {
-        const { subscription_id, customer_id } = user.customClaims
-        if (subscription_id) {
-          const subscription = await stripe.subscriptions.retrieve(
+    users.push(user)
+  }
+
+  if (userLists.pageToken) {
+    const userLists2 = await admin.auth().listUsers(1000, userLists.pageToken)
+    if (userLists2 && userLists2.users.length > 0) {
+      for (const user of userLists2.users) {
+        users.push(user)
+      }
+    }
+  }
+
+  var subs = [];
+
+  for (const user of users) {
+    if (user.customClaims && !isEmpty(user.customClaims)) {
+      const { subscription_id, customer_id } = user.customClaims
+      if (subscription_id) {
+        const subscription = await stripe.subscriptions.retrieve(
             subscription_id
-          );
-          console.log(subscription)
+        );
+        const activesub = await stripe.subscriptions.list({
+          customer: customer_id,
+        });
+        const customerData = await stripe.customers.retrieve(
+            customer_id
+        );
 
-          if (subscription && subscription.cancel_at_period_end === true &&
+        // console.log(subscription)
+        subs.push({user: user, sub: subscription, active_sub: activesub, customer: customerData});
+
+        if (subs.length > 100) {
+          break;
+        }
+      }
+    }
+  }
+  res.send({subs: subs});
+});
+
+// stripe - fetch user subscription and fix
+app.get("/fetch_user_subscription", async (req, res) => {
+  if (process.env.RELEASE_STAGE == "production") {
+    res.send("fail");
+    return;
+  }
+
+  if (process.env.DISABLE_CRON == "true") {
+    res.send("disabled");
+    return;
+  }
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
+  if (query.uid && query.uid.length > 0) {
+    console.log(query.uid);
+  } else {
+    res.send("failed, no user");
+    return;
+  }
+
+  var updateSubscription = false;
+  if (query.updatesub && query.updatesub === "true") {
+    console.log(query.updatesub);
+    updateSubscription = true;
+  }
+
+  const user = await admin.auth().getUser(query.uid);
+
+  var sub;
+
+  if (user.customClaims && !isEmpty(user.customClaims)) {
+    const { subscription_id, customer_id } = user.customClaims
+    if (subscription_id) {
+      const subscription = await stripe.subscriptions.retrieve(
+          subscription_id
+      );
+      const activesub = await stripe.subscriptions.list({
+        customer: customer_id,
+      });
+      const customerData = await stripe.customers.retrieve(
+          customer_id
+      );
+
+      sub = {user: user, sub: subscription, active_sub: activesub, customer: customerData};
+
+      try {
+        if (subscription.status === "active") {
+          console.log("This account is active");
+        } else if (subscription && subscription.cancel_at_period_end === true &&
             (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
-          ) {
-            console.log("subscription--", subscription)
-            const customerData = await stripe.customers.retrieve(
-              customer_id
-            );
+        ) {
+          console.log("found canceled subscription");
 
-            if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method) {
+          if (updateSubscription) {
+            if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
               await stripe.customers.update(
-                customer_id,
-                { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+                  customer_id,
+                  { invoice_settings: { default_payment_method: subscription.default_payment_method } }
               );
             }
-            console.log("customerData--", customerData)
 
+
+            console.log("attempting to create sub");
             const newSubscription = await stripe.subscriptions.create({
               customer: customer_id,
               items: [{ plan: planId }],
               expand: ["latest_invoice.payment_intent"],
-              coupon: couponId,
+              coupon: couponIdFree,
             });
             console.log("new subscription ---", newSubscription)
 
-            await admin.auth().setCustomUserClaims(user.uid, {
+            sub = {...sub, new_sub: newSubscription}
+
+            const userRecord = await admin.auth().getUser(user.uid);
+
+            await admin.auth().setCustomUserClaims(user.uid, Object.assign(userRecord.customClaims, {
               customer_id,
               subscription_id: newSubscription.id,
-            });
+            }));
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
@@ -2435,32 +2929,160 @@ app.get("/subscription_fixing", async (req, res) => {
               subscriptionId: newSubscription.id,
               subscriptionStatus: newSubscription.status
             });
+          }
+        } else if (sub && sub.sub && sub.sub.cancel_at_period_end === true && sub.sub.status != "canceled") {
 
-          } else if (subscription && subscription.cancel_at_period_end === true) {
+          console.log("not canceled yet but set to cancel");
+
+          if (updateSubscription) {
             const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
               cancel_at_period_end: false
             });
             console.log("updatedSubscription---", updatedSubscription)
+            sub = {...sub, updated_sub: updatedSubscription}
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
               subscriptionStatus: updatedSubscription.status
             });
           }
+        } else {
+          console.log("This account should stay canceled");
         }
+
+      } catch (error) {
+        console.error(user.uid, "---", error)
       }
-    } catch (error) {
-      console.error(user.uid, "---", error)
     }
   }
-  res.send("ok");
+  res.send({sub: sub});
 });
 
+// subscription fixing
+// app.get("/subscription_fixing_all", async (req, res) => {
+//   if (process.env.DISABLE_CRON == "true") {
+//     res.send("disabled");
+//     return;
+//   }
+//   let { query } = req;
+//   if (query.token != "XXX") {
+//     res.send("fail");
+//     return;
+//   }
+//
+//   var updateSubscription = false;
+//   if (query.updatesub && query.updatesub === "true") {
+//     console.log(query.updatesub);
+//     updateSubscription = true;
+//   }
+//
+//   var users = [];
+//
+//   const userLists = await admin.auth().listUsers(300)
+//
+//   for (const user of userLists.users) {
+//     users.push(user)
+//   }
+//
+//   if (userLists.pageToken) {
+//     const userLists2 = await admin.auth().listUsers(1000, userLists.pageToken)
+//     if (userLists2 && userLists2.users.length > 0) {
+//       for (const user of userLists2.users) {
+//         users.push(user)
+//       }
+//     }
+//   }
+//
+//   console.log("total: ", users.length);
+//
+//   var i = 0;
+//   for (const user of users) {
+//     i += 1
+//     console.log(i);
+//     if (user.customClaims && !isEmpty(user.customClaims)) {
+//       const { subscription_id, customer_id } = user.customClaims
+//       if (subscription_id) {
+//         const subscription = await stripe.subscriptions.retrieve(
+//             subscription_id
+//         );
+//         const customerData = await stripe.customers.retrieve(
+//             customer_id
+//         );
+//
+//         try {
+//           if (subscription.status === "active") {
+//             console.log("This account is active");
+//           } else if (subscription && subscription.cancel_at_period_end === true &&
+//               (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
+//           ) {
+//             console.log("found canceled subscription: ", user.uid);
+//
+//             if (updateSubscription) {
+//               if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
+//                 await stripe.customers.update(
+//                     customer_id,
+//                     { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+//                 );
+//               }
+//
+//
+//               console.log("attempting to create sub");
+//               const newSubscription = await stripe.subscriptions.create({
+//                 customer: customer_id,
+//                 items: [{ plan: planId }],
+//                 expand: ["latest_invoice.payment_intent"],
+//                 coupon: couponIdFree,
+//               });
+//               console.log("new subscription ---", newSubscription)
+//
+//               await admin.auth().setCustomUserClaims(user.uid, {
+//                 customer_id,
+//                 subscription_id: newSubscription.id,
+//               });
+//
+//               let docRef = db.collection("users").doc(user.uid);
+//               await docRef.update({
+//                 customerId: customer_id,
+//                 subscriptionId: newSubscription.id,
+//                 subscriptionStatus: newSubscription.status
+//               });
+//             }
+//           } else if (subscription && subscription.cancel_at_period_end === true && subscription.status != "canceled") {
+//
+//             console.log("not canceled yet but set to cancel: ", user.uid);
+//
+//             if (updateSubscription) {
+//               const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+//                 cancel_at_period_end: false
+//               });
+//               console.log("updatedSubscription---", updatedSubscription)
+//
+//               let docRef = db.collection("users").doc(user.uid);
+//               await docRef.update({
+//                 subscriptionStatus: updatedSubscription.status
+//               });
+//             }
+//           } else {
+//             console.log("This account should stay canceled");
+//           }
+//
+//         } catch (error) {
+//           console.error(user.uid, "---", error)
+//         }
+//       }
+//     }
+//   }
+//   res.send({success: true});
+// });
+
 // User Portfolio
-app.get("/user-portfolio", checkAuth, dashboard.userPortfolio)
+app.get("/user-portfolio", checkAuth, dashboard.userPortfolio);
 
 // User Performance
-app.get("/user-performance", checkAuth, dashboard.userPerformance)
+app.get("/user-performance", checkAuth, dashboard.userPerformance);
+
+// User Performance vs SNP
+app.get("/user-performance-vs-snp", checkAuth, dashboard.userPerformanceVsSNP);
 
 // Stock PIN/ UNPIN
 app.use("/stock/pin", checkAuth);
@@ -2525,6 +3147,144 @@ app.get("/user-access-report", checkAuth, async (req, res) => {
     }
   })
 })
+
+// stripe - fetch user subscription and fix
+app.get("/fetch_user_subscription", async (req, res) => {
+  if (process.env.DISABLE_CRON == "true") {
+    res.send("disabled");
+    return;
+  }
+  let { query } = req;
+  if (query.token != "XXX") {
+    res.send("fail");
+    return;
+  }
+
+  if (query.uid && query.uid.length > 0) {
+    console.log(query.uid);
+  } else {
+    res.send("failed, no user");
+    return;
+  }
+
+  var updateSubscription = false;
+  if (query.updatesub && query.updatesub === "true") {
+    console.log(query.updatesub);
+    updateSubscription = true;
+  }
+
+  const user = await admin.auth().getUser(query.uid);
+
+  var sub;
+
+  if (user.customClaims && !isEmpty(user.customClaims)) {
+    const { subscription_id, customer_id } = user.customClaims
+    if (subscription_id) {
+      const subscription = await stripe.subscriptions.retrieve(
+          subscription_id
+      );
+      const activesub = await stripe.subscriptions.list({
+        customer: customer_id,
+      });
+      const customerData = await stripe.customers.retrieve(
+          customer_id
+      );
+
+      sub = {user: user, sub: subscription, active_sub: activesub, customer: customerData};
+
+      try {
+        if (subscription.status === "active") {
+          console.log("This account is active");
+        } else if (subscription && subscription.cancel_at_period_end === true &&
+            (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
+        ) {
+          console.log("found canceled subscription");
+
+          if (updateSubscription) {
+            if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
+              await stripe.customers.update(
+                  customer_id,
+                  { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+              );
+            }
+
+
+            console.log("attempting to create sub");
+            const newSubscription = await stripe.subscriptions.create({
+              customer: customer_id,
+              items: [{ plan: planId }],
+              expand: ["latest_invoice.payment_intent"],
+              coupon: couponIdFree,
+            });
+            console.log("new subscription ---", newSubscription)
+
+            sub = {...sub, new_sub: newSubscription}
+
+            const userRecord = await admin.auth().getUser(user.uid);
+
+            await admin.auth().setCustomUserClaims(user.uid, Object.assign(userRecord.customClaims, {
+              customer_id,
+              subscription_id: newSubscription.id,
+            }));
+
+            let docRef = db.collection("users").doc(user.uid);
+            await docRef.update({
+              customerId: customer_id,
+              subscriptionId: newSubscription.id,
+              subscriptionStatus: newSubscription.status
+            });
+          }
+        } else if (sub && sub.sub && sub.sub.cancel_at_period_end === true && sub.sub.status != "canceled") {
+
+          console.log("not canceled yet but set to cancel");
+
+          if (updateSubscription) {
+            const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+              cancel_at_period_end: false
+            });
+            console.log("updatedSubscription---", updatedSubscription)
+            sub = {...sub, updated_sub: updatedSubscription}
+
+            let docRef = db.collection("users").doc(user.uid);
+            await docRef.update({
+              subscriptionStatus: updatedSubscription.status
+            });
+          }
+        } else {
+          console.log("This account should stay canceled");
+        }
+
+      } catch (error) {
+        console.error(user.uid, "---", error)
+      }
+    }
+  }
+  res.send({sub: sub});
+});
+
+// Options analytics data
+app.get("/options-analytics/bullish", checkAuth, async (req, res) => {
+  const result = await fetchBullishOptions();
+  return res.json(result)
+});
+
+app.get("/options-analytics/bearish", checkAuth, async (req, res) => {
+  const result = await fetchBearishOptions();
+  return res.json(result)
+});
+
+// Crypto
+app.use("/crypto/news", checkAuth);
+app.get("/crypto/news", crypto_api.getCryptoNews);
+
+// app.use("/crypto/currencies/:ticker", checkAuth);
+app.get("/crypto/currencies/:ticker", crypto_api.getCryptoTickerCurrency);
+
+// app.use("/crypto/trades/:ticker", checkAuth);
+app.get("/crypto/trades/:ticker", crypto_api.getCryptoTickerTrades);
+
+// app.use("/crypto/candles/:ticker", checkAuth);
+app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();

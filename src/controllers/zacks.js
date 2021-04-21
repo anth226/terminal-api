@@ -1,3 +1,4 @@
+import db from '../db';
 import axios from "axios";
 import redis, { KEY_ZACKS_EDITORIAL } from "../redis";
 
@@ -103,4 +104,28 @@ export async function get_stories() {
     return JSON.parse(cache);
   }
 
+}
+
+export async function getZacksRank(req, res, next) {
+  try {
+    let tickers = req.query.tickers;
+    
+    if (!tickers) {
+      return res.json([]);
+    }
+
+    if (typeof tickers === 'string') {
+      tickers = tickers.split(',');
+    }
+
+    const data = await db({
+      text: `SELECT * FROM zacks_rank WHERE ticker = ANY($1::text[])`,
+      values: [tickers]
+    });
+
+    return res.json(data);
+  } catch (e) {
+    console.log(e);
+    return res.json([]);
+  }
 }
