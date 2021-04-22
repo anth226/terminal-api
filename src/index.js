@@ -1529,7 +1529,7 @@ app.post("/cancellation-request", async (req, res) => {
 app.use("/security/:symbol/charts", checkAuth);
 app.get("/security/:symbol/charts", ChartsController.getSymbolChart);
 
-app.use("/security/:symbol", checkAuth);
+//app.use("/security/:symbol", checkAuth);
 app.get("/security/:symbol", async (req, res) => {
   const result = await securities.lookup(
     companyAPI,
