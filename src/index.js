@@ -1526,7 +1526,7 @@ app.post("/cancellation-request", async (req, res) => {
 });
 
 // Securities
-// app.use("/security/:symbol/charts", checkAuth);
+app.use("/security/:symbol/charts", checkAuth);
 app.get("/security/:symbol/charts", ChartsController.getSymbolChart);
 
 app.use("/security/:symbol", checkAuth);
