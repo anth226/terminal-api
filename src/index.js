@@ -1549,7 +1549,7 @@ app.get("/security/:symbol/meta", async (req, res) => {
   res.send(companyFundamentals);
 });
 
-app.use("/security/:symbol/price-action", checkAuth);
+//app.use("/security/:symbol/price-action", checkAuth);
 app.get("/security/:symbol/price-action", async (req, res) => {
   const priceData = await quodd.getAllForTicker(req.params.symbol);
   res.send(priceData);
@@ -1606,7 +1606,7 @@ app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
   res.send(snapshot);
 });
 
-app.use("/chart-data/:symbol", checkAuth);
+//app.use("/chart-data/:symbol", checkAuth);
 app.get("/chart-data/:symbol", async (req, res) => {
   const data = await getSecurityData.getChartData(
     securityAPI,
@@ -1760,7 +1760,7 @@ app.get("/sec-intraday-prices/:symbol", async (req, res) => {
   );
 });
 
-//app.use("/sec-last-price/:symbol", checkAuth);
+app.use("/sec-last-price/:symbol", checkAuth);
 app.get("/sec-last-price/:symbol", async (req, res) => {
   const lastPrice = await quodd.getLastPrice(req.params.symbol);
   res.send(lastPrice);
@@ -1860,7 +1860,7 @@ app.get("/all-news", async (req, res) => {
 });
 
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
-app.get("/naviga-news/:id/resource_id", checkAuth, naviga.getNewsResourceID);
+app.get("/naviga-news/:id/resource_id", naviga.getNewsResourceID);
 app.get("/naviga-news/general", checkAuth, naviga.getGeneralNews);
 app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
 app.get("/naviga-news/titan/:titan_uri", checkAuth, naviga.getTitanNews);
