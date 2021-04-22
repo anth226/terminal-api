@@ -1796,7 +1796,7 @@ app.get("/search/:query", async (req, res) => {
   }
 
   res.cookie('search_count',search_count, { maxAge: 900000, httpOnly: true });
-  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Origin", apiURL);
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
   res.header("Access-Control-Allow-Credentials", true);
   const query = req.params.query;
