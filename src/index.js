@@ -1556,17 +1556,14 @@ app.get("/security/:symbol/price-action", async (req, res) => {
 });
 
 app.get("/sec/:symbol/data", async (req, res) => {
-  /*let search_count = req.cookies.search_count;
+  let search_count = req.cookies.search_count;
   if(search_count) {
     search_count = parseInt(search_count) + 1;
   } else {
     search_count = 1;
   }
 
-  res.cookie('search_count',search_count, { maxAge: 900000, httpOnly: false });
-  res.header("Access-Control-Allow-Origin", apiProtocol + apiURL);
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  res.header("Access-Control-Allow-Credentials", true);*/
+  res.cookie('search_count', search_count, { maxAge: 900000, httpOnly: false });
 
   const companyData = await securities.lookupCompany(
     companyAPI,
