@@ -1555,9 +1555,17 @@ app.get("/security/:symbol/price-action", async (req, res) => {
   res.send(priceData);
 });
 
-app.get("/sec/:symbol/price-action", async (req, res) => {
+app.get("/sec/:symbol/data", async (req, res) => {
+  const companyFundamentals = await getSecurityData.lookupSecurity(
+    securityAPI,
+    req.params.symbol
+  );
   const priceData = await quodd.getAllForTicker(req.params.symbol);
-  res.send(priceData);
+  
+  res.json({
+    priceData,
+    companyFundamentals
+  });
 });
 
 app.use("/etfs/following", checkAuth);
@@ -1795,7 +1803,7 @@ app.get("/search/:query", async (req, res) => {
     search_count = 1;
   }
 
-  res.cookie('search_count',search_count, { maxAge: 900000, httpOnly: true });
+  res.cookie('search_count',search_count, { maxAge: 900000, httpOnly: false });
   res.header("Access-Control-Allow-Origin", apiProtocol + apiURL);
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
   res.header("Access-Control-Allow-Credentials", true);
