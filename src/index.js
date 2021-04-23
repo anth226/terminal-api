@@ -1563,7 +1563,7 @@ app.get("/sec/:symbol/data", async (req, res) => {
     search_count = 1;
   }
 
-  res.cookie('search_count', search_count, { maxAge: 900000, httpOnly: false });
+  res.cookie('search_count', search_count, { maxAge: expiresIn, httpOnly: false });
 
   const companyData = await securities.lookupCompany(
     companyAPI,
