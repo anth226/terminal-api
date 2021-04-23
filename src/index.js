@@ -1556,15 +1556,28 @@ app.get("/security/:symbol/price-action", async (req, res) => {
 });
 
 app.get("/sec/:symbol/data", async (req, res) => {
-  const companyFundamentals = await getSecurityData.lookupSecurity(
-    securityAPI,
-    req.params.symbol
+  /*let search_count = req.cookies.search_count;
+  if(search_count) {
+    search_count = parseInt(search_count) + 1;
+  } else {
+    search_count = 1;
+  }
+
+  res.cookie('search_count',search_count, { maxAge: 900000, httpOnly: false });
+  res.header("Access-Control-Allow-Origin", apiProtocol + apiURL);
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Credentials", true);*/
+
+  const companyData = await securities.lookupCompany(
+    companyAPI,
+    req.params.symbol,
   );
+
   const priceData = await quodd.getAllForTicker(req.params.symbol);
   
   res.json({
+    companyData,
     priceData,
-    companyFundamentals
   });
 });
 
@@ -1796,17 +1809,6 @@ app.get("/similar/:ticker", async (req, res) => {
 
 // SEARCH
 app.get("/search/:query", async (req, res) => {
-  let search_count = req.cookies.search_count;
-  if(search_count) {
-    search_count = parseInt(search_count) + 1;
-  } else {
-    search_count = 1;
-  }
-
-  res.cookie('search_count',search_count, { maxAge: 900000, httpOnly: false });
-  res.header("Access-Control-Allow-Origin", apiProtocol + apiURL);
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  res.header("Access-Control-Allow-Credentials", true);
   const query = req.params.query;
   const results = await search.searchCompanies(query);
   res.send(results);
