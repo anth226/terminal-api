@@ -1556,15 +1556,6 @@ app.get("/security/:symbol/price-action", async (req, res) => {
 });
 
 app.get("/sec/:symbol/data", async (req, res) => {
-  let search_count = req.cookies.search_count;
-  if(search_count) {
-    search_count = parseInt(search_count) + 1;
-  } else {
-    search_count = 1;
-  }
-
-  res.cookie('search_count', search_count, { maxAge: expiresIn, httpOnly: false });
-
   const companyData = await securities.lookupCompany(
     companyAPI,
     req.params.symbol,
@@ -1631,6 +1622,16 @@ app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
 
 //app.use("/chart-data/:symbol", checkAuth);
 app.get("/chart-data/:symbol", async (req, res) => {
+
+  let search_count = req.cookies.search_count;
+  if(search_count) {
+    search_count = parseInt(search_count) + 1;
+  } else {
+    search_count = 1;
+  }
+
+  res.cookie('search_count', search_count, { maxAge: expiresIn, httpOnly: false });
+
   const data = await getSecurityData.getChartData(
     securityAPI,
     req.params.symbol
