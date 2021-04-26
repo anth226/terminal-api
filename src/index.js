@@ -1555,6 +1555,20 @@ app.get("/security/:symbol/price-action", async (req, res) => {
   res.send(priceData);
 });
 
+app.get("/sec/:symbol/data", async (req, res) => {
+  const companyData = await companies.lookup(
+    companyAPI,
+    req.params.symbol,
+  );
+
+  const priceData = await quodd.getAllForTicker(req.params.symbol);
+  
+  res.json({
+    companyData,
+    priceData,
+  });
+});
+
 app.use("/etfs/following", checkAuth);
 app.get("/etfs/following", async (req, res) => {
   const result = await watchlist.getFollowedETFs(req.terminal_app.claims.uid);
@@ -1606,8 +1620,18 @@ app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
   res.send(snapshot);
 });
 
-app.use("/chart-data/:symbol", checkAuth);
+//app.use("/chart-data/:symbol", checkAuth);
 app.get("/chart-data/:symbol", async (req, res) => {
+
+  let search_count = req.cookies.search_count;
+  if(search_count) {
+    search_count = parseInt(search_count) + 1;
+  } else {
+    search_count = 1;
+  }
+
+  res.cookie('search_count', search_count, { maxAge: expiresIn, httpOnly: false });
+
   const data = await getSecurityData.getChartData(
     securityAPI,
     req.params.symbol
@@ -1766,7 +1790,7 @@ app.get("/sec-last-price/:symbol", async (req, res) => {
   res.send(lastPrice);
 });
 
-app.use("/sec-price-change/:symbol", checkAuth);
+//app.use("/sec-price-change/:symbol", checkAuth);
 app.get("/sec-price-change/:symbol", async (req, res) => {
   const lastPrice = await quodd.getLastPriceChange(req.params.symbol);
   res.send(lastPrice);
@@ -1782,14 +1806,12 @@ app.get("/similar/:ticker", async (req, res) => {
 });
 
 // SEARCH
-app.use("/search/:query", checkAuth);
 app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
   res.send(results);
 });
 
-app.use("/search-sec/:query", checkAuth);
 app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
@@ -1854,14 +1876,14 @@ app.get("/all-news", async (req, res) => {
 });
 
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
-app.get("/naviga-news/:id/resource_id", checkAuth, naviga.getNewsResourceID);
+app.get("/naviga-news/:id/resource_id", naviga.getNewsResourceID);
 app.get("/naviga-news/general", checkAuth, naviga.getGeneralNews);
 app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
 app.get("/naviga-news/titan/:titan_uri", checkAuth, naviga.getTitanNews);
 app.get("/naviga-news/strong-buy", checkAuth, naviga.getStrongBuyNews);
 app.get("/naviga-news/earning", checkAuth, naviga.getEarningNews);
 app.get("/naviga-news/for-you", checkAuth, news.getUserSpecificNews);
-app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
+app.get("/naviga-news/:ticker", naviga.getCompanyNews);
 
 // app.use("/news/trending-ticker", checkAuth);
 app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
