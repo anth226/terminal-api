@@ -5,7 +5,6 @@ import redis from "redis";
 import asyncRedis from "async-redis";
 import { getLastPriceChange } from "../controllers/quodd";
 
-
 export const lookup = async (companyAPI, identifier, userID) => {
   console.log("made it into new lookup");
 
