@@ -5,17 +5,6 @@ import redis from "redis";
 import asyncRedis from "async-redis";
 import { getLastPriceChange } from "../controllers/quodd";
 
-export const lookupCompany = async (companyAPI, identifier) => {
-  let companyResult = await db(`
-    SELECT id, json
-    FROM companies 
-    WHERE ticker = '${identifier}'
-    LIMIT 1
-  `);
-
-  return companyResult;
-}
-
 
 export const lookup = async (companyAPI, identifier, userID) => {
   console.log("made it into new lookup");

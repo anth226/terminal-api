@@ -1556,7 +1556,7 @@ app.get("/security/:symbol/price-action", async (req, res) => {
 });
 
 app.get("/sec/:symbol/data", async (req, res) => {
-  const companyData = await securities.lookupCompany(
+  const companyData = await companies.lookup(
     companyAPI,
     req.params.symbol,
   );
