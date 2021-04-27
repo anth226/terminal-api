@@ -64,6 +64,8 @@ const AWS = require("aws-sdk");
 import { v4 as uuidv4 } from "uuid";
 import { isEmpty } from "lodash";
 import moment from "moment";
+import expressSession from "express-session";
+import redis from "redis";
 
 import { isAuthorized } from "./middleware/authorized";
 import { db, admin } from "./services/firebase";
@@ -149,6 +151,10 @@ const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 // set up middlewares
 const app = express();
 
+const redisStore = require('connect-redis')(expressSession);
+const sesionClient  = redis.createClient();
+const router = express.Router()
+
 // configure CORS
 var corsOptions = {
   origin: true,
@@ -169,6 +175,18 @@ app.use(cookieParser());
 // app.use(bodyParser.urlencoded({ verify: rawBodySaver, extended: true }));
 // app.use(bodyParser.raw({ verify: rawBodySaver, type: "*/*" }));
 // app.use(express.json());
+
+app.use(expressSession({
+    secret: process.env.EXPRESS_SESSION_SECRET,
+    // create new redis store.
+    store: new redisStore({ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT, client: sesionClient,ttl : 260}),
+    saveUninitialized: false,
+    resave: false
+}));
+
+app.use(bodyParser.json());      
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(express.static(__dirname + '/views'));
 
 app.use((req, res, next) => {
   if (req.originalUrl === "/hooks") {
@@ -1569,6 +1587,23 @@ app.get("/sec/:symbol/data", async (req, res) => {
   });
 });
 
+
+app.get("/sec/search-count", async (req, res) => {
+
+  let search_count = req.session.search_count;
+
+  if(search_count) {
+    search_count = parseInt(search_count) + 1;
+  } else {
+    search_count = 1;
+  }
+
+  req.session.search_count = search_count; 
+  
+  res.json({search_count: search_count,
+  });
+});
+
 app.use("/etfs/following", checkAuth);
 app.get("/etfs/following", async (req, res) => {
   const result = await watchlist.getFollowedETFs(req.terminal_app.claims.uid);
@@ -1622,24 +1657,11 @@ app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
 
 //app.use("/chart-data/:symbol", checkAuth);
 app.get("/chart-data/:symbol", async (req, res) => {
-
-  let search_count = req.cookies.search_count;
-  if(search_count) {
-    search_count = parseInt(search_count) + 1;
-  } else {
-    search_count = 1;
-  }
-
-  res.header('Access-Control-Allow-Origin', apiURL); 
-  res.header('Access-Control-Allow-Methods', 'GET, POST');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-        
-  res.cookie('search_count', search_count, { maxAge: expiresIn, httpOnly: false});
-
   const data = await getSecurityData.getChartData(
     securityAPI,
     req.params.symbol
   );
+
   res.send(data);
 });
 
