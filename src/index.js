@@ -1630,7 +1630,7 @@ app.get("/chart-data/:symbol", async (req, res) => {
     search_count = 1;
   }
 
-  res.cookie('search_count', search_count, { maxAge: expiresIn, httpOnly: false });
+  res.cookie('search_count', search_count, { maxAge: expiresIn, httpOnly: false, domain: apiProtocol + apiURL,});
 
   const data = await getSecurityData.getChartData(
     securityAPI,
