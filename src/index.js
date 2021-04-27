@@ -1836,7 +1836,7 @@ app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
 
-  res.header('Access-Control-Allow-Origin', apiURL); 
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
   res.send(results);
 });
 
@@ -1844,7 +1844,7 @@ app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
 
-  res.header('Access-Control-Allow-Origin', apiURL); 
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
   res.send(results);
 });
 
