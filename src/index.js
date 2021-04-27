@@ -1587,6 +1587,23 @@ app.get("/sec/:symbol/data", async (req, res) => {
   });
 });
 
+
+app.get("/sec/search-count", async (req, res) => {
+
+  let search_count = req.session.search_count;
+
+  if(search_count) {
+    search_count = parseInt(search_count) + 1;
+  } else {
+    search_count = 1;
+  }
+
+  req.session.search_count = search_count; 
+  
+  res.json({search_count: search_count,
+  });
+});
+
 app.use("/etfs/following", checkAuth);
 app.get("/etfs/following", async (req, res) => {
   const result = await watchlist.getFollowedETFs(req.terminal_app.claims.uid);
@@ -1640,27 +1657,12 @@ app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
 
 //app.use("/chart-data/:symbol", checkAuth);
 app.get("/chart-data/:symbol", async (req, res) => {
-
-  let search_count = req.session.search_count;
-  if(search_count) {
-    search_count = parseInt(search_count) + 1;
-  } else {
-    search_count = 1;
-  }
-
-  req.session.search_count = search_count;
-
-  console.log("search_count: "+search_count);
-
   const data = await getSecurityData.getChartData(
     securityAPI,
     req.params.symbol
   );
 
-  res.json({
-    search_count: search_count,
-    data,
-  });
+  res.send(data);
 });
 
 app.use("/sec-historical-price/:symbol", checkAuth);
