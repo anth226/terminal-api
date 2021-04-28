@@ -152,8 +152,8 @@ const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 const app = express();
 
 const redisStore = require('connect-redis')(expressSession);
-const sesionClient  = redis.createClient();
-const router = express.Router()
+const sessionClient  = redis.createClient({host: process.env.REDIS_HOST, port: process.env.REDIS_PORT,});
+//const router = express.Router()
 
 // configure CORS
 var corsOptions = {
@@ -179,7 +179,7 @@ app.use(cookieParser());
 app.use(expressSession({
     secret: process.env.EXPRESS_SESSION_SECRET,
     // create new redis store.
-    store: new redisStore({ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT, client: sesionClient,ttl : 260, disableTTL: true,}),
+    store: new redisStore({ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT, client: sessionClient, ttl : 260, disableTTL: true,}),
     saveUninitialized: false,
     resave: false
 }));
