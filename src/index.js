@@ -1600,10 +1600,6 @@ app.get("/sec/search-count", async (req, res) => {
 
   req.session.search_count = search_count; 
   
-  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
-  res.header('Access-Control-Allow-Methods', 'GET, POST');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.header('Access-Control-Allow-Credentials', 'true');
   res.json({search_count: search_count,
   });
 });
@@ -1840,10 +1836,6 @@ app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
 
-  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL);
-  res.header('Access-Control-Allow-Methods', 'GET, POST');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.header('Access-Control-Allow-Credentials', 'true');
   res.send(results);
 });
 
@@ -1851,10 +1843,6 @@ app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
 
-  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
-  res.header('Access-Control-Allow-Methods', 'GET, POST');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.header('Access-Control-Allow-Credentials', 'true');
   res.send(results);
 });
 
