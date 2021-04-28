@@ -1600,6 +1600,7 @@ app.get("/sec/search-count", async (req, res) => {
 
   req.session.search_count = search_count; 
   
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
   res.json({search_count: search_count,
   });
 });
@@ -1836,6 +1837,7 @@ app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
 
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
   res.send(results);
 });
 
@@ -1843,6 +1845,7 @@ app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
 
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
   res.send(results);
 });
 
