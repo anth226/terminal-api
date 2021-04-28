@@ -179,7 +179,7 @@ app.use(cookieParser());
 app.use(expressSession({
     secret: process.env.EXPRESS_SESSION_SECRET,
     // create new redis store.
-    store: new redisStore({ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT, client: sesionClient,ttl : 260}),
+    store: new redisStore({ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT, client: sesionClient,ttl : 260, disableTTL: true,}),
     saveUninitialized: false,
     resave: false
 }));
@@ -1835,12 +1835,16 @@ app.get("/similar/:ticker", async (req, res) => {
 app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
+
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
   res.send(results);
 });
 
 app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
+
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
   res.send(results);
 });
 
