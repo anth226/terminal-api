@@ -65,6 +65,7 @@ import { v4 as uuidv4 } from "uuid";
 import { isEmpty } from "lodash";
 import moment from "moment";
 import expressSession from "express-session";
+import asyncRedis from "async-redis";
 import redis from "redis";
 
 import { isAuthorized } from "./middleware/authorized";
@@ -151,8 +152,24 @@ const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 // set up middlewares
 const app = express();
 
+function connectRedisClient(){
+  let credentials = {
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
+  };
+
+  const client = redis.createClient(credentials);
+    client.on("error", function (error) {
+      //   reportError(error);
+      console.log(error)
+    });
+
+  return client;
+};
+
 const redisStore = require('connect-redis')(expressSession);
-const sessionClient  = redis.createClient({host: process.env.REDIS_HOST, port: process.env.REDIS_PORT,});
+const sessionClient  = connectRedisClient();
+
 //const router = express.Router()
 
 // configure CORS
