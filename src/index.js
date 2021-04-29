@@ -65,6 +65,7 @@ import { v4 as uuidv4 } from "uuid";
 import { isEmpty } from "lodash";
 import moment from "moment";
 import expressSession from "express-session";
+import asyncRedis from "async-redis";
 import redis from "redis";
 
 import { isAuthorized } from "./middleware/authorized";
@@ -151,9 +152,25 @@ const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 // set up middlewares
 const app = express();
 
+function connectRedisClient(){
+  let credentials = {
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
+  };
+
+  const client = redis.createClient(credentials);
+    client.on("error", function (error) {
+      //   reportError(error);
+      console.log(error)
+    });
+
+  return client;
+};
+
 const redisStore = require('connect-redis')(expressSession);
-const sesionClient  = redis.createClient();
-const router = express.Router()
+const sessionClient  = connectRedisClient();
+
+//const router = express.Router()
 
 // configure CORS
 var corsOptions = {
@@ -179,7 +196,7 @@ app.use(cookieParser());
 app.use(expressSession({
     secret: process.env.EXPRESS_SESSION_SECRET,
     // create new redis store.
-    store: new redisStore({ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT, client: sesionClient,ttl : 260, disableTTL: true,}),
+    store: new redisStore({ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT, client: sessionClient, ttl : 260, disableTTL: true,}),
     saveUninitialized: false,
     resave: false
 }));
@@ -1600,6 +1617,7 @@ app.get("/sec/search-count", async (req, res) => {
 
   req.session.search_count = search_count; 
   
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
   res.json({search_count: search_count,
   });
 });
