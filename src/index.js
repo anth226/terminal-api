@@ -3354,27 +3354,43 @@ app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
 
 // Feature Module
 //app.use("/features", checkAuth);
-app.get("/features", async (req, res) => {
-  const result = await features.getFeature(req);
+app.get("/getFeatures", async (req, res) => {
+  let id;
+	if (req && req.query) {
+		let query = req.query;
+
+		if (query.id) {
+			id = query.id;
+		}
+  }
+  
+  const result = await features.getFeature(id);
   res.send(result);
 });
 
 //app.use("/features", checkAuth);
-app.post("/features", async (req, res) => {
+app.post("/updateFeature", async (req, res) => {
   try {
-    if(!req.params.id || !req.params.name) {
+    if(!req.body.id || !req.body.name) {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name"}));
     }
-    const result = await features.updateFeature(req.params.id, req.params.name);
+    const checkIDResult = await features.getFeature(req.body.id);
 
-    res.send(JSON.stringify({ success: true, message: "Successfully updated to "+req.params.name }));
+    if(checkIDResult.length > 0) {
+      const result = await features.updateFeature(req.body.id, req.body.name);
+      console.log(result);
+
+      res.send(JSON.stringify({ success: true, message: "Successfully updated to " + req.body.name }));
+    } else {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name"}));
+    }
 
   } catch (error) {
     res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name"}));
   }
 });
 
-app.post("/features", async (req, res) => {
+/*app.post("/features", async (req, res) => {
   try {
     if(!req.query.name) {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name"}));
@@ -3382,6 +3398,21 @@ app.post("/features", async (req, res) => {
     const result = await features.updateFeature(req.query.id, req.query.name);
 
     res.send(JSON.stringify({ success: true, message: "Successfully create feature "+req.query.name }));
+
+  } catch (error) {
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name"}));
+  }
+});*/
+
+//app.use("/features", checkAuth);
+app.delete("/deleteFeature", async (req, res) => {
+  try {
+    if(!req.params.id || !req.params.name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name"}));
+    }
+    const result = await features.deleteFeature(req.params.id, req.params.name);
+
+    res.send(JSON.stringify({ success: true, message: "Successfully deleted "+req.params.name }));
 
   } catch (error) {
     res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name"}));

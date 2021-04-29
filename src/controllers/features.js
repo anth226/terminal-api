@@ -41,15 +41,8 @@ export const deleteFeature = async (name, id) => {
 };
 
 
-export async function getFeature(req) {
-  let id;
-	if (req && req.query) {
-		let query = req.query;
+export async function getFeature(id) {
 
-		if (query.id) {
-			id = query.id;
-		}
-	}
   let result = await db(`
         SELECT *
 		FROM feature_module
