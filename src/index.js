@@ -47,6 +47,7 @@ import * as institutions from "./controllers/institutions";
 import * as titans from "./controllers/titans";
 import * as trades from "./controllers/trades";
 import * as alerts from "./controllers/alerts";
+import * as features from "./controllers/features";
 import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
@@ -3349,6 +3350,43 @@ app.get("/crypto/trades/:ticker", crypto_api.getCryptoTickerTrades);
 
 // app.use("/crypto/candles/:ticker", checkAuth);
 app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
+
+
+// Feature Module
+//app.use("/features", checkAuth);
+app.get("/features", async (req, res) => {
+  const result = await features.getFeature(req);
+  res.send(result);
+});
+
+//app.use("/features", checkAuth);
+app.post("/features", async (req, res) => {
+  try {
+    if(!req.params.id || !req.params.name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name"}));
+    }
+    const result = await features.updateFeature(req.params.id, req.params.name);
+
+    res.send(JSON.stringify({ success: true, message: "Successfully updated to "+req.params.name }));
+
+  } catch (error) {
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name"}));
+  }
+});
+
+app.post("/features", async (req, res) => {
+  try {
+    if(!req.query.name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name"}));
+    }
+    const result = await features.updateFeature(req.query.id, req.query.name);
+
+    res.send(JSON.stringify({ success: true, message: "Successfully create feature "+req.query.name }));
+
+  } catch (error) {
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name"}));
+  }
+});
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
