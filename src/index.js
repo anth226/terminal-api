@@ -3393,7 +3393,6 @@ app.post("/updateFeature", async (req, res) => {
 //app.use("/createFeature", checkAuth);
 app.post("/createFeature", async (req, res) => {
   try {
-    console.log(req.body.name);
     if(!req.body.name) {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name."}));
     }
@@ -3423,7 +3422,7 @@ app.delete("/deleteFeature", async (req, res) => {
     }
     
     const result = await features.deleteFeature(req.body.id, req.body.name);
-    console.log(result);
+
     if(result) {
       res.send(JSON.stringify({ success: true, message: "Successfully deleted " + req.body.name + "."}));
     } else {
