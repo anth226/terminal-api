@@ -190,12 +190,12 @@ export async function getArchivedPortfolio(top5Only) {
 	if(result.length > 0) {
 		for(let i = 0; i < result.length; i++) {
 			openMarketValueResult = await db(`
-				SELECT * FROM daily_trades WHERE created_at > NOW() - INTERVAL '30 days' AND ticker = '${tickers30Days[z].ticker}' AND direction = 'Buy'
+				SELECT * FROM daily_trades WHERE created_at > NOW() - INTERVAL '30 days' AND ticker = '${result[i].ticker}' AND direction = 'Buy'
 				ORDER BY created_at LIMIT 1
 				`);
 
 			closedMarketValueResult = await db(`
-				SELECT * FROM daily_trades WHERE created_at > NOW() - INTERVAL '30 days' AND ticker = '${tickers30Days[z].ticker}' AND direction = 'Sell'
+				SELECT * FROM daily_trades WHERE created_at > NOW() - INTERVAL '30 days' AND ticker = '${result[i].ticker}' AND direction = 'Sell'
 				ORDER BY created_at DESC LIMIT 1
 				`);
 
@@ -215,7 +215,7 @@ export async function getArchivedPortfolio(top5Only) {
 					nc_open_price:  closedMarketValueResult[0].open_price, 
 					open_market_value:  result[i].open_market_value,
 					close_market_value:  result[i].close_market_value,
-					total_gain:  ((prices.last_price / (result[i].close_market_value / result[i].shares)) - 1) * 100
+					total_gain:  result[i].total_gain
 				};
 				response.push(toJson);
 			}

@@ -7,10 +7,12 @@ import * as getSecurityData from "../intrinio/get_security_data";
 import asyncRedis from "async-redis";
 import redis from "redis";
 import {
-  CACHED_PRICE_15MIN,
-  KEY_SECURITY_PERFORMANCE
+  CACHED_DAY,
+  CACHED_NOW,
+  CACHED_PERF,
+  connectPriceCache
 } from "../redis";
-import {getLastPrice} from "./quodd";
+import { getLastPrice } from "./quodd";
 
 export async function getGlobalWidgetByType(widgetType) {
   let result = await db(`
@@ -22,18 +24,23 @@ export async function getGlobalWidgetByType(widgetType) {
   `);
 
   if (widgetType === 'CompanyTopStocks' && result.length > 0) {
-    let sharedCache = connectSharedCache();
+    let sharedCache = connectPriceCache();
 
     result[0].output = await Promise.all(result[0].output.map(async (security) => {
-      let perf = await sharedCache.get(`${KEY_SECURITY_PERFORMANCE}-${security.ticker}`);
-      let last_price = await sharedCache.get(`${CACHED_PRICE_15MIN}e${security.ticker}`);
+      let last_price;
+      let perf = await sharedCache.get(`${CACHED_PERF}${security.ticker}`);
+      let now = await sharedCache.get(`${CACHED_NOW}${security.ticker}`);
+      if (now) {
+        let data = JSON.parse(now);
+        last_price = data?.price;
+      }
+
 
       if (perf && last_price) {
         perf = JSON.parse(perf);
-        last_price = last_price / 100;
         let open_price = perf.values.today.value;
         let delta = Math.round(((last_price / open_price - 1) * 100) * 100) / 100;
-        
+
         security.price = last_price;
         security.delta = `${delta}%`;
       }
@@ -46,8 +53,9 @@ export async function getGlobalWidgetByType(widgetType) {
     result[0].output = await Promise.all(result[0].output.map(async (security) => {
       const priceChange = await quodd.getLastPriceChange(security.ticker);
       let performance = priceChange.performance;
-      
+
       if (priceChange && priceChange.values && priceChange.values.threemonth && priceChange.values.threemonth.value) {
+        security.three_month_price = priceChange.values.threemonth.value;
         performance = (priceChange.last_price / priceChange.values.threemonth.value - 1) * 100;
       }
 
@@ -214,7 +222,7 @@ export const processStockBuy = async (dashboardId, ticker) => {
   }
 
   let portId = await getPortfolioByDashboardID(dashboardId);
-  if(!portId){
+  if (!portId) {
     let query = {
       text: "INSERT INTO portfolios (dashboard_id) VALUES ($1) RETURNING *",
       values: [dashboardId],
@@ -350,7 +358,7 @@ export const get = async (widgetId) => {
 };
 
 export const pinByTicker = async (userId, input) => {
-  console.log(userId,input)
+  console.log(userId, input)
   let dashboardId = await dashboard.getDashboardId(userId);
 
   if (dashboardId) {
@@ -379,24 +387,4 @@ export const unPinByTicker = async (userId, input) => {
 
   return true;
 }
-
-const connectSharedCache = () => {
-  let sharedCache = null;
-
-  let credentials = {
-    host: process.env.REDIS_HOST_SHARED_CACHE,
-    port: process.env.REDIS_PORT_SHARED_CACHE,
-  };
-
-  if (!sharedCache) {
-    const client = redis.createClient(credentials);
-    client.on("error", function (error) {
-      //   reportError(error);
-    });
-
-    sharedCache = asyncRedis.decorate(client);
-  }
-
-  return sharedCache;
-};
 
