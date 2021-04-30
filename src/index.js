@@ -1562,7 +1562,7 @@ app.post("/cancellation-request", async (req, res) => {
 });
 
 // Securities
-app.use("/security/:symbol/charts", checkAuth);
+//app.use("/security/:symbol/charts", checkAuth);
 app.get("/security/:symbol/charts", ChartsController.getSymbolChart);
 
 app.use("/security/:symbol", checkAuth);
@@ -1599,15 +1599,9 @@ app.get("/sec/:symbol/data", async (req, res) => {
     req.params.symbol,
   );
 
-  const priceData = await getSecurityData.getChartData(
-    securityAPI,
-    req.params.symbol
-  );
-
   res.header('Access-Control-Allow-Origin', apiProtocol + apiURL);
   res.json({
     companyData,
-    priceData,
   });
 });
 
