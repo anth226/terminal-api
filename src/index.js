@@ -1599,7 +1599,10 @@ app.get("/sec/:symbol/data", async (req, res) => {
     req.params.symbol,
   );
 
-  const priceData = await quodd.getAllForTicker(req.params.symbol);
+  const priceData = await getSecurityData.getChartData(
+    securityAPI,
+    req.params.symbol
+  );
 
   res.header('Access-Control-Allow-Origin', apiProtocol + apiURL);
   res.json({
