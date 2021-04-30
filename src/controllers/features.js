@@ -45,8 +45,19 @@ export async function getFeature(id) {
 
   let result = await db(`
         SELECT *
-		FROM feature_module
-		${id ? `WHERE id = ${id}` : ''}
+		    FROM feature_module
+		    ${id ? `WHERE id = ${id}` : ''}
+		`);
+		
+  return result;
+}
+
+
+export async function getFeatureByName(name) {
+
+  let result = await db(`
+        SELECT *
+		    FROM feature_module WHERE name = '${name}'
 		`);
 		
   return result;
