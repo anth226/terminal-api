@@ -39,6 +39,7 @@ import { questionnaireSubmission } from "./controllers/questionnaire";
 import * as holdings from "./controllers/holdings";
 
 import * as darkpool from "./controllers/darkpool";
+import * as ats from "./controllers/ats";
 import * as quodd from "./controllers/quodd";
 import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
@@ -81,7 +82,7 @@ import {
 } from "./services/stripe";
 import { listAllUsers, updateUserAccess} from "./controllers/user";
 import Shopify from "shopify-api-node";
-import { fetchBullishOptions, fetchBearishOptions } from "./controllers/options";
+import { fetchBullishOptions, fetchBearishOptions, getFilteredOptions } from "./controllers/options";
 
 const shopify = new Shopify({
   shopName: "portfolio-insider",
@@ -201,7 +202,7 @@ app.use(expressSession({
     resave: false
 }));
 
-app.use(bodyParser.json());      
+app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static(__dirname + '/views'));
 
@@ -614,7 +615,7 @@ app.post("/product-checkout", async (req, res) => {
 
     const orderData = await shopify.order.create(order);
 
-    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+    axios.post('https://graph.facebook.com/v9.0/' + process.env.FB_PIXEL_ID + '/events?access_token=' + process.env.FB_PIXEL_KEY, {
       "data": [
         {
           "event_name": "Purchase",
@@ -622,7 +623,7 @@ app.post("/product-checkout", async (req, res) => {
           "user_data": {
             "client_ip_address": req.connection.remoteAddress,
             "client_user_agent": req.get('User-Agent'),
-            "em":crypto.createHash('sha256').update(data.email).digest('hex')
+            "em": crypto.createHash('sha256').update(data.email).digest('hex')
           },
           "custom_data": {
             "value": 1,
@@ -630,7 +631,7 @@ app.post("/product-checkout", async (req, res) => {
           }
         }
       ]
-    }).then(function (response) {}).catch(function (error) {});
+    }).then(function (response) { }).catch(function (error) { });
 
     res.json({ paymentIntent, order: orderData });
   } catch (err) {
@@ -673,12 +674,12 @@ app.post("/upgrade-order", async (req, res) => {
       customer: {
         id: orderCustomer
       },
-      shipping_address:orderCustomerObject.default_address
+      shipping_address: orderCustomerObject.default_address
     };
 
     const orderData = await shopify.order.create(order);
 
-    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+    axios.post('https://graph.facebook.com/v9.0/' + process.env.FB_PIXEL_ID + '/events?access_token=' + process.env.FB_PIXEL_KEY, {
       "data": [
         {
           "event_name": "Purchase",
@@ -686,7 +687,7 @@ app.post("/upgrade-order", async (req, res) => {
           "user_data": {
             "client_ip_address": req.connection.remoteAddress,
             "client_user_agent": req.get('User-Agent'),
-            "em":crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
+            "em": crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
           },
           "custom_data": {
             "value": 57,
@@ -694,7 +695,7 @@ app.post("/upgrade-order", async (req, res) => {
           }
         }
       ]
-    }).then(function (response) {}).catch(function (error) {});
+    }).then(function (response) { }).catch(function (error) { });
 
     res.json({
       status: 'succeeded'
@@ -758,7 +759,7 @@ app.post("/product-checkout-paypal", async (req, res) => {
 
     const orderData = await shopify.order.create(order);
 
-    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+    axios.post('https://graph.facebook.com/v9.0/' + process.env.FB_PIXEL_ID + '/events?access_token=' + process.env.FB_PIXEL_KEY, {
       "data": [
         {
           "event_name": "Purchase",
@@ -766,7 +767,7 @@ app.post("/product-checkout-paypal", async (req, res) => {
           "user_data": {
             "client_ip_address": req.connection.remoteAddress,
             "client_user_agent": req.get('User-Agent'),
-            "em":crypto.createHash('sha256').update(data.email).digest('hex')
+            "em": crypto.createHash('sha256').update(data.email).digest('hex')
           },
           "custom_data": {
             "value": 1,
@@ -774,7 +775,7 @@ app.post("/product-checkout-paypal", async (req, res) => {
           }
         }
       ]
-    }).then(function (response) {}).catch(function (error) {});
+    }).then(function (response) { }).catch(function (error) { });
 
     res.json({ order: orderData });
   } catch (err) {
@@ -800,12 +801,12 @@ app.post("/upgrade-order-paypal", async (req, res) => {
       customer: {
         id: customer
       },
-      shipping_address:orderCustomerObject.default_address
+      shipping_address: orderCustomerObject.default_address
     };
 
     const orderData = await shopify.order.create(order);
 
-    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+    axios.post('https://graph.facebook.com/v9.0/' + process.env.FB_PIXEL_ID + '/events?access_token=' + process.env.FB_PIXEL_KEY, {
       "data": [
         {
           "event_name": "Purchase",
@@ -813,16 +814,16 @@ app.post("/upgrade-order-paypal", async (req, res) => {
           "user_data": {
             "client_ip_address": req.connection.remoteAddress,
             "client_user_agent": req.get('User-Agent'),
-            "em":crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
+            "em": crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
           },
           "custom_data": {
             "value": 57,
             "currency": "USD"
           },
-          "test_event_code":"TEST90643"
+          "test_event_code": "TEST90643"
         }
       ]
-    }).then(function (response) {}).catch(function (error) {});
+    }).then(function (response) { }).catch(function (error) { });
 
     res.json({ order: orderData });
   } catch (err) {
@@ -931,7 +932,7 @@ app.post("/authenticate", async (req, res) => {
         };
       }
 
-      
+
       // retrieve customer data from stripe using customer id from firestore
       const customer = await stripe.customers.retrieve(customerId);
       console.log("\nCUSTOMER OBJ\n");
@@ -1093,7 +1094,7 @@ app.post("/payment", async (req, res) => {
 
     //Update User access
     let userRecord = await updateUserAccess(userId, type, plan, crypto_addon);
-    
+
 
     // Set custom auth claims with Firebase
     await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.userRecord.customClaims, {
@@ -1112,7 +1113,7 @@ app.post("/payment", async (req, res) => {
       expiry: userRecord.userRecord.customClaims.expiry,
     });
 
-    res.json({ 
+    res.json({
       success: true,
       userRecord,
       customer
@@ -1447,7 +1448,7 @@ app.post("/complete-signup", async (req, res) => {
       charges: chargesAmount,
     };
 
-    
+
 
     res.json({ success: true, userMeta, userRecord });
   } catch (error) {
@@ -1490,7 +1491,7 @@ app.post("/demorequest", async (req, res) => {
   try {
     const { email, name, phoneNumber } = req.body;
 
-    sendEmail.sendDemoRequest(name,phoneNumber,email);
+    sendEmail.sendDemoRequest(name, phoneNumber, email);
 
     res.send({ success: true });
   } catch (error) {
@@ -1542,7 +1543,7 @@ app.post("/cancellation-request", async (req, res) => {
       cancel_at_period_end: true,
     });
   }
-  
+
 
   let email = user.email;
 
@@ -1554,7 +1555,7 @@ app.post("/cancellation-request", async (req, res) => {
     user.customerId
   );
 
-  res.json({ 
+  res.json({
       success: true,
       user,
     });
@@ -1584,11 +1585,13 @@ app.get("/security/:symbol/meta", async (req, res) => {
   res.send(companyFundamentals);
 });
 
-app.use("/security/:symbol/price-action", checkAuth);
-app.get("/security/:symbol/price-action", async (req, res) => {
-  const priceData = await quodd.getAllForTicker(req.params.symbol);
-  res.send(priceData);
-});
+//ENDPOINT DEPRICATED 4/21/21
+// app.use("/security/:symbol/price-action", checkAuth);
+// app.get("/security/:symbol/price-action", async (req, res) => {
+//   const priceData = await quodd.getAllForTicker(req.params.symbol);
+//   res.send(priceData);
+// });
+// 4/21/21
 
 app.get("/sec/:symbol/data", async (req, res) => {
   const companyData = await companies.lookup(
@@ -1597,7 +1600,8 @@ app.get("/sec/:symbol/data", async (req, res) => {
   );
 
   const priceData = await quodd.getAllForTicker(req.params.symbol);
-  
+
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL);
   res.json({
     companyData,
     priceData,
@@ -1615,9 +1619,9 @@ app.get("/sec/search-count", async (req, res) => {
     search_count = 1;
   }
 
-  req.session.search_count = search_count; 
-  
-  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
+  req.session.search_count = search_count;
+
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL);
   res.json({search_count: search_count,
   });
 });
@@ -1673,7 +1677,7 @@ app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
   res.send(snapshot);
 });
 
-//app.use("/chart-data/:symbol", checkAuth);
+// app.use("/chart-data/:symbol", checkAuth);
 app.get("/chart-data/:symbol", async (req, res) => {
   const data = await getSecurityData.getChartData(
     securityAPI,
@@ -1834,7 +1838,7 @@ app.get("/sec-last-price/:symbol", async (req, res) => {
   res.send(lastPrice);
 });
 
-//app.use("/sec-price-change/:symbol", checkAuth);
+// app.use("/sec-price-change/:symbol", checkAuth);
 app.get("/sec-price-change/:symbol", async (req, res) => {
   const lastPrice = await quodd.getLastPriceChange(req.params.symbol);
   res.send(lastPrice);
@@ -1854,7 +1858,7 @@ app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
 
-  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL);
   res.send(results);
 });
 
@@ -1862,7 +1866,7 @@ app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
 
-  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL); 
+  res.header('Access-Control-Allow-Origin', apiProtocol + apiURL);
   res.send(results);
 });
 
@@ -1946,38 +1950,6 @@ app.get("/news/market-headlines", async (req, res) => {
 
   // const headlines = await news.getGeneralMarketNews();
   res.send([]);
-});
-
-app.get("/fetch-shared-securities", async (req, res) => {
-  let { query } = req;
-  if (query.token != "XXX") {
-    res.send("fail");
-    return;
-  }
-
-  securities.fetchCachedSecuritiesFromSharedCache(res);
-});
-
-app.get("/clear-shared-securities", async (req, res) => {
-  let { query } = req;
-  if (query.token != "XXX") {
-    res.send("fail");
-    return;
-  }
-
-  securities.clearCachedSecuritiesFromSharedCache(res);
-});
-
-app.get("/migration-script", async (req, res) => {
-  let { query } = req;
-  if (query.token != "XXX") {
-    res.send("fail");
-    return;
-  }
-
-  await securities.syncExistingSecuritiesWithRedis(req.query.ticker, res);
-
-  res.end();
 });
 
 app.use("/news-sources", checkAuth);
@@ -2266,7 +2238,7 @@ app.get("/alerts/:id/deactivate", async (req, res) => {
   res.send(result);
 });
 
- app.use("/alerts/:id/addUser", checkAuth);
+app.use("/alerts/:id/addUser", checkAuth);
 app.get("/alerts/:id/addUser", async (req, res) => {
   const result = await alerts.addAlertUser(
     req.terminal_app.claims.uid,
@@ -2302,17 +2274,17 @@ app.get("/daily_alerts", async (req, res) => {
 
 //app.use("/cw_getUser", checkAuth);
 app.get("/cw_getUser", async (req, res) => {
-  let userResult=[], alertUserResult=[];
-  try{
+  let userResult = [], alertUserResult = [];
+  try {
 
     alertUserResult = await alerts.getAlertByName("CW Daily");
     userResult = await alerts.getAlertUser(alertUserResult[0].id, req.query.uid);
 
     res.send(JSON.stringify({ success: true, userResult }));
   } catch (error) {
-      res.send(JSON.stringify({ success: false, error, userResult }));
-    }
-  
+    res.send(JSON.stringify({ success: false, error, userResult }));
+  }
+
 });
 
 //Cathie Wood subscribe
@@ -2329,7 +2301,7 @@ app.post("/cw_subscribe", async (req, res) => {
     alertUserResult = await alerts.getAlertByName("CW Daily");
 
     userResult = await alerts.getAlertUser(alertUserResult[0].id, req.terminal_app.claims.uid);
-    
+
     res.header('Content-Type', 'application/json');
     client.messages
       .create({
@@ -2344,9 +2316,9 @@ app.post("/cw_subscribe", async (req, res) => {
         console.log(err);
         res.send(JSON.stringify({ success: false, userResult }));
       });
-    } catch (error) {
-      res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
-    }
+  } catch (error) {
+    res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
+  }
 });
 
 //Cathie Wood unsubscribe
@@ -2357,7 +2329,7 @@ app.post("/cw_unsubscribe", async (req, res) => {
     await alerts.unsubscribeCWAlert(
       req.body.phone
     );
-    
+
     alertResult = await alerts.getAlertByName("CW Unsubscribe");
     alertUserResult = await alerts.getAlertByName("CW Daily");
 
@@ -2377,8 +2349,8 @@ app.post("/cw_unsubscribe", async (req, res) => {
         res.send(JSON.stringify({ success: false, userResult }));
       });
   } catch (error) {
-      res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
-    }
+    res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
+  }
 });
 
 
@@ -2412,14 +2384,14 @@ app.post('/alert/response', async function (req, res) {
     alerts.unsubscribeCWAlert(fromNum);
 
     const alertUnsub = await alerts.getAlertByName("CW Unsubscribe");
-    resp.message(alertUnsub[0].message); 
+    resp.message(alertUnsub[0].message);
 
-  } 
+  }
   else {
     resp.message('Invalid keyword!');
   }
   res.writeHead(200, {
-    'Content-Type':'text/xml'
+    'Content-Type': 'text/xml'
   });
   res.end(resp.toString());
 });
@@ -2522,7 +2494,7 @@ app.get("/zacks/long_term_growth_rates", async (req, res) => {
   res.send(result);
 });
 
-app.use("/zacks/editorial", checkAuth);
+// app.use("/zacks/editorial", checkAuth);
 app.get("/zacks/editorial", async (req, res) => {
   const result = await zacks.get_stories();
   res.send(result);
@@ -2712,8 +2684,19 @@ app.get("/darkpool/options/search/:ticker", async (req, res) => {
   res.send(result);
 });
 
-app.get("/darkpool/fill_options", async (req, res) => {
-  const result = await darkpool.fillSpotPrice();
+// ats
+app.get("/ats/snapshot", async (req, res) => {
+  const result = await ats.getATSDaySnapshot(req);
+  res.send(result);
+});
+
+app.get("/ats/compare-snapshot/:ticker", async (req, res) => {
+  const result = await ats.getATSComparisonSnapshot(req);
+  res.send(result);
+});
+
+app.get("/ats/equities", async (req, res) => {
+  const result = await ats.getATSEquities(req);
   res.send(result);
 });
 
@@ -2750,9 +2733,9 @@ app.get(
 // ciks endpoints
 app.use("/ciks/:cik", checkAuth);
 app.get("/ciks/:cik", async (req, res) => {
-    const result = await holdings.getHoldingsByCik(req.params.cik);
-    res.send(result);
-  }
+  const result = await holdings.getHoldingsByCik(req.params.cik);
+  res.send(result);
+}
 );
 
 app.use("/ciks/institutions/data", checkAuth);
@@ -2882,17 +2865,17 @@ app.get("/fetch_subscriptions", async (req, res) => {
       const { subscription_id, customer_id } = user.customClaims
       if (subscription_id) {
         const subscription = await stripe.subscriptions.retrieve(
-            subscription_id
+          subscription_id
         );
         const activesub = await stripe.subscriptions.list({
           customer: customer_id,
         });
         const customerData = await stripe.customers.retrieve(
-            customer_id
+          customer_id
         );
 
         // console.log(subscription)
-        subs.push({user: user, sub: subscription, active_sub: activesub, customer: customerData});
+        subs.push({ user: user, sub: subscription, active_sub: activesub, customer: customerData });
 
         if (subs.length > 100) {
           break;
@@ -2900,7 +2883,7 @@ app.get("/fetch_subscriptions", async (req, res) => {
       }
     }
   }
-  res.send({subs: subs});
+  res.send({ subs: subs });
 });
 
 // stripe - fetch user subscription and fix
@@ -2941,30 +2924,30 @@ app.get("/fetch_user_subscription", async (req, res) => {
     const { subscription_id, customer_id } = user.customClaims
     if (subscription_id) {
       const subscription = await stripe.subscriptions.retrieve(
-          subscription_id
+        subscription_id
       );
       const activesub = await stripe.subscriptions.list({
         customer: customer_id,
       });
       const customerData = await stripe.customers.retrieve(
-          customer_id
+        customer_id
       );
 
-      sub = {user: user, sub: subscription, active_sub: activesub, customer: customerData};
+      sub = { user: user, sub: subscription, active_sub: activesub, customer: customerData };
 
       try {
         if (subscription.status === "active") {
           console.log("This account is active");
         } else if (subscription && subscription.cancel_at_period_end === true &&
-            (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
+          (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
         ) {
           console.log("found canceled subscription");
 
           if (updateSubscription) {
             if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
               await stripe.customers.update(
-                  customer_id,
-                  { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+                customer_id,
+                { invoice_settings: { default_payment_method: subscription.default_payment_method } }
               );
             }
 
@@ -2978,7 +2961,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
             });
             console.log("new subscription ---", newSubscription)
 
-            sub = {...sub, new_sub: newSubscription}
+            sub = { ...sub, new_sub: newSubscription }
 
             const userRecord = await admin.auth().getUser(user.uid);
 
@@ -3003,7 +2986,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
               cancel_at_period_end: false
             });
             console.log("updatedSubscription---", updatedSubscription)
-            sub = {...sub, updated_sub: updatedSubscription}
+            sub = { ...sub, updated_sub: updatedSubscription }
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
@@ -3019,7 +3002,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
       }
     }
   }
-  res.send({sub: sub});
+  res.send({ sub: sub });
 });
 
 // subscription fixing
@@ -3245,30 +3228,30 @@ app.get("/fetch_user_subscription", async (req, res) => {
     const { subscription_id, customer_id } = user.customClaims
     if (subscription_id) {
       const subscription = await stripe.subscriptions.retrieve(
-          subscription_id
+        subscription_id
       );
       const activesub = await stripe.subscriptions.list({
         customer: customer_id,
       });
       const customerData = await stripe.customers.retrieve(
-          customer_id
+        customer_id
       );
 
-      sub = {user: user, sub: subscription, active_sub: activesub, customer: customerData};
+      sub = { user: user, sub: subscription, active_sub: activesub, customer: customerData };
 
       try {
         if (subscription.status === "active") {
           console.log("This account is active");
         } else if (subscription && subscription.cancel_at_period_end === true &&
-            (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
+          (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
         ) {
           console.log("found canceled subscription");
 
           if (updateSubscription) {
             if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
               await stripe.customers.update(
-                  customer_id,
-                  { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+                customer_id,
+                { invoice_settings: { default_payment_method: subscription.default_payment_method } }
               );
             }
 
@@ -3282,7 +3265,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
             });
             console.log("new subscription ---", newSubscription)
 
-            sub = {...sub, new_sub: newSubscription}
+            sub = { ...sub, new_sub: newSubscription }
 
             const userRecord = await admin.auth().getUser(user.uid);
 
@@ -3307,7 +3290,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
               cancel_at_period_end: false
             });
             console.log("updatedSubscription---", updatedSubscription)
-            sub = {...sub, updated_sub: updatedSubscription}
+            sub = { ...sub, updated_sub: updatedSubscription }
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
@@ -3323,10 +3306,12 @@ app.get("/fetch_user_subscription", async (req, res) => {
       }
     }
   }
-  res.send({sub: sub});
+  res.send({ sub: sub });
 });
 
 // Options analytics data
+app.get("/options-analytics/filter/bullish", checkAuth, getFilteredOptions);
+
 app.get("/options-analytics/bullish", checkAuth, async (req, res) => {
   const result = await fetchBullishOptions();
   return res.json(result)

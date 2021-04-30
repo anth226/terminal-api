@@ -65,3 +65,46 @@ export const fetchBearishOptions = async () => {
 
   return options
 }; 
+
+export const getFilteredOptions = async (req, res, next) => {
+  try {
+    let {min, max, limit} = req.query;
+
+    if (!min) min = 0;
+    if (!max) max = 100;
+    if (!limit) limit = 20;
+
+    const result = await optionsDB(`
+      SELECT ticker, SUM(prem) AS premium, SUM(contract_quantity) as call_flow
+      FROM options o
+      WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
+      GROUP BY ticker
+      HAVING CASE SUM(CASE cp WHEN 'P' THEN 1 ELSE 0 END) WHEN 0 THEN 100 ELSE (
+      ROUND(
+        (
+          SUM(CASE cp WHEN 'C' THEN 1 ELSE 0 END))::DECIMAL / 
+          SUM(CASE cp WHEN 'P' THEN 1 ELSE 1 END) * 100
+        )
+      ) END BETWEEN ${min} AND ${max}
+      ORDER BY premium DESC limit ${limit}
+    `);
+
+    const tickers = result.map(option => option.ticker).join(",");
+    const securities = await db(`
+      SELECT ticker, name FROM securities WHERE ticker = ANY('{${tickers}}')
+    `);
+
+    const securityMap = securities.reduce((s,security) => ({...s, [security.ticker]: security.name}), {});
+
+    const options = result.map(option => {
+      option.name = securityMap[option.ticker];
+
+      return option;
+    }).filter(option => option.name);
+
+    return res.json(options);
+  } catch (e) {
+    console.log(e);
+    res.json({});
+  }
+}

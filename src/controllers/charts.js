@@ -1,7 +1,8 @@
-import chartsCache, { C_CHART, C_CHART_LD, C_CHART_CURRENT } from './../chartsCache';
+import { C_CHART, C_CHART_LD, C_CHART_CURRENT, connectChartCache } from './../redis';
 
-const ChartsController =  {
-    getSymbolChart: async (req, res, next)=> {
+const ChartsController = {
+    getSymbolChart: async (req, res, next) => {
+        let chartsCache = connectChartCache();
         const symbol = req.params.symbol;
         let ldChart = false;
         let data, minute, parsedChart, parsedCurrent;
@@ -22,7 +23,16 @@ const ChartsController =  {
             }
 
             if (data) {
+                let parsedChartData = [];
                 parsedChart = await JSON.parse(data);
+                let candies = parsedChart.data;
+                if (candies.length > 0) {
+                    for (let i in candies) {
+                        let candy = await JSON.parse(candies[i]);
+                        parsedChartData.push(candy);
+                    }
+                }
+                parsedChart.data = parsedChartData;
             }
             if (minute) {
                 parsedCurrent = await JSON.parse(minute);
@@ -37,9 +47,9 @@ const ChartsController =  {
             if (parsedCurrent) {
                 chart.minute = parsedCurrent
             }
-            return res.send({chart: chart});
+            return res.send({ chart: chart });
         } catch (e) {
-            return res.send({chart: null});
+            return res.send({ chart: null });
         }
     }
 };

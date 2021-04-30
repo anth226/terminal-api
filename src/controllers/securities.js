@@ -87,51 +87,6 @@ export const getTypeByTicker = async (ticker) => {
   return type;
 };
 
-export const fetchCachedSecuritiesFromSharedCache = async (res) => {
-  const sharedCache = connectSharedCache();
-  const keys = await sharedCache.keys('C_SEC-e*');
-
-  return res.send(keys);
-}
-
-export const clearCachedSecuritiesFromSharedCache = async (res) => {
-  const sharedCache = connectSharedCache();
-  const keys = await sharedCache.keys('C_SEC-e*');
-
-  for (let i = 0; i < keys.length; i++) {
-    await sharedCache.del(keys[i]);
-  }
-  
-  return res.send(keys);
-}
-
-export const syncExistingSecuritiesWithRedis = async (ticker, res) => {
-  try {
-    const sharedCache = connectSharedCache();
-
-    let securities = await db(`
-      SELECT ticker
-      FROM securities
-      ${ticker && `WHERE ticker = '${ticker}'`}
-    `);
-
-    res.write(securities.length.toString());
-
-    for (let i = 0; i < securities.length; i++) {
-      res.write(i.toString());
-      await sharedCache.set(`C_SEC-e${securities[i].ticker}`, 'true');
-    }
-
-    res.write('done');
-    return 'done';
-  } catch (e) {
-    res.write('error');
-    res.write(e.message);
-    
-    return 'error';
-  }
-};
-
 export const getTopStocks = async () => {
   const topStocks = await db(`
     SELECT id, name, ticker, today_performance as delta
@@ -151,32 +106,12 @@ export const getTopStocks = async () => {
     security.delta = response && response.performance;
 
     return security;
-  }))).filter(security => security.price && security.delta !== Infinity)  
-      .filter(security => security.price && security.delta >= 0).sort((a, b) => {
-    return b.delta - a.delta;
-  }).map(security => {
-    security.delta = `${Math.round(security.delta * 100) / 100}%`;
+  }))).filter(security => security.price && security.delta !== Infinity)
+    .filter(security => security.price && security.delta >= 0).sort((a, b) => {
+      return b.delta - a.delta;
+    }).map(security => {
+      security.delta = `${Math.round(security.delta * 100) / 100}%`;
 
-    return security;
-  });
-}
-
-const connectSharedCache = () => {
-  let sharedCache = null;
-
-  let credentials = {
-    host: process.env.REDIS_HOST_SHARED_CACHE,
-    port: process.env.REDIS_PORT_SHARED_CACHE,
-  };
-
-  if (!sharedCache) {
-    const client = redis.createClient(credentials);
-    client.on("error", function (error) {
-      //   reportError(error);
+      return security;
     });
-
-    sharedCache = asyncRedis.decorate(client);
-  }
-
-  return sharedCache;
-};
+}

@@ -143,12 +143,12 @@ export const userPortfolio = async (req, res) => {
       from portfolio_histories
       JOIN portfolios ON portfolios.id = portfolio_histories.portfolio_id 
       WHERE portfolios.dashboard_id = '${id}' AND type = '${type}' AND close_date is null GROUP BY ticker
-    `)
+    `);
 
     for (let data of result) {
       let { ticker, trade } = data
 
-      let name
+      let name;
 
       const companyData = await db(`
         SELECT json
@@ -158,7 +158,7 @@ export const userPortfolio = async (req, res) => {
       `);
 
       if (size(companyData) !== 0) {
-        name = companyData[0].json.name
+        name = companyData[0].json.name;
         data = { ...data, name }
       }
 
@@ -166,6 +166,7 @@ export const userPortfolio = async (req, res) => {
       if (priceResponse) {
         trade[0] = {
           ...trade[0],
+          open_day_price: priceResponse.open_price,
           last_price: priceResponse.last_price,
           performance: priceResponse.performance,
           pin_performance: (priceResponse.last_price - trade[0].open_price) / trade[0].open_price * 100
@@ -183,7 +184,7 @@ export const userPortfolio = async (req, res) => {
   }
 
   res.json(result)
-}
+};
 
 export const userPerformance = async (req, res) => {
   let result = await db(`

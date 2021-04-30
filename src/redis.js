@@ -4,6 +4,9 @@ import redis from "redis";
 // import { reportError } from "./reporting";
 
 let db;
+let priceCache;
+let chartCache;
+let atsCache;
 
 export let KEY_NEWS_HEADLINES_SOURCED = "KEY_NEWS_HEADLINES_SOURCED";
 export let KEY_NEWS_HEADLINES_HOME = "KEY_NEWS_HEADLINES_HOME";
@@ -22,19 +25,22 @@ export let KEY_ETF_STATS = "KEY_ETF_STATS";
 export let KEY_ETF_ANALYTICS = "KEY_ETF_ANALYTICS";
 export let KEY_ETF_INFO = "KEY_ETF_INFO";
 
-export let AWS_POSTGRES_DB_DATABASE = "AWS_POSTGRES_DB_DATABASE";
-export let AWS_POSTGRES_DB_HOST = "AWS_POSTGRES_DB_HOST";
-export let AWS_POSTGRES_DB_PORT = "AWS_POSTGRES_DB_PORT";
-export let AWS_POSTGRES_DB_USER = "AWS_POSTGRES_DB_USER";
-export let AWS_POSTGRES_DB_PASSWORD = "AWS_POSTGRES_DB_PASSWORD";
-
-//sharedCache keys
-export let CACHED_SYMBOL = "CS";
-export let CACHED_PRICE_REALTIME = "C_R";
-export let CACHED_PRICE_15MIN = "C_15";
-export let KEY_SECURITY_PERFORMANCE = "KEY_SEC_PERF";
-export let CACHED_PRICE_CLOSE = "C_PC";
-export let CACHED_PRICE_OPEN = "C_O";
+//price redis
+export let CACHED_SECURITY = "C_SEC:"; // security master
+export let CACHED_PERF = "PERF:"; // current perf
+export let CACHED_NOW = "NOW:"; // current price
+export let CACHED_THEN = "THEN:"; // delayed price
+export let CACHED_DAY = "DAY:"; // open and close
+//chart redis
+export let C_CHART = "CHART:";
+export let C_CHART_LD = "LD:CHART:";
+export let C_CHART_CURRENT = "CURRENT:";
+//ats redis
+export let ATS_CURRENT = "CURRENT:";
+export let ATS_DAY = "DAY:";
+export let ATS_ALL = "ALL";
+export let ATS_DATES = "DATES";
+export let ATS_SNAPSHOT = "SNAPSHOT:";
 
 function connectDatabase() {
   let credentials = {
@@ -54,3 +60,58 @@ function connectDatabase() {
 }
 
 export default connectDatabase();
+
+export const connectPriceCache = () => {
+  let credentials = {
+    host: process.env.REDIS_HOST_PRICE_CACHE,
+    port: process.env.REDIS_PORT,
+  };
+
+  if (!priceCache) {
+    const client = redis.createClient(credentials);
+    client.on("error", function (error) {
+      //   reportError(error);
+    });
+
+    priceCache = asyncRedis.decorate(client);
+  }
+
+  return priceCache;
+};
+
+
+export const connectChartCache = () => {
+  let credentials = {
+    host: process.env.REDIS_HOST_CHART_CACHE,
+    port: process.env.REDIS_PORT,
+  };
+
+  if (!chartCache) {
+    const client = redis.createClient(credentials);
+    client.on("error", function (error) {
+      //   reportError(error);
+    });
+
+    chartCache = asyncRedis.decorate(client);
+  }
+
+  return chartCache;
+};
+
+export const connectATSCache = () => {
+  let credentials = {
+    host: process.env.REDIS_HOST_ATS_CACHE,
+    port: process.env.REDIS_PORT,
+  };
+
+  if (!atsCache) {
+    const client = redis.createClient(credentials);
+    client.on("error", function (error) {
+      //   reportError(error);
+    });
+
+    atsCache = asyncRedis.decorate(client);
+  }
+
+  return atsCache;
+};
