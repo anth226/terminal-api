@@ -1562,7 +1562,7 @@ app.post("/cancellation-request", async (req, res) => {
 });
 
 // Securities
-//app.use("/security/:symbol/charts", checkAuth);
+app.use("/security/:symbol/charts", checkAuth);
 app.get("/security/:symbol/charts", ChartsController.getSymbolChart);
 
 app.use("/security/:symbol", checkAuth);
@@ -1604,6 +1604,8 @@ app.get("/sec/:symbol/data", async (req, res) => {
     companyData,
   });
 });
+
+app.get("/sec/:symbol/charts", ChartsController.getSymbolChart);
 
 
 app.get("/sec/search-count", async (req, res) => {
