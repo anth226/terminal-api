@@ -3418,12 +3418,17 @@ app.post("/createFeature", async (req, res) => {
 //app.use("/deleteFeature", checkAuth);
 app.delete("/deleteFeature", async (req, res) => {
   try {
-    if(!req.params.id || !req.params.name) {
+    if(!req.body.id || !req.body.name) {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
     }
-    const result = await features.deleteFeature(req.params.id, req.params.name);
-
-    res.send(JSON.stringify({ success: true, message: "Successfully deleted " + req.params.name + "."}));
+    
+    const result = await features.deleteFeature(req.body.id, req.body.name);
+    console.log(result);
+    if(result) {
+      res.send(JSON.stringify({ success: true, message: "Successfully deleted " + req.body.name + "."}));
+    } else {
+      res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ req.body.id + " and name = " + req.body.name + "."}));
+    }
 
   } catch (error) {
     console.log(error);

@@ -28,16 +28,26 @@ export const updateFeature = async (id, name) => {
 };
 
 
-export const deleteFeature = async (name, id) => {
-  let query = {
-    text:
-      "DELETE FROM feature_module WHERE id=($1) AND name=($2)",
-    values: [id, name],
-  };
+export const deleteFeature = async (id, name) => {
+  let checkResult = await db(`
+    SELECT *
+		FROM feature_module WHERE id = ${id} AND name = '${name}'
+  `);
+    
+  if (checkResult.length > 0) {
+    let query = {
+      text:
+        "DELETE FROM feature_module WHERE id=($1) AND name=($2)",
+      values: [id, name],
+    };
 
-  let result = await db(query);
+    let result = await db(query);
 
-  return result;
+    return true;
+  } else {
+    return false;
+  }
+  
 };
 
 
