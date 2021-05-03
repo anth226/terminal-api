@@ -187,7 +187,7 @@ const s3 = new AWS.S3({
 //   // `);
 
 //   let result = await db(`
-//     SELECT timestamp, 
+//     SELECT timestamp,
 //     price::decimal / 100 as price
 //     FROM equities_current
 //     WHERE symbol='e${ticker}' AND timestamp > (now() - interval '5h')::date
