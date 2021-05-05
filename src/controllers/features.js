@@ -1,11 +1,10 @@
 import db from "../db";
 import db1 from "../db1";
 
-
 export const createFeature = async (name) => {
   let query = {
     text:
-      "INSERT INTO feature_module (name, created_on) VALUES ($1, now())",
+      "INSERT INTO features (name, created_on) VALUES ($1, now())",
     values: [name],
   };
 
@@ -18,7 +17,7 @@ export const createFeature = async (name) => {
 export const updateFeature = async (id, name) => {
   let query = {
     text:
-      "UPDATE feature_module SET name = ($1) WHERE id=($2)",
+      "UPDATE features SET name = ($1) WHERE id=($2)",
     values: [name, id],
   };
 
@@ -31,13 +30,13 @@ export const updateFeature = async (id, name) => {
 export const deleteFeature = async (id, name) => {
   let checkResult = await db(`
     SELECT *
-		FROM feature_module WHERE id = ${id} AND name = '${name}'
+		FROM features WHERE id = ${id} AND name = '${name}'
   `);
     
   if (checkResult.length > 0) {
     let query = {
       text:
-        "DELETE FROM feature_module WHERE id=($1) AND name=($2)",
+        "DELETE FROM features WHERE id=($1) AND name=($2)",
       values: [id, name],
     };
 
@@ -55,7 +54,7 @@ export async function getFeature(id) {
 
   let result = await db(`
         SELECT *
-		    FROM feature_module
+		    FROM features
 		    ${id ? `WHERE id = ${id}` : ''}
 		`);
 		
@@ -67,7 +66,7 @@ export async function getFeatureByName(name) {
 
   let result = await db(`
         SELECT *
-		    FROM feature_module WHERE name = '${name}'
+		    FROM features WHERE name = '${name}'
 		`);
 		
   return result;
