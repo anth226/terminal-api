@@ -3429,16 +3429,30 @@ app.post("/feature/assign", async (req, res) => {
 //app.use("/feature/delete", checkAuth);
 app.delete("/feature/delete", async (req, res) => {
   try {
-    if(!req.body.id || !req.body.name) {
+    let id, name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!id || !name) {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
     }
     
-    const result = await features.deleteFeature(req.body.id, req.body.name);
+    const result = await features.deleteFeature(id, name);
 
     if(result) {
-      res.send(JSON.stringify({ success: true, message: "Successfully deleted " + req.body.name + "."}));
+      res.send(JSON.stringify({ success: true, message: "Successfully deleted " + name + "."}));
     } else {
-      res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ req.body.id + " and name = " + req.body.name + "."}));
+      res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ id + " and name = " + name + "."}));
     }
 
   } catch (error) {
