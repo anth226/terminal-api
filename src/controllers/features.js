@@ -1,5 +1,4 @@
 import db from "../db";
-import db1 from "../db1";
 
 export const createFeature = async (name) => {
   let query = {
@@ -42,6 +41,21 @@ export const deleteFeature = async (id, name) => {
 
     let result = await db(query);
 
+    let checkTierFeatureResult = await db(`
+      SELECT *
+      FROM tiers_feature WHERE feature_id = ${id}
+    `);
+
+    if (checkTierFeatureResult.length > 0) {
+      let checkTierFeatureQuery = {
+        text:
+          "DELETE FROM tiers_feature WHERE feature_id=($1)",
+        values: [id],
+      };
+
+      let checkTierFeatureResult = await db(checkTierFeatureQuery);
+    }
+
     return true;
   } else {
     return false;
@@ -67,6 +81,32 @@ export async function getFeatureByName(name) {
   let result = await db(`
         SELECT *
 		    FROM features WHERE name = '${name}'
+		`);
+		
+  return result;
+}
+
+
+export const assignToTier = async (tierId, featureId) => {
+
+  let query = {
+    text:
+      "INSERT INTO tiers_feature (tier_id, feature_id, created_at) VALUES ($1, $2, now())",
+    values: [tierId, featureId],
+  };
+
+  let result = await db(query);
+
+  return result;
+};
+
+
+export async function getTierFeature(tierId, featureId) {
+
+  let result = await db(`
+        SELECT *
+		    FROM tiers_feature
+		    WHERE tier_id = ${tierId} AND feature_id = ${featureId}
 		`);
 		
   return result;

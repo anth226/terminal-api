@@ -48,7 +48,6 @@ import * as institutions from "./controllers/institutions";
 import * as titans from "./controllers/titans";
 import * as trades from "./controllers/trades";
 import * as alerts from "./controllers/alerts";
-import * as features from "./controllers/features";
 import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
@@ -58,6 +57,7 @@ import * as klaviyo from "./controllers/klaviyo";
 import * as watchlist from "./controllers/watchlist";
 import * as sendEmail from "./sendEmail";
 import ChartsController from './controllers/charts';
+import * as features from "./controllers/features";
 import * as tiers from './controllers/tiers';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
@@ -3279,8 +3279,8 @@ app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
 
 
 // Feature Module
-//app.use("/getFeatures", checkAuth);
-app.get("/getFeatures", async (req, res) => {
+//app.use("/feature/fetch", checkAuth);
+app.get("/feature/fetch", async (req, res) => {
   let id;
 	if (req && req.query) {
 		let query = req.query;
@@ -3294,18 +3294,39 @@ app.get("/getFeatures", async (req, res) => {
   res.send(result);
 });
 
-//app.use("/updateFeature", checkAuth);
-app.post("/updateFeature", async (req, res) => {
+//app.use("/feature/update", checkAuth);
+app.post("/feature/update", async (req, res) => {
   try {
-    if(!req.body.id || !req.body.name) {
+    let id, name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!id || !name) {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
     }
-    const checkIDResult = await features.getFeature(req.body.id);
+    const checkIDResult = await features.getFeature(id);
 
     if(checkIDResult.length > 0) {
-      const result = await features.updateFeature(req.body.id, req.body.name);
+      const checkNameResult = await features.getFeatureByName(name);
 
-      res.send(JSON.stringify({ success: true, message: "Successfully updated to " + req.body.name + "." }));
+      if(checkNameResult.length > 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! There's already a feature with same name."}));
+        
+      } else {
+        const result = await features.updateFeature(id, name);
+
+        res.send(JSON.stringify({ success: true, message: "Successfully updated to " + name + "." }));
+      }
     } else {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
     }
@@ -3316,22 +3337,32 @@ app.post("/updateFeature", async (req, res) => {
   }
 });
 
-//app.use("/createFeature", checkAuth);
-app.post("/createFeature", async (req, res) => {
+//app.use("/feature/create", checkAuth);
+app.post("/feature/create", async (req, res) => {
   try {
-    if(!req.body.name) {
+    let name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!name) {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name."}));
     }
 
-    const checkNameResult = await features.getFeatureByName(req.body.name);
+    const checkNameResult = await features.getFeatureByName(name);
 
     if(checkNameResult.length > 0) {
       res.send(JSON.stringify({ success: false, message: "Failed! There's already a feature with same name."}));
       
     } else {
-      const result = await features.createFeature(req.body.name);
-
-      res.send(JSON.stringify({ success: true, message: "Successfully create feature " + req.body.name + "." }));
+      const result = await features.createFeature(name);
+      console.log({result});
+      res.send(JSON.stringify({ success: true, message: "Successfully create feature " + name + "." }));
     }
 
   } catch (error) {
@@ -3340,8 +3371,59 @@ app.post("/createFeature", async (req, res) => {
   }
 });
 
-//app.use("/deleteFeature", checkAuth);
-app.delete("/deleteFeature", async (req, res) => {
+//app.use("/feature/assign", checkAuth);
+app.post("/feature/assign", async (req, res) => {
+  try {
+    let tier_id, feature_id;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.tier_id) {
+        tier_id = body.tier_id;
+      }
+
+      if (body.feature_id) {
+        feature_id = body.feature_id;
+      }
+    }
+
+    if(!tier_id || !feature_id) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and feature id."}));
+    }
+
+    const checkFeatureResult = await features.getFeature(feature_id);
+
+    if(checkFeatureResult.length === 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's no feature found with id: " + feature_id + "."}));
+    } else {
+      const checkTierResult = await tiers.getTier(tier_id);
+
+      if(checkTierResult.length === 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! There's no tier found with id: " + tier_id + "."}));
+        
+      } else {
+        const checkTierFeatureResult = await features.getTierFeature(tier_id, feature_id);
+
+        if(checkTierFeatureResult.length > 0) {
+          res.send(JSON.stringify({ success: false, message: "Failed! The feature id: " + feature_id + " is already assigned to tier: " + tier_id + "."}));
+          
+        } else {
+          const result = await features.assignToTier(tier_id, feature_id);
+
+          res.send(JSON.stringify({ success: true, message: "Successfully assigned feature id: " + feature_id + " to tier: " + tier_id + "."}));
+        }
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and feature id."}));
+  }
+});
+
+//app.use("/feature/delete", checkAuth);
+app.delete("/feature/delete", async (req, res) => {
   try {
     if(!req.body.id || !req.body.name) {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
