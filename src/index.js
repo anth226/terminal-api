@@ -3358,10 +3358,9 @@ app.post("/feature/create", async (req, res) => {
 
     if(checkNameResult.length > 0) {
       res.send(JSON.stringify({ success: false, message: "Failed! There's already a feature with same name."}));
-      
     } else {
       const result = await features.createFeature(name);
-      console.log({result});
+
       res.send(JSON.stringify({ success: true, message: "Successfully create feature " + name + "." }));
     }
 
