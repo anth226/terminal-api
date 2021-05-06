@@ -59,6 +59,7 @@ import * as sendEmail from "./sendEmail";
 import ChartsController from './controllers/charts';
 import * as features from "./controllers/features";
 import * as tiers from './controllers/tiers';
+import * as feature_module from './controllers/feature_module';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
@@ -1751,6 +1752,11 @@ app.get("/tiers/ui-display", async (req, res) => {
   const result = await tiers.displayActiveTierAndModule();
   res.send(result);
 });
+/* Feature Module */
+app.get("/feature_module/list", async (req, res) => {
+  const result = await feature_module.getAllFeatureModule();
+  res.send(result);
+});
 
 /* Securities */
 
@@ -3276,7 +3282,6 @@ app.get("/crypto/trades/:ticker", crypto_api.getCryptoTickerTrades);
 
 // app.use("/crypto/candles/:ticker", checkAuth);
 app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
-
 
 // Feature Module
 //app.use("/feature/fetch", checkAuth);
