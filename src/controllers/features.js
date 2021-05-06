@@ -40,22 +40,7 @@ export const deleteFeature = async (id, name) => {
     };
 
     let result = await db(query);
-
-    let checkTierFeatureResult = await db(`
-      SELECT *
-      FROM tiers_feature WHERE feature_id = ${id}
-    `);
-
-    if (checkTierFeatureResult.length > 0) {
-      let checkTierFeatureQuery = {
-        text:
-          "DELETE FROM tiers_feature WHERE feature_id=($1)",
-        values: [id],
-      };
-
-      let checkTierFeatureResult = await db(checkTierFeatureQuery);
-    }
-
+    
     return true;
   } else {
     return false;
