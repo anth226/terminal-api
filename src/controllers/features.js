@@ -85,6 +85,19 @@ export const assignToTier = async (tierId, featureId) => {
   return result;
 };
 
+export const unassignToTier = async (tierId, featureId) => {
+
+  let query = {
+    text:
+      "DELETE FROM tiers_feature WHERE tier_id = ($1) AND feature_id=($2)",
+    values: [tierId, featureId],
+  };
+
+  let result = await db(query);
+
+  return result;
+};
+
 
 export async function getTierFeature(tierId, featureId) {
 
@@ -92,6 +105,30 @@ export async function getTierFeature(tierId, featureId) {
         SELECT *
 		    FROM tiers_feature
 		    WHERE tier_id = ${tierId} AND feature_id = ${featureId}
+		`);
+		
+  return result;
+}
+
+export async function checkTierFeature(featureId) {
+
+  let result = await db(`
+        SELECT *
+		    FROM tiers_feature
+		    WHERE feature_id = ${featureId}
+		`);
+		
+  return result;
+}
+
+
+
+export async function getTier(id) {
+
+  let result = await db(`
+        SELECT *
+		    FROM tiers
+		    ${id ? `WHERE id = ${id}` : ''}
 		`);
 		
   return result;

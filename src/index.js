@@ -3283,7 +3283,7 @@ app.get("/crypto/trades/:ticker", crypto_api.getCryptoTickerTrades);
 // app.use("/crypto/candles/:ticker", checkAuth);
 app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
 
-// Feature Module
+// Feature Endpoints
 //app.use("/feature/fetch", checkAuth);
 app.get("/feature/fetch", async (req, res) => {
   let id;
@@ -3401,7 +3401,7 @@ app.post("/feature/assign", async (req, res) => {
     if(checkFeatureResult.length === 0) {
       res.send(JSON.stringify({ success: false, message: "Failed! There's no feature found with id: " + feature_id + "."}));
     } else {
-      const checkTierResult = await tiers.getTier(tier_id);
+      const checkTierResult = await features.getTier(tier_id);
 
       if(checkTierResult.length === 0) {
         res.send(JSON.stringify({ success: false, message: "Failed! There's no tier found with id: " + tier_id + "."}));
@@ -3416,6 +3416,58 @@ app.post("/feature/assign", async (req, res) => {
           const result = await features.assignToTier(tier_id, feature_id);
 
           res.send(JSON.stringify({ success: true, message: "Successfully assigned feature id: " + feature_id + " to tier: " + tier_id + "."}));
+        }
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and feature id."}));
+  }
+});
+
+
+//app.use("/feature/unassign", checkAuth);
+app.post("/feature/unassign", async (req, res) => {
+  try {
+    let tier_id, feature_id;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.tier_id) {
+        tier_id = body.tier_id;
+      }
+
+      if (body.feature_id) {
+        feature_id = body.feature_id;
+      }
+    }
+
+    if(!tier_id || !feature_id) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and feature id."}));
+    }
+
+    const checkFeatureResult = await features.getFeature(feature_id);
+
+    if(checkFeatureResult.length === 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's no feature found with id: " + feature_id + "."}));
+    } else {
+      const checkTierResult = await features.getTier(tier_id);
+
+      if(checkTierResult.length === 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! There's no tier found with id: " + tier_id + "."}));
+        
+      } else {
+        const checkTierFeatureResult = await features.getTierFeature(tier_id, feature_id);
+
+        if(checkTierFeatureResult.length === 0) {
+          res.send(JSON.stringify({ success: false, message: "Failed! The feature id: " + feature_id + " is not assigned to tier: " + tier_id + "."}));
+          
+        } else {
+          const result = await features.unassignToTier(tier_id, feature_id);
+
+          res.send(JSON.stringify({ success: true, message: "Successfully unassigned feature id: " + feature_id + " to tier: " + tier_id + "."}));
         }
       }
     }
@@ -3447,12 +3499,19 @@ app.delete("/feature/delete", async (req, res) => {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
     }
     
-    const result = await features.deleteFeature(id, name);
+    const checkTierFeatureResult = await features.checkTierFeature(id);
 
-    if(result) {
-      res.send(JSON.stringify({ success: true, message: "Successfully deleted " + name + "."}));
+    if(checkTierFeatureResult.length > 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! The feature id: " + id + " is currently assigned to a tier."}));
+          
     } else {
-      res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ id + " and name = " + name + "."}));
+      const result = await features.deleteFeature(id, name);
+
+      if(result) {
+        res.send(JSON.stringify({ success: true, message: "Successfully deleted " + name + "."}));
+      } else {
+        res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ id + " and name = " + name + "."}));
+      }
     }
 
   } catch (error) {
