@@ -22,13 +22,15 @@ export const createTier = async (name, type, isActive, price) => {
 
 
 export const updateTier = async (id, name, type, isActive, price) => {
-  let query = {
-    text:
-      "UPDATE tiers SET name = ($1), type = ($2), is_active = ($3), price = ($4) WHERE id=($5)",
-    values: [name, type, isActive, price, id],
-  };
-
-  let result = await db(query);
+  const result = await db(`
+    UPDATE tiers 
+    SET id = ${id}
+		${name ? `, name = '${name}'` : ''}
+		${type ? `, type = '${type}'` : ''}
+		${isActive ? `, is_active = '${isActive}'` : ''}
+    ${price ? `, price = ${price}` : ''}
+    WHERE id=${id}
+		`);
 
   return result;
 };
@@ -48,21 +50,6 @@ export const deleteTier = async (id, name) => {
     };
 
     let result = await db(query);
-
-    let checkTierFeatureResult = await db(`
-      SELECT *
-      FROM tiers_feature WHERE tier_id = ${id}
-    `);
-
-    if (checkTierFeatureResult.length > 0) {
-      let checkTierFeatureQuery = {
-        text:
-          "DELETE FROM tiers_feature WHERE tier_id=($1)",
-        values: [id],
-      };
-
-      let checkTierFeatureResult = await db(checkTierFeatureQuery);
-    }
 
     return true;
   } else {
@@ -91,5 +78,27 @@ export async function getTierByName(name) {
 		    FROM tiers WHERE name = '${name}'
 		`);
 		
+  return result;
+}
+
+export async function checkTierFeature(id) {
+
+  let result = await db(`
+        SELECT *
+		    FROM tiers_feature
+		    WHERE tier_id = ${id}
+		`);
+
+  return result;
+}
+
+export async function checkTierFeatureModule(id) {
+
+  let result = await db(`
+        SELECT *
+		    FROM tiers_feature_module
+		    WHERE tier_id = ${id}
+		`);
+
   return result;
 }
