@@ -3282,6 +3282,68 @@ app.get("/crypto/trades/:ticker", crypto_api.getCryptoTickerTrades);
 // app.use("/crypto/candles/:ticker", checkAuth);
 app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
 
+// Tiers endpoints
+//app.use("/tier/fetch", checkAuth);
+app.get("/tier/fetch", async (req, res) => {
+  let id;
+	if (req && req.query) {
+		let query = req.query;
+
+		if (query.id) {
+			id = query.id;
+		}
+  }
+  
+  const result = await tiers.getTier(id);
+  res.send(result);
+});
+
+//app.use("/tier/create", checkAuth);
+app.post("/tier/create", async (req, res) => {
+  try {
+    let types = ['a', 'c', 'm', 'e'];
+    let name, type, is_active, price;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.name) {
+        name = body.name;
+      }
+
+      if (body.type) {
+        type = body.type;
+      }
+
+      if (body.is_active) {
+        is_active = body.is_active;
+      }
+
+      if (body.price) {
+        price = body.price;
+      }
+    }
+
+    if(!name ||  !type || !is_active || !price) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name, type, is_active, and price."}));
+    }
+
+    const checkNameResult = await tiers.getTierByName(name);
+
+    if(checkNameResult.length > 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's already a tier with same name."}));
+    } else {
+      const result = await features.createFeature(name);
+
+      res.send(JSON.stringify({ success: true, message: "Successfully create feature " + name + "." }));
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+  }
+});
+
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
   res.send(result);
