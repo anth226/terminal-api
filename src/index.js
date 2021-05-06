@@ -48,7 +48,6 @@ import * as institutions from "./controllers/institutions";
 import * as titans from "./controllers/titans";
 import * as trades from "./controllers/trades";
 import * as alerts from "./controllers/alerts";
-import * as features from "./controllers/features";
 import * as mutual_funds from "./controllers/mutual-funds";
 import * as companies from "./controllers/companies";
 import * as zacks from "./controllers/zacks";
@@ -59,6 +58,7 @@ import * as watchlist from "./controllers/watchlist";
 import * as sendEmail from "./sendEmail";
 import ChartsController from './controllers/charts';
 import * as tiers from './controllers/tiers';
+import * as feature_module from './controllers/feature_module';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
@@ -1751,6 +1751,11 @@ app.get("/tiers/ui-display", async (req, res) => {
   const result = await tiers.displayActiveTierAndModule();
   res.send(result);
 });
+/* Feature Module */
+app.get("/feature_module/list", async (req, res) => {
+  const result = await feature_module.getAllFeatureModule();
+  res.send(result);
+});
 
 /* Securities */
 
@@ -3276,90 +3281,6 @@ app.get("/crypto/trades/:ticker", crypto_api.getCryptoTickerTrades);
 
 // app.use("/crypto/candles/:ticker", checkAuth);
 app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
-
-
-// Feature Module
-//app.use("/getFeatures", checkAuth);
-app.get("/getFeatures", async (req, res) => {
-  let id;
-	if (req && req.query) {
-		let query = req.query;
-
-		if (query.id) {
-			id = query.id;
-		}
-  }
-  
-  const result = await features.getFeature(id);
-  res.send(result);
-});
-
-//app.use("/updateFeature", checkAuth);
-app.post("/updateFeature", async (req, res) => {
-  try {
-    if(!req.body.id || !req.body.name) {
-      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
-    }
-    const checkIDResult = await features.getFeature(req.body.id);
-
-    if(checkIDResult.length > 0) {
-      const result = await features.updateFeature(req.body.id, req.body.name);
-
-      res.send(JSON.stringify({ success: true, message: "Successfully updated to " + req.body.name + "." }));
-    } else {
-      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
-    }
-
-  } catch (error) {
-    console.log(error);
-    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and nam."}));
-  }
-});
-
-//app.use("/createFeature", checkAuth);
-app.post("/createFeature", async (req, res) => {
-  try {
-    if(!req.body.name) {
-      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name."}));
-    }
-
-    const checkNameResult = await features.getFeatureByName(req.body.name);
-
-    if(checkNameResult.length > 0) {
-      res.send(JSON.stringify({ success: false, message: "Failed! There's already a feature with same name."}));
-      
-    } else {
-      const result = await features.createFeature(req.body.name);
-
-      res.send(JSON.stringify({ success: true, message: "Successfully create feature " + req.body.name + "." }));
-    }
-
-  } catch (error) {
-    console.log(error);
-    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
-  }
-});
-
-//app.use("/deleteFeature", checkAuth);
-app.delete("/deleteFeature", async (req, res) => {
-  try {
-    if(!req.body.id || !req.body.name) {
-      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
-    }
-    
-    const result = await features.deleteFeature(req.body.id, req.body.name);
-
-    if(result) {
-      res.send(JSON.stringify({ success: true, message: "Successfully deleted " + req.body.name + "."}));
-    } else {
-      res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ req.body.id + " and name = " + req.body.name + "."}));
-    }
-
-  } catch (error) {
-    console.log(error);
-    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
-  }
-});
 
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
