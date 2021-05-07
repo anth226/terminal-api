@@ -3322,23 +3322,16 @@ app.post("/feature_module/update", async (req, res) => {
     const checkIDResult = await feature_module.getFeatureModule(id);
 
     if(checkIDResult.length > 0) {
-      const checkNameResult = await feature_module.getFeatureModuleByName(name);
+      const result = await feature_module.updateFeatureModule(id, name);
 
-      if(checkNameResult.length > 0) {
-        res.send(JSON.stringify({ success: false, message: "Failed! There's already a feature module with same name."}));
-        
-      } else {
-        const result = await feature_module.updateFeatureModule(id, name);
-
-        res.send(JSON.stringify({ success: true, message: "Successfully updated to " + name + "." }));
-      }
+      res.send(JSON.stringify({ success: true, message: "Successfully updated to " + name + "." }));
     } else {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
     }
 
   } catch (error) {
     console.log(error);
-    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and nam."}));
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and nam.", error: error}));
   }
 });
 
@@ -3359,19 +3352,13 @@ app.post("/feature_module/create", async (req, res) => {
       res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name."}));
     }
 
-    const checkNameResult = await feature_module.getFeatureModuleByName(name);
+    const result = await feature_module.createFeatureModule(name);
 
-    if(checkNameResult.length > 0) {
-      res.send(JSON.stringify({ success: false, message: "Failed! There's already a feature module with same name."}));
-    } else {
-      const result = await feature_module.createFeatureModule(name);
-
-      res.send(JSON.stringify({ success: true, message: "Successfully create feature module " + name + "." }));
-    }
+    res.send(JSON.stringify({ success: true, message: "Successfully create feature module " + name + "." }));
 
   } catch (error) {
     console.log(error);
-    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name."}));
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name.", error: error}));
   }
 });
 
