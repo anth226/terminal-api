@@ -3507,6 +3507,192 @@ app.delete("/feature_module/delete", async (req, res) => {
   }
 });
 
+// Tiers endpoints
+//app.use("/tier/fetch", checkAuth);
+app.get("/tier/fetch", async (req, res) => {
+  let id;
+	if (req && req.query) {
+		let query = req.query;
+
+		if (query.id) {
+			id = query.id;
+		}
+  }
+  
+  const result = await tiers.getTier(id);
+  res.send(result);
+});
+
+//app.use("/tier/create", checkAuth);
+app.post("/tier/create", async (req, res) => {
+  try {
+    let types = ['a', 'c', 'm', 'e'], status = ['y', 'n'];
+    let name, type, is_active, price;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.name) {
+        name = body.name;
+      }
+
+      if (body.type) {
+        type = body.type;
+      }
+
+      if (body.is_active) {
+        is_active = body.is_active;
+      }
+
+      if (body.price) {
+        price = body.price;
+      }
+    }
+
+    if(!name ||  !type || !is_active || !price) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name, type, is_active, and price."}));
+    }
+
+    if(types.indexOf(type) === -1) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid type."}));
+    }
+
+    if(status.indexOf(is_active) === -1) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid is_active value."}));
+    }
+
+    const checkNameResult = await tiers.getTierByName(name);
+
+    if(checkNameResult.length > 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's already a tier with same name."}));
+    } else {
+      const result = await tiers.createTier(name, type, is_active, price);
+
+      res.send(JSON.stringify({ success: true, message: "Successfully create feature " + name + "." }));
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name, type, is_active, and price."}));
+  }
+});
+
+//app.use("/tier/update", checkAuth);
+app.post("/tier/update", async (req, res) => {
+  try {
+    let types = ['a', 'c', 'm', 'e'], status = ['y', 'n'];
+    let id, name, type, is_active, price;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+
+      if (body.type) {
+        type = body.type;
+      }
+
+      if (body.is_active) {
+        is_active = body.is_active;
+      }
+
+      if (body.price) {
+        price = body.price;
+      }
+    }
+
+    if(!name &&  !type && !is_active && !price) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name, type, is_active, or price."}));
+    }
+
+    if(type && types.indexOf(type) === -1) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid type."}));
+    }
+
+    if(is_active && status.indexOf(is_active) === -1) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid is_active value."}));
+    }
+
+    const checkIDResult = await tiers.getTier(id);
+
+    if(checkIDResult.length > 0) {
+      if(name) {
+        const checkNameResult = await tiers.getTierByName(name);
+
+        if(checkNameResult.length > 0) {
+          res.send(JSON.stringify({ success: false, message: "Failed! There's already a tier with same name."}));
+          
+        } 
+      }
+
+      const result = await tiers.updateTier(id, name, type, is_active, price);
+
+      res.send(JSON.stringify({ success: true, message: "Tier with id: " + id + " was successfully updated."}));
+      
+    } else {
+      res.send(JSON.stringify({ success: false, message: "Failed! No Tier found with id: " + id + "."}));
+    }
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name, type, is_active, or price."}));
+  }
+});
+
+//app.use("/tier/delete", checkAuth);
+app.delete("/tier/delete", async (req, res) => {
+  try {
+    let id, name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!id || !name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+    }
+    
+    const checkTierFeatureResult = await tiers.checkTierFeature(id);
+
+    if(checkTierFeatureResult.length > 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! The tier id: " + id + " is currently assigned with a feature."}));
+          
+    } else {
+      const checkTierFeatureModuleResult = await tiers.checkTierFeatureModule(id);
+
+      if(checkTierFeatureModuleResult.length > 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! The tier id: " + id + " is currently assigned with a feature module."}));
+            
+      }
+
+      const result = await tiers.deleteTier(id, name);
+
+      if(result) {
+        res.send(JSON.stringify({ success: true, message: "Successfully deleted " + name + "."}));
+      } else {
+        res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ id + " and name = " + name + "."}));
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+  }
+});
+
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
   res.send(result);
