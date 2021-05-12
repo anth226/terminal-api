@@ -1,5 +1,6 @@
 import axios from "axios";
-import redis, { KEY_CHART_DATA } from "../redis";
+import redis, {C_CHART_CURRENT, connectChartCache, KEY_CHART_DATA} from "../redis";
+import moment from "moment";
 
 export function getIntradayPrices(intrinioApi, identifier) {
   const opts = {
@@ -87,6 +88,7 @@ export function getHistoricalData(intrinioApi, identifier, days, freq) {
 
 export async function getChartData(intrinioApi, identifier) {
   let cache = await redis.get(`${KEY_CHART_DATA}-${identifier}`);
+  let charts;
 
   if (!cache) {
     const [daily, weekly] = await Promise.all([
@@ -101,10 +103,44 @@ export async function getChartData(intrinioApi, identifier) {
       "EX",
       60 * 10
     );
-    return data;
+    charts = data;
   } else {
-    return JSON.parse(cache);
+    charts = JSON.parse(cache);
   }
+
+  // fetch the current minute to update the last point of daily/weekly
+  let chartsCache = connectChartCache();
+  let minute = await chartsCache.get(`${C_CHART_CURRENT}${identifier}`);
+
+  if (minute) {
+    minute = JSON.parse(minute);
+
+    let daily = charts.daily;
+    let weekly = charts.weekly;
+    let minuteDate = moment(minute.date).format("YYYY-MM-DD");
+    let minuteDateString = minuteDate.toString()+'T00:00:00.000Z'
+    let minuteLast = Number(minute.last);
+
+    // update the latest daily value to be the same as the current minute. If the current date is not there, add the latest date and value
+    if (daily && daily.length > 0) {
+      let dailyFirst = daily[0];
+      let dailyDate = moment(dailyFirst.date).format("YYYY-MM-DD");
+      if (dailyDate == minuteDate) {
+        dailyFirst.value = minuteLast
+      } else {
+        daily.unshift({date: minuteDateString, value: minuteLast})
+      }
+    }
+
+    // update the latest weekly date and value to be the same as the current minute candle
+    if (weekly && weekly.length > 0) {
+      let weeklyFirst = weekly[0];
+      weeklyFirst.date = minuteDateString
+      weeklyFirst.value = minuteLast
+    }
+  }
+
+  return charts
 }
 
 export async function getSecurityLastPrice(symbol) {

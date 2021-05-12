@@ -1,10 +1,11 @@
-import chartsCache, { C_CHART, C_CHART_LD, C_CHART_CURRENT } from './../chartsCache';
+import { C_CHART, C_CHART_LD, C_CHART_CURRENT, connectChartCache } from './../redis';
 
-const ChartsController =  {
-    getSymbolChart: async (req, res, next)=> {
+const ChartsController = {
+    getSymbolChart: async (req, res, next) => {
+        let chartsCache = connectChartCache();
         const symbol = req.params.symbol;
         let ldChart = false;
-        let data, minute, parsedChart, parsedCurrent;
+        let data, minute, parsedChart;
         let chart = {};
 
         try {
@@ -22,10 +23,20 @@ const ChartsController =  {
             }
 
             if (data) {
+                let parsedChartData = [];
                 parsedChart = await JSON.parse(data);
-            }
-            if (minute) {
-                parsedCurrent = await JSON.parse(minute);
+                let candies = parsedChart.data;
+                if (candies.length > 0) {
+                    for (let i in candies) {
+                        let candy = await JSON.parse(candies[i]);
+                        parsedChartData.push(candy);
+                    }
+                    if (minute) {
+                        let parsedMinute = JSON.parse(minute);
+                        parsedChartData.push(parsedMinute);
+                    }
+                }
+                parsedChart.data = parsedChartData;
             }
 
             if (parsedChart) {
@@ -34,12 +45,10 @@ const ChartsController =  {
                     chart.ld_chart = true
                 }
             }
-            if (parsedCurrent) {
-                chart.minute = parsedCurrent
-            }
-            return res.send({chart: chart});
+
+            return res.send({ chart: chart });
         } catch (e) {
-            return res.send({chart: null});
+            return res.send({ chart: null });
         }
     }
 };

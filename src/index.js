@@ -39,6 +39,7 @@ import { questionnaireSubmission } from "./controllers/questionnaire";
 import * as holdings from "./controllers/holdings";
 
 import * as darkpool from "./controllers/darkpool";
+import * as ats from "./controllers/ats";
 import * as quodd from "./controllers/quodd";
 import * as bots from "./controllers/bots";
 import * as edgar from "./controllers/edgar";
@@ -56,6 +57,9 @@ import * as klaviyo from "./controllers/klaviyo";
 import * as watchlist from "./controllers/watchlist";
 import * as sendEmail from "./sendEmail";
 import ChartsController from './controllers/charts';
+import * as tiers from './controllers/tiers';
+import * as features from "./controllers/features";
+import * as feature_module from './controllers/feature_module';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
@@ -78,7 +82,7 @@ import {
 } from "./services/stripe";
 import { listAllUsers, updateUserAccess} from "./controllers/user";
 import Shopify from "shopify-api-node";
-import { fetchBullishOptions, fetchBearishOptions } from "./controllers/options";
+import { fetchBullishOptions, fetchBearishOptions, getFilteredOptions } from "./controllers/options";
 
 const shopify = new Shopify({
   shopName: "portfolio-insider",
@@ -148,6 +152,8 @@ const apiProtocol = process.env.IS_DEV == "true" ? "http://" : "https://";
 
 // set up middlewares
 const app = express();
+
+//const router = express.Router()
 
 // configure CORS
 var corsOptions = {
@@ -579,7 +585,7 @@ app.post("/product-checkout", async (req, res) => {
 
     const orderData = await shopify.order.create(order);
 
-    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+    axios.post('https://graph.facebook.com/v9.0/' + process.env.FB_PIXEL_ID + '/events?access_token=' + process.env.FB_PIXEL_KEY, {
       "data": [
         {
           "event_name": "Purchase",
@@ -587,7 +593,7 @@ app.post("/product-checkout", async (req, res) => {
           "user_data": {
             "client_ip_address": req.connection.remoteAddress,
             "client_user_agent": req.get('User-Agent'),
-            "em":crypto.createHash('sha256').update(data.email).digest('hex')
+            "em": crypto.createHash('sha256').update(data.email).digest('hex')
           },
           "custom_data": {
             "value": 1,
@@ -595,7 +601,7 @@ app.post("/product-checkout", async (req, res) => {
           }
         }
       ]
-    }).then(function (response) {}).catch(function (error) {});
+    }).then(function (response) { }).catch(function (error) { });
 
     res.json({ paymentIntent, order: orderData });
   } catch (err) {
@@ -638,12 +644,12 @@ app.post("/upgrade-order", async (req, res) => {
       customer: {
         id: orderCustomer
       },
-      shipping_address:orderCustomerObject.default_address
+      shipping_address: orderCustomerObject.default_address
     };
 
     const orderData = await shopify.order.create(order);
 
-    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+    axios.post('https://graph.facebook.com/v9.0/' + process.env.FB_PIXEL_ID + '/events?access_token=' + process.env.FB_PIXEL_KEY, {
       "data": [
         {
           "event_name": "Purchase",
@@ -651,7 +657,7 @@ app.post("/upgrade-order", async (req, res) => {
           "user_data": {
             "client_ip_address": req.connection.remoteAddress,
             "client_user_agent": req.get('User-Agent'),
-            "em":crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
+            "em": crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
           },
           "custom_data": {
             "value": 57,
@@ -659,7 +665,7 @@ app.post("/upgrade-order", async (req, res) => {
           }
         }
       ]
-    }).then(function (response) {}).catch(function (error) {});
+    }).then(function (response) { }).catch(function (error) { });
 
     res.json({
       status: 'succeeded'
@@ -723,7 +729,7 @@ app.post("/product-checkout-paypal", async (req, res) => {
 
     const orderData = await shopify.order.create(order);
 
-    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+    axios.post('https://graph.facebook.com/v9.0/' + process.env.FB_PIXEL_ID + '/events?access_token=' + process.env.FB_PIXEL_KEY, {
       "data": [
         {
           "event_name": "Purchase",
@@ -731,7 +737,7 @@ app.post("/product-checkout-paypal", async (req, res) => {
           "user_data": {
             "client_ip_address": req.connection.remoteAddress,
             "client_user_agent": req.get('User-Agent'),
-            "em":crypto.createHash('sha256').update(data.email).digest('hex')
+            "em": crypto.createHash('sha256').update(data.email).digest('hex')
           },
           "custom_data": {
             "value": 1,
@@ -739,7 +745,7 @@ app.post("/product-checkout-paypal", async (req, res) => {
           }
         }
       ]
-    }).then(function (response) {}).catch(function (error) {});
+    }).then(function (response) { }).catch(function (error) { });
 
     res.json({ order: orderData });
   } catch (err) {
@@ -765,12 +771,12 @@ app.post("/upgrade-order-paypal", async (req, res) => {
       customer: {
         id: customer
       },
-      shipping_address:orderCustomerObject.default_address
+      shipping_address: orderCustomerObject.default_address
     };
 
     const orderData = await shopify.order.create(order);
 
-    axios.post('https://graph.facebook.com/v9.0/'+process.env.FB_PIXEL_ID+'/events?access_token='+process.env.FB_PIXEL_KEY, {
+    axios.post('https://graph.facebook.com/v9.0/' + process.env.FB_PIXEL_ID + '/events?access_token=' + process.env.FB_PIXEL_KEY, {
       "data": [
         {
           "event_name": "Purchase",
@@ -778,16 +784,16 @@ app.post("/upgrade-order-paypal", async (req, res) => {
           "user_data": {
             "client_ip_address": req.connection.remoteAddress,
             "client_user_agent": req.get('User-Agent'),
-            "em":crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
+            "em": crypto.createHash('sha256').update(orderData.contact_email).digest('hex')
           },
           "custom_data": {
             "value": 57,
             "currency": "USD"
           },
-          "test_event_code":"TEST90643"
+          "test_event_code": "TEST90643"
         }
       ]
-    }).then(function (response) {}).catch(function (error) {});
+    }).then(function (response) { }).catch(function (error) { });
 
     res.json({ order: orderData });
   } catch (err) {
@@ -896,7 +902,7 @@ app.post("/authenticate", async (req, res) => {
         };
       }
 
-      
+
       // retrieve customer data from stripe using customer id from firestore
       const customer = await stripe.customers.retrieve(customerId);
       console.log("\nCUSTOMER OBJ\n");
@@ -1058,7 +1064,7 @@ app.post("/payment", async (req, res) => {
 
     //Update User access
     let userRecord = await updateUserAccess(userId, type, plan, crypto_addon);
-    
+
 
     // Set custom auth claims with Firebase
     await admin.auth().setCustomUserClaims(userId, Object.assign(userRecord.userRecord.customClaims, {
@@ -1077,7 +1083,7 @@ app.post("/payment", async (req, res) => {
       expiry: userRecord.userRecord.customClaims.expiry,
     });
 
-    res.json({ 
+    res.json({
       success: true,
       userRecord,
       customer
@@ -1412,7 +1418,7 @@ app.post("/complete-signup", async (req, res) => {
       charges: chargesAmount,
     };
 
-    
+
 
     res.json({ success: true, userMeta, userRecord });
   } catch (error) {
@@ -1455,7 +1461,7 @@ app.post("/demorequest", async (req, res) => {
   try {
     const { email, name, phoneNumber } = req.body;
 
-    sendEmail.sendDemoRequest(name,phoneNumber,email);
+    sendEmail.sendDemoRequest(name, phoneNumber, email);
 
     res.send({ success: true });
   } catch (error) {
@@ -1507,7 +1513,7 @@ app.post("/cancellation-request", async (req, res) => {
       cancel_at_period_end: true,
     });
   }
-  
+
 
   let email = user.email;
 
@@ -1519,14 +1525,14 @@ app.post("/cancellation-request", async (req, res) => {
     user.customerId
   );
 
-  res.json({ 
+  res.json({
       success: true,
       user,
     });
 });
 
 // Securities
-app.use("/security/:symbol/charts", checkAuth);
+// app.use("/security/:symbol/charts", checkAuth);
 app.get("/security/:symbol/charts", ChartsController.getSymbolChart);
 
 app.use("/security/:symbol", checkAuth);
@@ -1549,11 +1555,13 @@ app.get("/security/:symbol/meta", async (req, res) => {
   res.send(companyFundamentals);
 });
 
-app.use("/security/:symbol/price-action", checkAuth);
-app.get("/security/:symbol/price-action", async (req, res) => {
-  const priceData = await quodd.getAllForTicker(req.params.symbol);
-  res.send(priceData);
-});
+//ENDPOINT DEPRICATED 4/21/21
+// app.use("/security/:symbol/price-action", checkAuth);
+// app.get("/security/:symbol/price-action", async (req, res) => {
+//   const priceData = await quodd.getAllForTicker(req.params.symbol);
+//   res.send(priceData);
+// });
+// 4/21/21
 
 app.use("/etfs/following", checkAuth);
 app.get("/etfs/following", async (req, res) => {
@@ -1606,12 +1614,13 @@ app.get("/analyst-ratings/:symbol/snapshot", async (req, res) => {
   res.send(snapshot);
 });
 
-app.use("/chart-data/:symbol", checkAuth);
+// app.use("/chart-data/:symbol", checkAuth);
 app.get("/chart-data/:symbol", async (req, res) => {
   const data = await getSecurityData.getChartData(
     securityAPI,
     req.params.symbol
   );
+
   res.send(data);
 });
 
@@ -1738,6 +1747,17 @@ app.get("/companies/:id/follow", async (req, res) => {
   res.send(result);
 });
 
+/* Tiering */
+app.get("/tiers/ui-display", async (req, res) => {
+  const result = await tiers.displayActiveTierAndModule();
+  res.send(result);
+});
+/* Feature Module */
+app.get("/feature_module/list", async (req, res) => {
+  const result = await feature_module.getAllFeatureModule();
+  res.send(result);
+});
+
 /* Securities */
 
 app.use("/data-tags", checkAuth);
@@ -1766,7 +1786,7 @@ app.get("/sec-last-price/:symbol", async (req, res) => {
   res.send(lastPrice);
 });
 
-app.use("/sec-price-change/:symbol", checkAuth);
+// app.use("/sec-price-change/:symbol", checkAuth);
 app.get("/sec-price-change/:symbol", async (req, res) => {
   const lastPrice = await quodd.getLastPriceChange(req.params.symbol);
   res.send(lastPrice);
@@ -1782,14 +1802,12 @@ app.get("/similar/:ticker", async (req, res) => {
 });
 
 // SEARCH
-app.use("/search/:query", checkAuth);
 app.get("/search/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
   res.send(results);
 });
 
-app.use("/search-sec/:query", checkAuth);
 app.get("/search-sec/:query", async (req, res) => {
   const query = req.params.query;
   const results = await search.searchCompanies(query);
@@ -1854,14 +1872,14 @@ app.get("/all-news", async (req, res) => {
 });
 
 app.get("/naviga-news", checkAuth, naviga.getAllNews);
-app.get("/naviga-news/:id/resource_id", checkAuth, naviga.getNewsResourceID);
+app.get("/naviga-news/:id/resource_id", naviga.getNewsResourceID);
 app.get("/naviga-news/general", checkAuth, naviga.getGeneralNews);
 app.get("/naviga-news/sector/:sector_code", checkAuth, naviga.getSectorNews);
 app.get("/naviga-news/titan/:titan_uri", checkAuth, naviga.getTitanNews);
 app.get("/naviga-news/strong-buy", checkAuth, naviga.getStrongBuyNews);
 app.get("/naviga-news/earning", checkAuth, naviga.getEarningNews);
 app.get("/naviga-news/for-you", checkAuth, news.getUserSpecificNews);
-app.get("/naviga-news/:ticker", checkAuth, naviga.getCompanyNews);
+app.get("/naviga-news/:ticker", naviga.getCompanyNews);
 
 // app.use("/news/trending-ticker", checkAuth);
 app.get("/news/trending-ticker", checkAuth, news.getMostViewedPinnedCompanyNews);
@@ -1876,38 +1894,6 @@ app.get("/news/market-headlines", async (req, res) => {
 
   // const headlines = await news.getGeneralMarketNews();
   res.send([]);
-});
-
-app.get("/fetch-shared-securities", async (req, res) => {
-  let { query } = req;
-  if (query.token != "XXX") {
-    res.send("fail");
-    return;
-  }
-
-  securities.fetchCachedSecuritiesFromSharedCache(res);
-});
-
-app.get("/clear-shared-securities", async (req, res) => {
-  let { query } = req;
-  if (query.token != "XXX") {
-    res.send("fail");
-    return;
-  }
-
-  securities.clearCachedSecuritiesFromSharedCache(res);
-});
-
-app.get("/migration-script", async (req, res) => {
-  let { query } = req;
-  if (query.token != "XXX") {
-    res.send("fail");
-    return;
-  }
-
-  await securities.syncExistingSecuritiesWithRedis(req.query.ticker, res);
-
-  res.end();
 });
 
 app.use("/news-sources", checkAuth);
@@ -2196,7 +2182,7 @@ app.get("/alerts/:id/deactivate", async (req, res) => {
   res.send(result);
 });
 
- app.use("/alerts/:id/addUser", checkAuth);
+app.use("/alerts/:id/addUser", checkAuth);
 app.get("/alerts/:id/addUser", async (req, res) => {
   const result = await alerts.addAlertUser(
     req.terminal_app.claims.uid,
@@ -2232,17 +2218,17 @@ app.get("/daily_alerts", async (req, res) => {
 
 //app.use("/cw_getUser", checkAuth);
 app.get("/cw_getUser", async (req, res) => {
-  let userResult=[], alertUserResult=[];
-  try{
+  let userResult = [], alertUserResult = [];
+  try {
 
     alertUserResult = await alerts.getAlertByName("CW Daily");
     userResult = await alerts.getAlertUser(alertUserResult[0].id, req.query.uid);
 
     res.send(JSON.stringify({ success: true, userResult }));
   } catch (error) {
-      res.send(JSON.stringify({ success: false, error, userResult }));
-    }
-  
+    res.send(JSON.stringify({ success: false, error, userResult }));
+  }
+
 });
 
 //Cathie Wood subscribe
@@ -2259,7 +2245,7 @@ app.post("/cw_subscribe", async (req, res) => {
     alertUserResult = await alerts.getAlertByName("CW Daily");
 
     userResult = await alerts.getAlertUser(alertUserResult[0].id, req.terminal_app.claims.uid);
-    
+
     res.header('Content-Type', 'application/json');
     client.messages
       .create({
@@ -2274,9 +2260,9 @@ app.post("/cw_subscribe", async (req, res) => {
         console.log(err);
         res.send(JSON.stringify({ success: false, userResult }));
       });
-    } catch (error) {
-      res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
-    }
+  } catch (error) {
+    res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
+  }
 });
 
 //Cathie Wood unsubscribe
@@ -2287,7 +2273,7 @@ app.post("/cw_unsubscribe", async (req, res) => {
     await alerts.unsubscribeCWAlert(
       req.body.phone
     );
-    
+
     alertResult = await alerts.getAlertByName("CW Unsubscribe");
     alertUserResult = await alerts.getAlertByName("CW Daily");
 
@@ -2307,8 +2293,8 @@ app.post("/cw_unsubscribe", async (req, res) => {
         res.send(JSON.stringify({ success: false, userResult }));
       });
   } catch (error) {
-      res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
-    }
+    res.send(JSON.stringify({ success: false, error, alertResult, userResult }));
+  }
 });
 
 
@@ -2342,14 +2328,14 @@ app.post('/alert/response', async function (req, res) {
     alerts.unsubscribeCWAlert(fromNum);
 
     const alertUnsub = await alerts.getAlertByName("CW Unsubscribe");
-    resp.message(alertUnsub[0].message); 
+    resp.message(alertUnsub[0].message);
 
-  } 
+  }
   else {
     resp.message('Invalid keyword!');
   }
   res.writeHead(200, {
-    'Content-Type':'text/xml'
+    'Content-Type': 'text/xml'
   });
   res.end(resp.toString());
 });
@@ -2452,7 +2438,7 @@ app.get("/zacks/long_term_growth_rates", async (req, res) => {
   res.send(result);
 });
 
-app.use("/zacks/editorial", checkAuth);
+// app.use("/zacks/editorial", checkAuth);
 app.get("/zacks/editorial", async (req, res) => {
   const result = await zacks.get_stories();
   res.send(result);
@@ -2642,8 +2628,29 @@ app.get("/darkpool/options/search/:ticker", async (req, res) => {
   res.send(result);
 });
 
-app.get("/darkpool/fill_options", async (req, res) => {
-  const result = await darkpool.fillSpotPrice();
+// ats
+app.get("/ats/snapshot", async (req, res) => {
+  const result = await ats.getATSDaySnapshot(req);
+  res.send(result);
+});
+
+app.get("/ats/compare-snapshot/:ticker", async (req, res) => {
+  const result = await ats.getATSComparisonSnapshot(req);
+  res.send(result);
+});
+
+app.get("/ats/all-snapshots/:ticker", async (req, res) => {
+  const result = await ats.getATSFrequencySnapshots(req);
+  res.send(result);
+});
+
+app.get("/ats/high_dark_flow", async (req, res) => {
+  const result = await ats.getATSHighDarkFlow(req);
+  res.send(result);
+});
+
+app.get("/ats/equities", async (req, res) => {
+  const result = await ats.getATSEquities(req);
   res.send(result);
 });
 
@@ -2680,9 +2687,9 @@ app.get(
 // ciks endpoints
 app.use("/ciks/:cik", checkAuth);
 app.get("/ciks/:cik", async (req, res) => {
-    const result = await holdings.getHoldingsByCik(req.params.cik);
-    res.send(result);
-  }
+  const result = await holdings.getHoldingsByCik(req.params.cik);
+  res.send(result);
+}
 );
 
 app.use("/ciks/institutions/data", checkAuth);
@@ -2812,17 +2819,17 @@ app.get("/fetch_subscriptions", async (req, res) => {
       const { subscription_id, customer_id } = user.customClaims
       if (subscription_id) {
         const subscription = await stripe.subscriptions.retrieve(
-            subscription_id
+          subscription_id
         );
         const activesub = await stripe.subscriptions.list({
           customer: customer_id,
         });
         const customerData = await stripe.customers.retrieve(
-            customer_id
+          customer_id
         );
 
         // console.log(subscription)
-        subs.push({user: user, sub: subscription, active_sub: activesub, customer: customerData});
+        subs.push({ user: user, sub: subscription, active_sub: activesub, customer: customerData });
 
         if (subs.length > 100) {
           break;
@@ -2830,7 +2837,7 @@ app.get("/fetch_subscriptions", async (req, res) => {
       }
     }
   }
-  res.send({subs: subs});
+  res.send({ subs: subs });
 });
 
 // stripe - fetch user subscription and fix
@@ -2871,30 +2878,30 @@ app.get("/fetch_user_subscription", async (req, res) => {
     const { subscription_id, customer_id } = user.customClaims
     if (subscription_id) {
       const subscription = await stripe.subscriptions.retrieve(
-          subscription_id
+        subscription_id
       );
       const activesub = await stripe.subscriptions.list({
         customer: customer_id,
       });
       const customerData = await stripe.customers.retrieve(
-          customer_id
+        customer_id
       );
 
-      sub = {user: user, sub: subscription, active_sub: activesub, customer: customerData};
+      sub = { user: user, sub: subscription, active_sub: activesub, customer: customerData };
 
       try {
         if (subscription.status === "active") {
           console.log("This account is active");
         } else if (subscription && subscription.cancel_at_period_end === true &&
-            (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
+          (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
         ) {
           console.log("found canceled subscription");
 
           if (updateSubscription) {
             if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
               await stripe.customers.update(
-                  customer_id,
-                  { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+                customer_id,
+                { invoice_settings: { default_payment_method: subscription.default_payment_method } }
               );
             }
 
@@ -2908,7 +2915,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
             });
             console.log("new subscription ---", newSubscription)
 
-            sub = {...sub, new_sub: newSubscription}
+            sub = { ...sub, new_sub: newSubscription }
 
             const userRecord = await admin.auth().getUser(user.uid);
 
@@ -2933,7 +2940,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
               cancel_at_period_end: false
             });
             console.log("updatedSubscription---", updatedSubscription)
-            sub = {...sub, updated_sub: updatedSubscription}
+            sub = { ...sub, updated_sub: updatedSubscription }
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
@@ -2949,7 +2956,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
       }
     }
   }
-  res.send({sub: sub});
+  res.send({ sub: sub });
 });
 
 // subscription fixing
@@ -3175,30 +3182,30 @@ app.get("/fetch_user_subscription", async (req, res) => {
     const { subscription_id, customer_id } = user.customClaims
     if (subscription_id) {
       const subscription = await stripe.subscriptions.retrieve(
-          subscription_id
+        subscription_id
       );
       const activesub = await stripe.subscriptions.list({
         customer: customer_id,
       });
       const customerData = await stripe.customers.retrieve(
-          customer_id
+        customer_id
       );
 
-      sub = {user: user, sub: subscription, active_sub: activesub, customer: customerData};
+      sub = { user: user, sub: subscription, active_sub: activesub, customer: customerData };
 
       try {
         if (subscription.status === "active") {
           console.log("This account is active");
         } else if (subscription && subscription.cancel_at_period_end === true &&
-            (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
+          (subscription.status === "canceled" && moment(subscription.canceled_at, "DD-MM-YYYY").isAfter(moment("01-01-2021", "DD-MM-YYYY"), "day"))
         ) {
           console.log("found canceled subscription");
 
           if (updateSubscription) {
             if (customerData && customerData.invoice_settings && !customerData.invoice_settings.default_payment_method && subscription.default_payment_method) {
               await stripe.customers.update(
-                  customer_id,
-                  { invoice_settings: { default_payment_method: subscription.default_payment_method } }
+                customer_id,
+                { invoice_settings: { default_payment_method: subscription.default_payment_method } }
               );
             }
 
@@ -3212,7 +3219,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
             });
             console.log("new subscription ---", newSubscription)
 
-            sub = {...sub, new_sub: newSubscription}
+            sub = { ...sub, new_sub: newSubscription }
 
             const userRecord = await admin.auth().getUser(user.uid);
 
@@ -3237,7 +3244,7 @@ app.get("/fetch_user_subscription", async (req, res) => {
               cancel_at_period_end: false
             });
             console.log("updatedSubscription---", updatedSubscription)
-            sub = {...sub, updated_sub: updatedSubscription}
+            sub = { ...sub, updated_sub: updatedSubscription }
 
             let docRef = db.collection("users").doc(user.uid);
             await docRef.update({
@@ -3253,10 +3260,12 @@ app.get("/fetch_user_subscription", async (req, res) => {
       }
     }
   }
-  res.send({sub: sub});
+  res.send({ sub: sub });
 });
 
 // Options analytics data
+app.get("/options-analytics/filter/bullish", checkAuth, getFilteredOptions);
+
 app.get("/options-analytics/bullish", checkAuth, async (req, res) => {
   const result = await fetchBullishOptions();
   return res.json(result)
@@ -3280,6 +3289,651 @@ app.get("/crypto/trades/:ticker", crypto_api.getCryptoTickerTrades);
 // app.use("/crypto/candles/:ticker", checkAuth);
 app.get("/crypto/candles/:ticker", crypto_api.getCryptoTickerCandles);
 
+// Feature Endpoints
+//app.use("/feature/fetch", checkAuth);
+app.get("/feature/fetch", async (req, res) => {
+  let id;
+	if (req && req.query) {
+		let query = req.query;
+
+		if (query.id) {
+			id = query.id;
+		}
+  }
+
+  const result = await features.getFeature(id);
+  res.send(result);
+});
+
+//app.use("/feature/update", checkAuth);
+app.post("/feature/update", async (req, res) => {
+  try {
+    let id, name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!id || !name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+    }
+    const checkIDResult = await features.getFeature(id);
+
+    if(checkIDResult.length > 0) {
+      const checkNameResult = await features.getFeatureByName(name);
+
+      if(checkNameResult.length > 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! There's already a feature with same name."}));
+
+      } else {
+        const result = await features.updateFeature(id, name);
+
+        res.send(JSON.stringify({ success: true, message: "Successfully updated to " + name + "." }));
+      }
+    } else {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and nam."}));
+  }
+});
+
+//app.use("/feature/create", checkAuth);
+app.post("/feature/create", async (req, res) => {
+  try {
+    let name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name."}));
+    }
+
+    const checkNameResult = await features.getFeatureByName(name);
+
+    if(checkNameResult.length > 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's already a feature with same name."}));
+    } else {
+      const result = await features.createFeature(name);
+
+      res.send(JSON.stringify({ success: true, message: "Successfully create feature " + name + "." }));
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+  }
+});
+
+//app.use("/feature/assign", checkAuth);
+app.post("/feature/assign", async (req, res) => {
+  try {
+    let tier_id, feature_id;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.tier_id) {
+        tier_id = body.tier_id;
+      }
+
+      if (body.feature_id) {
+        feature_id = body.feature_id;
+      }
+    }
+
+    if(!tier_id || !feature_id) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and feature id."}));
+    }
+
+    const checkFeatureResult = await features.getFeature(feature_id);
+
+    if(checkFeatureResult.length === 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's no feature found with id: " + feature_id + "."}));
+    } else {
+      const checkTierResult = await features.getTier(tier_id);
+
+      if(checkTierResult.length === 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! There's no tier found with id: " + tier_id + "."}));
+
+      } else {
+        const checkTierFeatureResult = await features.getTierFeature(tier_id, feature_id);
+
+        if(checkTierFeatureResult.length > 0) {
+          res.send(JSON.stringify({ success: false, message: "Failed! The feature id: " + feature_id + " is already assigned to tier: " + tier_id + "."}));
+
+        } else {
+          const result = await features.assignToTier(tier_id, feature_id);
+
+          res.send(JSON.stringify({ success: true, message: "Successfully assigned feature id: " + feature_id + " to tier: " + tier_id + "."}));
+        }
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and feature id."}));
+  }
+});
+
+
+//app.use("/feature/unassign", checkAuth);
+app.post("/feature/unassign", async (req, res) => {
+  try {
+    let tier_id, feature_id;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.tier_id) {
+        tier_id = body.tier_id;
+      }
+
+      if (body.feature_id) {
+        feature_id = body.feature_id;
+      }
+    }
+
+    if(!tier_id || !feature_id) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and feature id."}));
+    }
+
+    const checkFeatureResult = await features.getFeature(feature_id);
+
+    if(checkFeatureResult.length === 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's no feature found with id: " + feature_id + "."}));
+    } else {
+      const checkTierResult = await features.getTier(tier_id);
+
+      if(checkTierResult.length === 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! There's no tier found with id: " + tier_id + "."}));
+
+      } else {
+        const checkTierFeatureResult = await features.getTierFeature(tier_id, feature_id);
+
+        if(checkTierFeatureResult.length === 0) {
+          res.send(JSON.stringify({ success: false, message: "Failed! The feature id: " + feature_id + " is not assigned to tier: " + tier_id + "."}));
+
+        } else {
+          const result = await features.unassignToTier(tier_id, feature_id);
+
+          res.send(JSON.stringify({ success: true, message: "Successfully unassigned feature id: " + feature_id + " to tier: " + tier_id + "."}));
+        }
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and feature id."}));
+  }
+});
+
+//app.use("/feature/delete", checkAuth);
+app.delete("/feature/delete", async (req, res) => {
+  try {
+    let id, name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!id || !name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+    }
+
+    const checkTierFeatureResult = await features.checkTierFeature(id);
+
+    if(checkTierFeatureResult.length > 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! The feature id: " + id + " is currently assigned to a tier."}));
+
+    } else {
+      const result = await features.deleteFeature(id, name);
+
+      if(result) {
+        res.send(JSON.stringify({ success: true, message: "Successfully deleted " + name + "."}));
+      } else {
+        res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ id + " and name = " + name + "."}));
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+  }
+});
+
+// Feature Module Endpoints
+//app.use("/feature_module/fetch", checkAuth);
+app.get("/feature_module/fetch", async (req, res) => {
+  let id;
+	if (req && req.query) {
+		let query = req.query;
+
+		if (query.id) {
+			id = query.id;
+		}
+  }
+  
+  const result = await feature_module.getFeatureModule(id);
+  res.send(result);
+});
+
+//app.use("/feature_module/update", checkAuth);
+app.post("/feature_module/update", async (req, res) => {
+  try {
+    let id, name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!id || !name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+    }
+    const checkIDResult = await feature_module.getFeatureModule(id);
+
+    if(checkIDResult.length > 0) {
+      const result = await feature_module.updateFeatureModule(id, name);
+
+      res.send(JSON.stringify({ success: true, message: "Successfully updated to " + name + "." }));
+    } else {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and nam.", error: error}));
+  }
+});
+
+//app.use("/feature_module/create", checkAuth);
+app.post("/feature_module/create", async (req, res) => {
+  try {
+    let name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name."}));
+    }
+
+    const result = await feature_module.createFeatureModule(name);
+
+    res.send(JSON.stringify({ success: true, message: "Successfully create feature module " + name + "." }));
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name.", error: error}));
+  }
+});
+
+//app.use("/feature_module/assign", checkAuth);
+app.post("/feature_module/assign", async (req, res) => {
+  try {
+    let tier_id, module_id;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.tier_id) {
+        tier_id = body.tier_id;
+      }
+
+      if (body.module_id) {
+        module_id = body.module_id;
+      }
+    }
+
+    if(!tier_id || !module_id) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and module id."}));
+    }
+
+    const checkFeatureResult = await feature_module.getFeatureModule(module_id);
+
+    if(checkFeatureResult.length === 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's no feature module found with id: " + module_id + "."}));
+    } else {
+      const checkTierResult = await feature_module.getTier(tier_id);
+
+      if(checkTierResult.length === 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! There's no tier found with id: " + tier_id + "."}));
+        
+      } else {
+        const checkTierFeatureResult = await feature_module.getTierFeatureModule(tier_id, module_id);
+
+        if(checkTierFeatureResult.length > 0) {
+          res.send(JSON.stringify({ success: false, message: "Failed! The feature module id: " + module_id + " is already assigned to tier: " + tier_id + "."}));
+          
+        } else {
+          const result = await feature_module.assignToTier(tier_id, module_id);
+
+          res.send(JSON.stringify({ success: true, message: "Successfully assigned feature module id: " + module_id + " to tier: " + tier_id + "."}));
+        }
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and module id."}));
+  }
+});
+
+
+//app.use("/feature_module/unassign", checkAuth);
+app.post("/feature_module/unassign", async (req, res) => {
+  try {
+    let tier_id, module_id;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.tier_id) {
+        tier_id = body.tier_id;
+      }
+
+      if (body.module_id) {
+        module_id = body.module_id;
+      }
+    }
+
+    if(!tier_id || !module_id) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and module id."}));
+    }
+
+    const checkFeatureResult = await feature_module.getFeatureModule(module_id);
+
+    if(checkFeatureResult.length === 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's no feature module found with id: " + module_id + "."}));
+    } else {
+      const checkTierResult = await feature_module.getTier(tier_id);
+
+      if(checkTierResult.length === 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! There's no tier found with id: " + tier_id + "."}));
+        
+      } else {
+        const checkTierFeatureResult = await feature_module.getTierFeatureModule(tier_id, module_id);
+
+        if(checkTierFeatureResult.length === 0) {
+          res.send(JSON.stringify({ success: false, message: "Failed! The feature module id: " + module_id + " is not assigned to tier: " + tier_id + "."}));
+          
+        } else {
+          const result = await feature_module.unassignToTier(tier_id, module_id);
+
+          res.send(JSON.stringify({ success: true, message: "Successfully unassigned feature module id: " + module_id + " to tier: " + tier_id + "."}));
+        }
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid tier id and module id."}));
+  }
+});
+
+//app.use("/feature_module/delete", checkAuth);
+app.delete("/feature_module/delete", async (req, res) => {
+  try {
+    let id, name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!id || !name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+    }
+    
+    const checkTierFeatureResult = await feature_module.checkTierFeatureModule(id);
+
+    if(checkTierFeatureResult.length > 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! The feature module id: " + id + " is currently assigned to a tier."}));
+          
+    } else {
+      const result = await feature_module.deleteFeatureModule(id, name);
+
+      if(result) {
+        res.send(JSON.stringify({ success: true, message: "Successfully deleted " + name + "."}));
+      } else {
+        res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ id + " and name = " + name + "."}));
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+  }
+});
+// Tiers endpoints
+//app.use("/tier/fetch", checkAuth);
+app.get("/tier/fetch", async (req, res) => {
+  let id;
+	if (req && req.query) {
+		let query = req.query;
+
+		if (query.id) {
+			id = query.id;
+		}
+  }
+
+  const result = await tiers.getTier(id);
+  res.send(result);
+});
+
+//app.use("/tier/create", checkAuth);
+app.post("/tier/create", async (req, res) => {
+  try {
+    let types = ['a', 'c', 'm', 'e'], status = ['y', 'n'];
+    let name, type, is_active, price;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.name) {
+        name = body.name;
+      }
+
+      if (body.type) {
+        type = body.type;
+      }
+
+      if (body.is_active) {
+        is_active = body.is_active;
+      }
+
+      if (body.price) {
+        price = body.price;
+      }
+    }
+
+    if(!name ||  !type || !is_active || !price) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name, type, is_active, and price."}));
+    }
+
+    if(types.indexOf(type) === -1) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid type."}));
+    }
+
+    if(status.indexOf(is_active) === -1) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid is_active value."}));
+    }
+
+    const checkNameResult = await tiers.getTierByName(name);
+
+    if(checkNameResult.length > 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! There's already a tier with same name."}));
+    } else {
+      const result = await tiers.createTier(name, type, is_active, price);
+
+      res.send(JSON.stringify({ success: true, message: "Successfully create feature " + name + "." }));
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name, type, is_active, and price."}));
+  }
+});
+
+//app.use("/tier/update", checkAuth);
+app.post("/tier/update", async (req, res) => {
+  try {
+    let types = ['a', 'c', 'm', 'e'], status = ['y', 'n'];
+    let id, name, type, is_active, price;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+
+      if (body.type) {
+        type = body.type;
+      }
+
+      if (body.is_active) {
+        is_active = body.is_active;
+      }
+
+      if (body.price) {
+        price = body.price;
+      }
+    }
+
+    if(!name &&  !type && !is_active && !price) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name, type, is_active, or price."}));
+    }
+
+    if(type && types.indexOf(type) === -1) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid type."}));
+    }
+
+    if(is_active && status.indexOf(is_active) === -1) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid is_active value."}));
+    }
+
+    const checkIDResult = await tiers.getTier(id);
+
+    if(checkIDResult.length > 0) {
+      if(name) {
+        const checkNameResult = await tiers.getTierByName(name);
+
+        if(checkNameResult.length > 0) {
+          res.send(JSON.stringify({ success: false, message: "Failed! There's already a tier with same name."}));
+
+        } 
+      }
+
+      const result = await tiers.updateTier(id, name, type, is_active, price);
+
+      res.send(JSON.stringify({ success: true, message: "Tier with id: " + id + " was successfully updated."}));
+
+    } else {
+      res.send(JSON.stringify({ success: false, message: "Failed! No Tier found with id: " + id + "."}));
+    }
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid name, type, is_active, or price."}));
+  }
+});
+
+//app.use("/tier/delete", checkAuth);
+app.delete("/tier/delete", async (req, res) => {
+  try {
+    let id, name;
+
+    if (req && req.body) {
+      let body = req.body;
+
+      if (body.id) {
+        id = body.id;
+      }
+
+      if (body.name) {
+        name = body.name;
+      }
+    }
+
+    if(!id || !name) {
+      res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+    }
+
+    const checkTierFeatureResult = await tiers.checkTierFeature(id);
+
+    if(checkTierFeatureResult.length > 0) {
+      res.send(JSON.stringify({ success: false, message: "Failed! The tier id: " + id + " is currently assigned with a feature."}));
+
+    } else {
+      const checkTierFeatureModuleResult = await tiers.checkTierFeatureModule(id);
+
+      if(checkTierFeatureModuleResult.length > 0) {
+        res.send(JSON.stringify({ success: false, message: "Failed! The tier id: " + id + " is currently assigned with a feature module."}));
+
+      }
+
+      const result = await tiers.deleteTier(id, name);
+
+      if(result) {
+        res.send(JSON.stringify({ success: true, message: "Successfully deleted " + name + "."}));
+      } else {
+        res.send(JSON.stringify({ success: false, message: "Failed! No record found with id = "+ id + " and name = " + name + "."}));
+      }
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and name."}));
+  }
+});
 app.get("/test", async (req, res) => {
   const result = await edgar.test();
   res.send(result);

@@ -178,7 +178,7 @@ export async function getOptions(req) {
 function validateDate(date) {
   let formats = ['MM-DD-YYYY', 'MM-DD-YY', 'YYYY-MM-DD', 'YY-MM-DD'];
   for (let format of formats) {
-    let validDate = moment(date, format,true).isValid();
+    let validDate = moment(date, format, true).isValid();
     if (validDate) {
       return true;
     }
@@ -240,46 +240,4 @@ export async function searchOptions(ticker) {
         ORDER BY (LOWER(ticker) = '${ticker}') desc, length(ticker)
         `)
   return result;
-}
-
-let sharedCache;
-const connectSharedCache = () => {
-  let credentials = {
-    host: process.env.REDIS_HOST_SHARED_CACHE,
-    port: process.env.REDIS_PORT_SHARED_CACHE,
-  };
-
-  if (!sharedCache) {
-    const client = redis.createClient(credentials);
-    client.on("error", function (error) {
-      //   reportError(error);
-    });
-
-    sharedCache = asyncRedis.decorate(client);
-  }
-  return sharedCache;
-};
-
-export async function fillSpotPrice() {
-
-  const options = await getOptions();
-
-  connectSharedCache();
-
-  if (options) {
-    for (var i = 0; i < options.length; i++) {
-
-      let qTicker = "e" + options[i].ticker;
-      let cachedPrice_15 = await sharedCache.get(`${CACHED_PRICE_15MIN}${qTicker}`);
-
-      if (cachedPrice_15) {
-        let p = cachedPrice_15 / 100
-        const result = await optionsDB(`
-        UPDATE options SET spot = ${p} WHERE id = ${options[i].id}
-        `)
-      }
-    }
-  }
-
-  return { success: true }
 }
