@@ -74,18 +74,24 @@ export const getFilteredOptions = async (req, res, next) => {
     if (!max) max = 100;
     if (!limit) limit = 20;
 
+    let cp = 'C';
+    if (max <= 50) {
+      cp = 'P';
+    }
+
     const result = await optionsDB(`
-      SELECT ticker, SUM(prem) AS premium, SUM(contract_quantity) as call_flow
-      FROM options o
+      SELECT ticker,
+      SUM(CASE cp WHEN '${cp}' THEN prem ELSE 0 END) as premium, 
+      SUM(CASE cp WHEN '${cp}' THEN contract_quantity ELSE 0 END) as flow
+      FROM options
       WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
       GROUP BY ticker
       HAVING CASE SUM(CASE cp WHEN 'P' THEN 1 ELSE 0 END) WHEN 0 THEN 100 ELSE (
-      ROUND(
-        (
-          SUM(CASE cp WHEN 'C' THEN 1 ELSE 0 END))::DECIMAL / 
-          SUM(CASE cp WHEN 'P' THEN 1 ELSE 1 END) * 100
-        )
-      ) END BETWEEN ${min} AND ${max}
+        ROUND(
+          (
+            SUM(CASE cp WHEN 'C' THEN contract_quantity ELSE 0 END))::DECIMAL / SUM(CASE cp WHEN 'C' THEN contract_quantity ELSE contract_quantity END) * 100
+            )
+         ) END BETWEEN ${min} AND ${max}
       ORDER BY premium DESC limit ${limit}
     `);
 

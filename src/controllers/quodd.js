@@ -355,7 +355,7 @@ export async function getLastPrice(ticker) {
 export async function getLastPriceChange(ticker) {
   console.log("\n\nLAST PRICE CHANGE");
   let response;
-  let realtime, open, close, date;
+  let realtime, open, close, prev_close, date;
 
   console.log("ticker", ticker);
 
@@ -380,6 +380,7 @@ export async function getLastPriceChange(ticker) {
   if (day) {
     let parsedDay = JSON.parse(day);
     close = Number(parsedDay.close);
+    prev_close = Number(parsedDay.prev_close);
     open = Number(parsedDay.open);
     date = parsedDay.date;
   }
@@ -403,6 +404,7 @@ export async function getLastPriceChange(ticker) {
       response = {
         //last_price_realtime: realtime,
         close_price: close,
+        prev_close_price: prev_close,
         last_price: realtime,
         open_price: openVal,
         performance: percentChange,
@@ -419,6 +421,7 @@ export async function getLastPriceChange(ticker) {
         response = {
           //last_price_realtime: intrinioPrice.last_price,
           close_price: close,
+          prev_close_price: prev_close,
           last_price: lastPrice,
           open_price: openVal,
           performance: percentChange,
@@ -429,6 +432,7 @@ export async function getLastPriceChange(ticker) {
         response = {
           //last_price_realtime: intrinioPrice.last_price,
           close_price: close,
+          prev_close_price: prev_close,
           last_price: 0,
           open_price: openVal,
           performance: 0,
@@ -460,6 +464,7 @@ export async function getLastPriceChange(ticker) {
 
     return {
       close_price: close,
+      prev_close_price: prev_close,
       last_price,
       open_price,
       performance: (last_price / open_price - 1) * 100,

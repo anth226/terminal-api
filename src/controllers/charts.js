@@ -5,7 +5,7 @@ const ChartsController = {
         let chartsCache = connectChartCache();
         const symbol = req.params.symbol;
         let ldChart = false;
-        let data, minute, parsedChart, parsedCurrent;
+        let data, minute, parsedChart;
         let chart = {};
 
         try {
@@ -31,11 +31,12 @@ const ChartsController = {
                         let candy = await JSON.parse(candies[i]);
                         parsedChartData.push(candy);
                     }
+                    if (minute) {
+                        let parsedMinute = JSON.parse(minute);
+                        parsedChartData.push(parsedMinute);
+                    }
                 }
                 parsedChart.data = parsedChartData;
-            }
-            if (minute) {
-                parsedCurrent = await JSON.parse(minute);
             }
 
             if (parsedChart) {
@@ -44,9 +45,7 @@ const ChartsController = {
                     chart.ld_chart = true
                 }
             }
-            if (parsedCurrent) {
-                chart.minute = parsedCurrent
-            }
+
             return res.send({ chart: chart });
         } catch (e) {
             return res.send({ chart: null });

@@ -40,7 +40,9 @@ export let ATS_CURRENT = "CURRENT:";
 export let ATS_DAY = "DAY:";
 export let ATS_ALL = "ALL";
 export let ATS_DATES = "DATES";
+export let ATS_LAST_TIME = "LAST_TIME";
 export let ATS_SNAPSHOT = "SNAPSHOT:";
+export let ATS_HIGH_DARK_FLOW = "HIGHDARKFLOW";
 
 function connectDatabase() {
   let credentials = {
