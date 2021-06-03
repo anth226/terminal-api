@@ -30,6 +30,7 @@
   "dependencies": {
     "@bugsnag/js": "^6.5.2",
     "@bugsnag/plugin-express": "^6.5.1",
+    "argon2": "^0.27.2",
     "async-redis": "^1.1.7",
     "aws-sdk": "^2.635.0",
     "axios": "^0.21.1",
@@ -40,6 +41,7 @@
     "cors": "^2.8.5",
     "crom": "^0.1.0",
     "cron": "^1.8.2",
+    "crypto-js": "^4.0.0",
     "csvtojson": "^2.0.10",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",

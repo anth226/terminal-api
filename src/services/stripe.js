@@ -5,7 +5,7 @@ import Stripe from "stripe";
 export const couponId = process.env.STRIPE_COUPON_ID;
 export const couponIdFree = process.env.STRIPE_COUPON_ID_FREE;
 export const planId = process.env.STRIPE_PLAN_ID;
-export const yearlyPlanId = process.env.STRIPE_YEARLY_PLAN_ID;
+export const yearlyPlanId = process.env.STRIPE_YEALY_PLAN_ID;
 export const monthlyPlanId = process.env.STRIPE_MONTHLY_PLAN_ID;
 export const stripeKey = process.env.STRIPE_API_KEY;
 export const endpointSecret = process.env.STRIPE_ENDPOINT_SECRET;

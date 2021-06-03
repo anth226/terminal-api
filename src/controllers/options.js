@@ -1,5 +1,6 @@
 import optionsDB from "../optionsDB";
 import db from "../db";
+import moment from "moment"
 
 export const fetchOptionsAnalytics = async () => {
   const result = await optionsDB(`
@@ -9,16 +10,17 @@ export const fetchOptionsAnalytics = async () => {
   return result
 };
 
-export const fetchBullishOptions = async () => {
-  // fetch bullish options
-  const result = await optionsDB(`
-    SELECT ticker, SUM(prem) AS premium, SUM(contract_quantity) as call_flow
-    FROM options o
-    WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
-    Group by ticker
-    Having SUM(case cp when 'P' then 1 end) is null
-    order by premium DESC limit 20
-  `);
+export const fetchBullishOptions = async (req) => {
+  const bullishQuery = getBullishQuery({
+    date: req.query.date
+  });
+
+  let result;
+  try {
+    result = await optionsDB(bullishQuery);
+  } catch {
+    result = [];
+  }
 
   // create comma separated string of tickers to fetch ticker and name from securities
   let tickers = result.map(function(option){return option.ticker}).join(",");
@@ -38,16 +40,17 @@ export const fetchBullishOptions = async () => {
   return options
 };
 
-export const fetchBearishOptions = async () => {
-  // fetch bullish options
-  const result = await optionsDB(`
-    SELECT ticker, SUM(prem) AS premium, SUM(contract_quantity) as put_flow
-    FROM options o
-    WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
-    Group by ticker
-    Having SUM(case cp when 'C' then 1 end) is null
-    order by premium DESC limit 20
-  `);
+export const fetchBearishOptions = async (req) => {
+  const bearishQuery = getBearishQuery({
+    date: req.query.date
+  });
+
+  let result;
+  try {
+    result = await optionsDB(bearishQuery);
+  } catch {
+    result = [];
+  }
 
   // create comma separated string of tickers to fetch ticker and name from securities
   let tickers = result.map(function(option){return option.ticker}).join(",");
@@ -57,14 +60,16 @@ export const fetchBearishOptions = async () => {
 
   // convert securities to map of ticker:name to update options with name
   let securityMap = securities.reduce((s,security) => ({...s, [security.ticker]: security.name}), {});
+
   for (let option of result) {
     let name = securityMap[option.ticker];
     option.name = name;
   }
+
   let options = result.filter(v => v.name);
 
   return options
-}; 
+};
 
 export const getFilteredOptions = async (req, res, next) => {
   try {
@@ -81,7 +86,7 @@ export const getFilteredOptions = async (req, res, next) => {
 
     const result = await optionsDB(`
       SELECT ticker,
-      SUM(CASE cp WHEN '${cp}' THEN prem ELSE 0 END) as premium, 
+      SUM(CASE cp WHEN '${cp}' THEN prem ELSE 0 END) as premium,
       SUM(CASE cp WHEN '${cp}' THEN contract_quantity ELSE 0 END) as flow
       FROM options
       WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)
@@ -114,3 +119,160 @@ export const getFilteredOptions = async (req, res, next) => {
     res.json({});
   }
 }
+
+const getOptionsTablePostfix = (date) => {
+  if (!date) {
+    return null;
+  }
+
+  const currentDate = moment().tz('America/New_York').format('YYYY-MM');
+  const selectedDate = moment(date).format('YYYY-MM');
+
+  if (currentDate === selectedDate) {
+    return null;
+  }
+
+  let tablePostfix = date.split('-');
+  tablePostfix.length = 2;
+
+  return `_${tablePostfix.join('_')}`;
+}
+
+const getBullishQuery = ({
+  date
+}) => {
+  let startDate, endDate = null;
+
+  if (date) {
+    [startDate, endDate] = date.split(',');
+  }
+
+  let dateClause = `WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)`;
+
+  if (!endDate && startDate) {
+    dateClause = `WHERE to_timestamp(time)::date = '${startDate}'`;
+  }
+
+  if (!endDate) {
+    const tablePostfix = getOptionsTablePostfix(startDate);
+    const optionsSubquery = getBullishSubquery({
+      tablePostfix,
+      dateClause,
+    });
+
+    return `
+      SELECT ticker, SUM(premium) AS premium, SUM(call_flow) as call_flow
+      FROM ${optionsSubquery} as results
+      GROUP BY ticker
+      ORDER BY premium DESC limit 20
+    `;
+  }
+
+  const unionQuery = enumerateDaysBetweenDates(startDate, endDate).map(date => {
+    const tablePostfix = getOptionsTablePostfix(date);
+    const dateClause = `WHERE to_timestamp(time)::date = '${date}'`;
+
+    return getBullishSubquery({
+      tablePostfix,
+      dateClause,
+    });
+  }).join(' UNION ');
+
+  return `
+    SELECT ticker, SUM(premium) AS premium, SUM(call_flow) as call_flow
+    FROM (${unionQuery}) as results
+    GROUP BY ticker
+    ORDER BY premium DESC limit 20
+  `;
+}
+
+const getBullishSubquery = ({
+  tablePostfix,
+  dateClause
+}) => {
+  return `(
+    SELECT ticker, SUM(prem) AS premium, SUM(contract_quantity) as call_flow
+    FROM options${tablePostfix ? tablePostfix : ''} o
+    ${dateClause}
+    GROUP BY ticker
+    Having SUM(case cp when 'P' then 1 end) is null
+  )`;
+}
+
+const getBearishQuery = ({
+  date
+}) => {
+  let startDate, endDate = null;
+
+  if (date) {
+    [startDate, endDate] = date.split(',');
+  }
+
+  let dateClause = `WHERE to_timestamp(time)::date = (SELECT to_timestamp(time)::date FROM options ORDER BY time DESC LIMIT 1)`;
+
+  if (!endDate && startDate) {
+    dateClause = `WHERE to_timestamp(time)::date = '${startDate}'`;
+  }
+
+  if (!endDate) {
+    const tablePostfix = getOptionsTablePostfix(startDate);
+    const optionsSubquery = getBearishSubquery({
+      tablePostfix,
+      dateClause,
+    });
+
+    return `
+      SELECT ticker, SUM(premium) AS premium, SUM(put_flow) as put_flow
+      FROM ${optionsSubquery} as results
+      GROUP BY ticker
+      ORDER BY premium DESC limit 20
+    `;
+  }
+
+  const unionQuery = enumerateDaysBetweenDates(startDate, endDate).map(date => {
+    const tablePostfix = getOptionsTablePostfix(date);
+    const dateClause = `WHERE to_timestamp(time)::date = '${date}'`;
+
+    return getBearishSubquery({
+      tablePostfix,
+      dateClause,
+    });
+  }).join(' UNION ');
+
+  return `
+    SELECT ticker, SUM(premium) AS premium, SUM(put_flow) as put_flow
+    FROM (${unionQuery}) as results
+    GROUP BY ticker
+    ORDER BY premium DESC limit 20
+  `;
+}
+
+const getBearishSubquery = ({
+  tablePostfix,
+  dateClause
+}) => {
+  return `(
+    SELECT ticker, SUM(prem) AS premium, SUM(contract_quantity) as put_flow
+    FROM options${tablePostfix ? tablePostfix : ''} o
+    ${dateClause}
+    GROUP BY ticker
+    Having SUM(case cp when 'C' then 1 end) is null
+    ORDER BY premium DESC limit 20
+  )`;
+}
+
+const enumerateDaysBetweenDates = (startDate, endDate) => {
+  let dates = [];
+  let currDate = moment(startDate).startOf('day');
+  let lastDate = moment(endDate).startOf('day');
+
+  dates.push(startDate);
+
+  while(currDate.add(1, 'days').diff(lastDate) < 0) {
+    dates.push(currDate.clone().format('YYYY-MM-DD'));
+  }
+
+  dates.push(endDate);
+
+  return dates;
+};

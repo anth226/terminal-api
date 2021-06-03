@@ -35,6 +35,8 @@ export let CACHED_DAY = "DAY:"; // open and close
 export let C_CHART = "CHART:";
 export let C_CHART_LD = "LD:CHART:";
 export let C_CHART_CURRENT = "CURRENT:";
+export let C_DL_CHART = "DL:CHART:";
+export let C_DL_CHART_LD = "DL:LD:CHART:";
 //ats redis
 export let ATS_CURRENT = "CURRENT:";
 export let ATS_DAY = "DAY:";
@@ -43,6 +45,7 @@ export let ATS_DATES = "DATES";
 export let ATS_LAST_TIME = "LAST_TIME";
 export let ATS_SNAPSHOT = "SNAPSHOT:";
 export let ATS_HIGH_DARK_FLOW = "HIGHDARKFLOW";
+export let ATS_TRENDING_HIGH_DARK_FLOW = "TRENDINGHIGHDARKFLOW";
 
 function connectDatabase() {
   let credentials = {

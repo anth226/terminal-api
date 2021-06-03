@@ -2,15 +2,313 @@ import {
     ATS_DAY,
     ATS_ALL,
     connectATSCache,
+    connectChartCache,
+    connectPriceCache,
     ATS_DATES,
     ATS_LAST_TIME,
     ATS_SNAPSHOT,
-    ATS_HIGH_DARK_FLOW
+    ATS_HIGH_DARK_FLOW,
+    ATS_TRENDING_HIGH_DARK_FLOW
 } from './../redis';
 import db from "../atsDB";
+import mainDB from "../db";
 import moment from "moment"
+import * as darkpool from "./darkpool";
+
+async function fetchATSDates(ticker) {
+    let atsCache = connectATSCache();
+
+    // fetch the latest date of the data
+    let cachedDate = await atsCache.get(`DATE:${ticker}`);
+
+    // find the last 7 dates
+    let date = moment(cachedDate);
+    let pastDates = [];
+    for (let i = 1; i <= 7; i++) {
+        let iDate = date.subtract(1, "days");
+        pastDates.push(iDate.format("YYYY-MM-DD"));
+    }
+
+    return { date: cachedDate, pastDates: pastDates };
+}
+
+async function fetchATSData(dates, ticker, jMin, day) {
+    let current = {};
+
+    let atsCache = connectATSCache();
+
+    let trades = 0;
+    let volume = 0;
+    let price = 0;
+    let num = 0;
+    let score;
+    for (let date of dates) {
+        let minute = await atsCache.zrevrangebyscore(`DAY:${date}:${ticker}`, jMin, 0, 'WITHSCORES', 'LIMIT', 0, 1);
+        if (!minute || !minute[0] || !minute[1]) {
+            continue;
+        }
+        let minuteData = JSON.parse(minute[0]);
+        trades += minuteData.totalTrades;
+        volume += minuteData.totalVolume;
+        price += minuteData.totalPrice;
+
+        score = minute[1];
+        num += 1;
+    }
+
+    let days = num || 1;
+    current.trades = Number(trades / days);
+    current.volume = Number(volume / days);
+    current.price = Number(price / days);
+
+    // if day exists, subtract the above result from the current day to find the remaining data
+    if (day) {
+        current.trades = Number(day.day_trades - current.trades);
+        current.volume = Number(day.day_volume - current.volume);
+        current.price = Number(day.day_price - current.price);
+    }
+    current.dollar_volume = current.trades ? (current.price / current.trades) * current.volume : 0;
+    current.score = score;
+
+    return current;
+}
+
+function calculateNomralizedChange(current, previous) {
+    let result;
+    if (current && previous) {
+        let calc = ((((current - previous) / (previous * 2))) + 0.5) * 100;
+        result = Number(calc.toFixed(2));
+    }
+    return result;
+}
+
+// Snapshot comparing the last 7 days and current day (hourly and daily)
+export const getATSFrequencySnapshots = async (req) => {
+    let ticker = req.params.ticker.toUpperCase();
+    let jMin = 2000;
+
+    let current = {};
+    let previous = {};
+    let compared = {};
+
+    let { date, pastDates } = await fetchATSDates(ticker);
+    if (!date) {
+        return {};
+    }
+
+    // get the latest date's data
+    let currentMinData = await fetchATSData([date], ticker, jMin);
+    if (currentMinData) {
+        current.day_trades = currentMinData.trades;
+        current.day_volume = currentMinData.volume;
+        current.day_price = currentMinData.price;
+        current.day_dollar_volume = current.day_trades ? (current.day_price / current.day_trades) * current.day_volume : 0;
+        jMin = currentMinData.score; // julian minute of latest date
+    }
+
+    // get the previous date's data
+    let previousMinData = await fetchATSData(pastDates, ticker, jMin);
+    if (previousMinData) {
+        previous.day_trades = previousMinData.trades;
+        previous.day_volume = previousMinData.volume;
+        previous.day_price = previousMinData.price;
+        previous.day_dollar_volume = previous.day_trades ? (previous.day_price / previous.day_trades) * previous.day_volume : 0;
+    }
+
+    compared.day_trades = calculateNomralizedChange(current.day_trades, previous.day_trades);
+    compared.day_volume = calculateNomralizedChange(current.day_volume, previous.day_volume);
+    compared.day_price = calculateNomralizedChange(current.day_price, previous.day_price);
+    compared.day_dollar_volume = calculateNomralizedChange(current.day_dollar_volume, previous.day_dollar_volume);
+
+    jMin -= 60; // hour ago julian minute
+    let currentHourAgoData = await fetchATSData([date], ticker, jMin, current);
+    if (currentHourAgoData) {
+        current.hour_trades = currentHourAgoData.trades;
+        current.hour_volume = currentHourAgoData.volume;
+        current.hour_price = currentHourAgoData.price;
+        current.hour_dollar_volume = current.hour_trades ? (current.hour_price / current.hour_trades) * current.hour_volume : 0;
+    }
+
+    // get the previous date's hour data
+    let previousHourAgoData = await fetchATSData(pastDates, ticker, jMin, previous);
+    if (previousHourAgoData) {
+        previous.hour_trades = previousHourAgoData.trades;
+        previous.hour_volume = previousHourAgoData.volume;
+        previous.hour_price = previousHourAgoData.price;
+        previous.hour_dollar_volume = previous.hour_trades ? (previous.hour_price / previous.hour_trades) * previous.hour_volume : 0;
+    }
+
+    compared.hour_trades = calculateNomralizedChange(current.hour_trades, previous.hour_trades);
+    compared.hour_volume = calculateNomralizedChange(current.hour_volume, previous.hour_volume);
+    compared.hour_price = calculateNomralizedChange(current.hour_price, previous.hour_price);
+    compared.hour_dollar_volume = calculateNomralizedChange(current.hour_dollar_volume, previous.hour_dollar_volume);
+
+    return {
+        date,
+        ticker,
+        current,
+        previous,
+        compared,
+    };
+};
+
+export const getATSHighDarkFlow = async (req) => {
+    let data;
+    let atsCache = connectATSCache();
+
+    data = await atsCache.get(`${ATS_HIGH_DARK_FLOW}`);
+
+    if (data) {
+        data = await JSON.parse(data);
+    }
+
+    return data;
+};
+
+export const getATSTrendingHighDarkFlow = async (req) => {
+    let data;
+    let atsCache = connectATSCache();
+
+    data = await atsCache.get(`${ATS_TRENDING_HIGH_DARK_FLOW}`);
+
+    if (data) {
+        data = await JSON.parse(data);
+    }
+
+    return data;
+};
+
+export const getATSEquities = async (req) => {
+    let { query } = req;
+    let ticker;
+
+    if (query.ticker && query.ticker.length > 0) {
+        ticker = query.ticker.toLowerCase();
+    }
+    let last_time = query.last_time;
+    let limit = query.limit || 200;
+
+    let atsQuery = `
+        SELECT ticker, "totalTrades", "totalPrice", "totalVolume", "lastTime", "openTime"
+        FROM minutes
+        WHERE date = (SELECT date FROM minutes ORDER BY date DESC LIMIT 1)
+        AND ("totalPrice"/"totalTrades")*"totalVolume" > 100000
+        ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
+        ${last_time ? `AND "openTime" < ${last_time}` : ''}
+        ORDER BY "openTime" DESC
+        LIMIT ${limit}
+        `;
+
+    const results = await db(atsQuery);
+
+    return results
+};
+
+export const getTopATS = async () => {
+    let result;
+    let atsCache = connectATSCache();
+
+    result = await atsCache.get(`TOPTICKERS`);
+
+    if (result) {
+        result = await JSON.parse(result);
+    } else {
+        return null;
+    }
+
+    const promises = result.map(ticker => getAllData(ticker))
+
+    const all = await Promise.all(promises)
+
+    return all;
+};
+
+export const getAllData = async (ticker) => {
+    let all = {};
+    let ats = {};
+    all.ticker = ticker;
+
+
+
+    let sec = await mainDB(`SELECT * FROM securities WHERE ticker = '${ticker}'`);
+    if (sec.length > 0) {
+        all.name = sec[0].name;
+    }
+
+
+    let chartCache = connectChartCache();
+    let priceCache = connectPriceCache();
+    let atsCache = connectATSCache();
+
+    let bounds = await priceCache.get(`BOUNDS:${ticker}`);
+    let day = await priceCache.get(`DAY:${ticker}`);
+
+    let ldChart = false;
+    let chartData, minute, parsedChart;
+    let chart = {};
+
+    chartData = await chartCache.get(`CHART:${ticker}`);
+
+    if (!chartData) {
+        chartData = await chartCache.get(`CHART:LD:${ticker}`);
+        if (chartData) {
+            ldChart = true;
+        }
+    }
+
+    if (!ldChart) {
+        minute = await chartCache.get(`CURRENT:${ticker}`);
+    }
+
+    if (chartData) {
+        let parsedChartData = [];
+        parsedChart = await JSON.parse(chartData);
+        let candies = parsedChart.data;
+        if (candies.length > 0) {
+            for (let i in candies) {
+                let candy = await JSON.parse(candies[i]);
+                parsedChartData.push(candy);
+            }
+            if (minute) {
+                let parsedMinute = JSON.parse(minute);
+                parsedChartData.push(parsedMinute);
+            }
+        }
+        parsedChart.data = parsedChartData;
+    }
+
+    if (parsedChart) {
+        chart = parsedChart;
+        if (ldChart) {
+            chart.ld_chart = true
+        }
+    }
+
+    let cachedDate = await atsCache.get(`DATE:${ticker}`);
+
+    let currentMinData = await fetchATSData([cachedDate], ticker, 2000);
+    if (currentMinData) {
+        ats.day_trades = currentMinData.trades;
+        ats.day_volume = currentMinData.volume;
+        ats.day_price = currentMinData.price;
+        ats.day_dollar_volume = ats.day_trades ? (ats.day_price / ats.day_trades) * ats.day_volume : 0;
+    }
+
+    let t = ticker.toLowerCase();
+    let options = await darkpool.helperGetSnapshot(t);
+
+    all.bounds = await JSON.parse(bounds);
+    all.day = await JSON.parse(day);
+    all.chart = chart;
+    all.options = options;
+    all.ats = ats;
+
+    return all;
+};
+
 
 // snapshot of the total trades, volume, and price for the current day
+// deprecated
 export const getATSDaySnapshot = async (req) => {
     let { query } = req;
     let ticker;
@@ -46,6 +344,7 @@ export const getATSDaySnapshot = async (req) => {
 };
 
 // Snapshot comparing the last 7 days and current day
+// deprecated
 export const getATSComparisonSnapshot = async (req) => {
     let ticker = req.params.ticker.toUpperCase();
 
@@ -70,8 +369,8 @@ export const getATSComparisonSnapshot = async (req) => {
 
         dates = await db(dateQuery);
         atsCache.set(`${ATS_DATES}`,
-        JSON.stringify(dates),
-        "EX", 60 * 10);
+            JSON.stringify(dates),
+            "EX", 60 * 10);
     } else {
         dates = JSON.parse(cachedDates);
     }
@@ -90,11 +389,11 @@ export const getATSComparisonSnapshot = async (req) => {
     let previousTimeClause;
     let currentTimeClause;
     let timeKey;
-    switch(frequency) {
+    switch (frequency) {
         case "1D":
             previousTimeClause = `AND "openTime" <= (SELECT "openTime" FROM minutes ORDER BY date DESC, "openTime" DESC LIMIT 1)`;
             timeKey = '';
-        break;
+            break;
         case "1H":
             let lastTime;
             let cachedLastTime = await atsCache.get(`${ATS_LAST_TIME}`);
@@ -102,8 +401,8 @@ export const getATSComparisonSnapshot = async (req) => {
                 let timeQuery = `SELECT "openTime" FROM minutes ORDER BY date DESC, "openTime" DESC LIMIT 1`;
                 lastTime = await db(timeQuery);
                 atsCache.set(`${ATS_LAST_TIME}`,
-                JSON.stringify(lastTime),
-                "EX", 60 * 10);
+                    JSON.stringify(lastTime),
+                    "EX", 60 * 10);
             } else {
                 lastTime = JSON.parse(cachedLastTime);
             }
@@ -117,9 +416,9 @@ export const getATSComparisonSnapshot = async (req) => {
                 previousTimeClause = `AND "openTime" >= '${hourAgo}' AND "openTime" <= '${openTime}'`;
                 timeKey = '1H:';
             }
-        break;
+            break;
         default:
-        break;
+            break;
     }
 
     let cachedSnapshot = await atsCache.get(`${ATS_SNAPSHOT}${timeKey}${ticker}`);
@@ -129,22 +428,22 @@ export const getATSComparisonSnapshot = async (req) => {
             SELECT 'current' as type, SUM("totalTrades") AS "totalTrades", SUM("totalPrice") AS "totalPrice", SUM("totalVolume") AS "totalVolume", MAX(date) as date
             FROM minutes
             WHERE date = (SELECT date FROM minutes ORDER BY date DESC LIMIT 1)
-            ${currentTimeClause ? currentTimeClause : ''} 
+            ${currentTimeClause ? currentTimeClause : ''}
             AND ticker = '${ticker}'
             ) UNION (
             SELECT 'previous' as type, SUM("totalTrades") AS "totalTrades", SUM("totalPrice") AS "totalPrice", SUM("totalVolume") AS "totalVolume", MIN(date) as date
             FROM minutes
             ${dateClause}
-            AND date < (SELECT date FROM minutes ORDER BY date DESC LIMIT 1) 
+            AND date < (SELECT date FROM minutes ORDER BY date DESC LIMIT 1)
             ${previousTimeClause}
             AND ticker = '${ticker}'
-            ) 
-            ORDER BY type ASC    
+            )
+            ORDER BY type ASC
             `;
         results = await db(aggregateQuery);
         atsCache.set(`${ATS_SNAPSHOT}${timeKey}${ticker}`,
-         JSON.stringify(results),
-          "EX", 60 * 10);
+            JSON.stringify(results),
+            "EX", 60 * 10);
     } else {
         results = JSON.parse(cachedSnapshot);
     }
@@ -198,242 +497,5 @@ export const getATSComparisonSnapshot = async (req) => {
     };
 };
 
-// Snapshot comparing the last 7 days and current day (hourly and daily)
-export const getATSFrequencySnapshots = async (req) => {
-    let ticker = req.params.ticker.toUpperCase();
 
-    let date, dates;
-    let current = {};
-    let previous = {};
-    let compared = {};
 
-    let atsCache = connectATSCache();
-
-    let cachedDates = await atsCache.get(`${ATS_DATES}`);
-    if (!cachedDates) {
-        let dateQuery = `
-        SELECT DISTINCT(date) FROM minutes
-        WHERE date >= ((SELECT date FROM minutes ORDER BY date DESC LIMIT 1) - INTERVAL '7 DAY')
-        AND date < (SELECT date FROM minutes ORDER BY date DESC LIMIT 1)
-        ORDER BY date DESC
-        `;
-
-        dates = await db(dateQuery);
-        atsCache.set(`${ATS_DATES}`,
-        JSON.stringify(dates),
-        "EX", 60 * 10);
-    } else {
-        dates = JSON.parse(cachedDates);
-    }
-
-    let numDates = dates.length || 1;
-
-    let dateClause;
-    if (dates.length > 0) {
-        // subtract 6 because the dateQuery does not include current day so it is already -1 days
-        let prevDate = moment(dates[0].date).subtract(6, "day").format("YYYY-MM-DD").toString();
-        dateClause = `WHERE date >= '${prevDate}'`
-    } else {
-        dateClause = `WHERE date >= ((SELECT date FROM minutes ORDER BY date DESC LIMIT 1) - INTERVAL '7 DAY')`
-    }
-
-    let dayResults;
-    let dayCachedSnapshot = await atsCache.get(`${ATS_SNAPSHOT}${ticker}`);
-    if (!dayCachedSnapshot) {
-        let aggregateQuery = `
-            (
-            SELECT 'current' as type, SUM("totalTrades") AS "totalTrades", SUM("totalPrice") AS "totalPrice", SUM("totalVolume") AS "totalVolume", MAX(date) as date
-            FROM minutes
-            WHERE date = (SELECT date FROM minutes ORDER BY date DESC LIMIT 1)
-            AND ticker = '${ticker}'
-            ) UNION (
-            SELECT 'previous' as type, SUM("totalTrades") AS "totalTrades", SUM("totalPrice") AS "totalPrice", SUM("totalVolume") AS "totalVolume", MIN(date) as date
-            FROM minutes
-            ${dateClause}
-            AND date < (SELECT date FROM minutes ORDER BY date DESC LIMIT 1) 
-            AND "openTime" <= (SELECT "openTime" FROM minutes ORDER BY date DESC, "openTime" DESC LIMIT 1)
-            AND ticker = '${ticker}'
-            ) 
-            ORDER BY type ASC    
-            `;
-        dayResults = await db(aggregateQuery);
-        atsCache.set(`${ATS_SNAPSHOT}${ticker}`,
-         JSON.stringify(dayResults),
-          "EX", 60 * 10);
-    } else {
-        dayResults = JSON.parse(dayCachedSnapshot);
-    }
-
-    if (dayResults) {
-        if (dayResults[0]) {
-            let atsCurrent = dayResults[0];
-            date = atsCurrent.date;
-            if (date) {
-                date = moment(date).format("YYYY-MM-DD").toString();
-            }
-            current.day_trades = Number(atsCurrent.totalTrades);
-            current.day_volume = Number(atsCurrent.totalVolume);
-            current.day_price = Number(atsCurrent.totalPrice);
-            current.day_dollar_volume = current.day_trades ? (current.day_price/current.day_trades)*current.day_volume : 0;
-        }
-        if (dayResults[1]) {
-            let atsPrevious = dayResults[1];
-            previous.day_trades = Number(atsPrevious.totalTrades / numDates);
-            previous.day_volume = Number(atsPrevious.totalVolume / numDates);
-            previous.day_price = Number(atsPrevious.totalPrice / numDates);
-            previous.day_dollar_volume = previous.day_trades ? (previous.day_price/previous.day_trades)*previous.day_volume : 0;
-        }
-    }
-
-    if (current.day_trades && previous.day_trades) {
-        let calc = ((((current.day_trades - previous.day_trades) / (previous.day_trades * 2))) + 0.5) * 100;
-        compared.day_trades = Number(calc.toFixed(2));
-    }
-
-    if (current.day_volume && previous.day_volume) {
-        let calc = ((((current.day_volume - previous.day_volume) / (previous.day_volume * 2))) + 0.5) * 100;
-        compared.day_volume = Number(calc.toFixed(2));
-    }
-
-    if (current.day_price && previous.day_price) {
-        let calc = ((((current.day_price - previous.day_price) / (previous.day_price * 2))) + 0.5) * 100;
-        compared.day_price = Number(calc.toFixed(2));
-    }
-
-    if (current.day_dollar_volume && previous.day_dollar_volume) {
-        let calc = ((((current.day_dollar_volume - previous.day_dollar_volume) / (previous.day_dollar_volume * 2))) + 0.5) * 100;
-        compared.day_dollar_volume = Number(calc.toFixed(2));
-    }
-
-    let lastTime;
-    let cachedLastTime = await atsCache.get(`${ATS_LAST_TIME}`);
-    if (!cachedLastTime) {
-        let timeQuery = `SELECT "openTime" FROM minutes ORDER BY date DESC, "openTime" DESC LIMIT 1`;
-        lastTime = await db(timeQuery);
-        atsCache.set(`${ATS_LAST_TIME}`,
-        JSON.stringify(lastTime),
-        "EX", 60 * 10);
-    } else {
-        lastTime = JSON.parse(cachedLastTime);
-    }
-    
-    let hourResults;
-    if (lastTime && lastTime.length > 0) {
-        let openTime = lastTime[0].openTime;
-        let today = moment().format("YYYY-MM-DD").toString();
-        let t = moment(today + 'T' + openTime);
-        let hourAgo = t.subtract(1, "h").format("HH:mm:ss").toString();
-        let timeClause = `AND "openTime" >= '${hourAgo}' AND "openTime" <= '${openTime}'`;
-
-        let hourCachedSnapshot = await atsCache.get(`${ATS_SNAPSHOT}1H:${ticker}`);
-        if (!hourCachedSnapshot) {
-            let aggregateQuery = `
-                (
-                SELECT 'current' as type, SUM("totalTrades") AS "totalTrades", SUM("totalPrice") AS "totalPrice", SUM("totalVolume") AS "totalVolume", MAX(date) as date
-                FROM minutes
-                WHERE date = (SELECT date FROM minutes ORDER BY date DESC LIMIT 1)
-                ${timeClause} 
-                AND ticker = '${ticker}'
-                ) UNION (
-                SELECT 'previous' as type, SUM("totalTrades") AS "totalTrades", SUM("totalPrice") AS "totalPrice", SUM("totalVolume") AS "totalVolume", MIN(date) as date
-                FROM minutes
-                ${dateClause}
-                AND date < (SELECT date FROM minutes ORDER BY date DESC LIMIT 1) 
-                ${timeClause}
-                AND ticker = '${ticker}'
-                ) 
-                ORDER BY type ASC    
-                `;
-            hourResults = await db(aggregateQuery);
-            atsCache.set(`${ATS_SNAPSHOT}1H:${ticker}`,
-                JSON.stringify(hourResults),
-                "EX", 60 * 10);
-        } else {
-            hourResults = JSON.parse(hourCachedSnapshot);
-        }
-    }
-
-    if (hourResults) {
-        if (hourResults[0]) {
-            let atsCurrent = hourResults[0];
-            current.hour_trades = Number(atsCurrent.totalTrades);
-            current.hour_volume = Number(atsCurrent.totalVolume);
-            current.hour_price = Number(atsCurrent.totalPrice);
-            current.hour_dollar_volume = current.hour_trades ? (current.hour_price/current.hour_trades)*current.hour_volume : 0;
-        }
-        if (hourResults[1]) {
-            let atsPrevious = hourResults[1];
-            previous.hour_trades = Number(atsPrevious.totalTrades / numDates);
-            previous.hour_volume = Number(atsPrevious.totalVolume / numDates);
-            previous.hour_price = Number(atsPrevious.totalPrice / numDates);
-            previous.hour_dollar_volume = previous.hour_trades ? (previous.hour_price/previous.hour_trades)*previous.hour_volume : 0;
-        }
-    }
-
-    if (current.hour_trades && previous.hour_trades) {
-        let calc = ((((current.hour_trades - previous.hour_trades) / (previous.hour_trades * 2))) + 0.5) * 100;
-        compared.hour_trades = Number(calc.toFixed(2));
-    }
-
-    if (current.hour_volume && previous.hour_volume) {
-        let calc = ((((current.hour_volume - previous.hour_volume) / (previous.hour_volume * 2))) + 0.5) * 100;
-        compared.hour_volume = Number(calc.toFixed(2));
-    }
-
-    if (current.hour_price && previous.hour_price) {
-        let calc = ((((current.hour_price - previous.hour_price) / (previous.hour_price * 2))) + 0.5) * 100;
-        compared.hour_price = Number(calc.toFixed(2));
-    }
-
-    if (current.hour_dollar_volume && previous.hour_dollar_volume) {
-        let calc = ((((current.hour_dollar_volume - previous.hour_dollar_volume) / (previous.hour_dollar_volume * 2))) + 0.5) * 100;
-        compared.hour_dollar_volume = Number(calc.toFixed(2));
-    }
-
-    return {
-        date,
-        ticker,
-        current,
-        previous,
-        compared,
-    };
-};
-
-export const getATSHighDarkFlow = async (req) => {
-    let data;
-    let atsCache = connectATSCache();
-
-    data = await atsCache.get(`${ATS_HIGH_DARK_FLOW}`);
-
-    if (data) {
-        data = await JSON.parse(data);
-    }
-
-    return data;
-};
-
-export const getATSEquities = async (req) => {
-    let { query } = req;
-    let ticker;
-
-    if (query.ticker && query.ticker.length > 0) {
-        ticker = query.ticker.toLowerCase();
-    }
-    let last_time = query.last_time;
-    let limit = query.limit || 200;
-
-    let atsQuery = `
-        SELECT ticker, "totalTrades", "totalPrice", "totalVolume", "lastTime", "openTime"
-        FROM minutes
-        WHERE date = (SELECT date FROM minutes ORDER BY date DESC LIMIT 1)
-        AND ("totalPrice"/"totalTrades")*"totalVolume" > 500000
-        ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
-        ${last_time ? `AND "openTime" < ${last_time}` : ''}
-        ORDER BY "openTime" DESC
-        LIMIT ${limit}
-        `;
-
-    const results = await db(atsQuery);
-
-    return results
-};

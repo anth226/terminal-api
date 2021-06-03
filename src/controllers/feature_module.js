@@ -8,7 +8,7 @@ export const getAllFeatureModule = async () => {
 export const createFeatureModule = async (name) => {
   let query = {
     text:
-      "INSERT INTO feature_module (name, created_on) VALUES ($1, now())",
+      "INSERT INTO feature_module (name, created_on) VALUES ($1, now()) RETURNING *",
     values: [name],
   };
 
@@ -21,7 +21,7 @@ export const createFeatureModule = async (name) => {
 export const updateFeatureModule = async (id, name) => {
   let query = {
     text:
-      "UPDATE feature_module SET name = ($1) WHERE id=($2)",
+      "UPDATE feature_module SET name = ($1) WHERE id=($2) RETURNING *",
     values: [name, id],
   };
 
@@ -81,7 +81,7 @@ export const assignToTier = async (tierId, moduleId) => {
 
   let query = {
     text:
-      "INSERT INTO tiers_feature_module (tier_id, feature_module_id, created_at) VALUES ($1, $2, now())",
+      "INSERT INTO tiers_feature_module (tier_id, feature_module_id, created_at) VALUES ($1, $2, now()) RETURNING *",
     values: [tierId, moduleId],
   };
 

@@ -43,21 +43,21 @@ export async function searchCompanies(query) {
 }
 
 export function searchMutualFunds(query) {
-  let data = axios
-    .get(
-      "https://fds1.cannonvalleyresearch.com/api/v1/securitySearch?apiKey=lCWj7ozXyLoxvqr28OCC&searchPattern=" +
-        query +
-        "&active=true&listed=true"
-    )
-    .then(function (res) {
-      return res.data;
-    })
-    .catch(function (err) {
-      console.log(err);
-      return [];
-    });
+  // let data = axios
+  //   .get(
+  //     "https://fds1.cannonvalleyresearch.com/api/v1/securitySearch?apiKey=lCWj7ozXyLoxvqr28OCC&searchPattern=" +
+  //       query +
+  //       "&active=true&listed=true"
+  //   )
+  //   .then(function (res) {
+  //     return res.data;
+  //   })
+  //   .catch(function (err) {
+  //     console.log(err);
+  //     return [];
+  //   });
 
-  return data;
+  return [];
 }
 
 export async function prefetchTitans() {

@@ -3,7 +3,7 @@ import db from "../db";
 export const createFeature = async (name) => {
   let query = {
     text:
-      "INSERT INTO features (name, created_on) VALUES ($1, now())",
+      "INSERT INTO features (name, created_on) VALUES ($1, now()) RETURNING *",
     values: [name],
   };
 
@@ -16,7 +16,7 @@ export const createFeature = async (name) => {
 export const updateFeature = async (id, name) => {
   let query = {
     text:
-      "UPDATE features SET name = ($1) WHERE id=($2)",
+      "UPDATE features SET name = ($1) WHERE id=($2) RETURNING *",
     values: [name, id],
   };
 
@@ -72,39 +72,26 @@ export async function getFeatureByName(name) {
 }
 
 
-export const assignToTier = async (tierId, featureId) => {
-
-  let query = {
-    text:
-      "INSERT INTO tiers_feature (tier_id, feature_id, created_at) VALUES ($1, $2, now())",
-    values: [tierId, featureId],
-  };
-
-  let result = await db(query);
-
+export const assignToAssignment = async (table, id, featureId) => {
+  let result = await db(`
+    INSERT INTO ${table} (${table == 'tiers_feature' ? `tier_id` : `navbar_item_list_id`}, feature_id) VALUES (${id}, ${featureId}) RETURNING *`);
   return result;
 };
 
-export const unassignToTier = async (tierId, featureId) => {
-
-  let query = {
-    text:
-      "DELETE FROM tiers_feature WHERE tier_id = ($1) AND feature_id=($2)",
-    values: [tierId, featureId],
-  };
-
-  let result = await db(query);
-
+export const unassignToAssignment = async (table, id, featureId) => {
+  let result = await db(`
+    DELETE FROM ${table} WHERE ${table == 'tiers_feature' ? `tier_id = ${id}` : `navbar_item_list_id = ${id}`} AND feature_id = ${featureId} RETURNING *`);
   return result;
 };
 
 
-export async function getTierFeature(tierId, featureId) {
+export async function getFeatureAssignment(table, id, featureId) {
 
   let result = await db(`
         SELECT *
-		    FROM tiers_feature
-		    WHERE tier_id = ${tierId} AND feature_id = ${featureId}
+		    FROM ${table}
+		    WHERE ${table == 'tiers_feature' ? ` tier_id = ${id} ` : ` navbar_item_list_id = ${id} `}
+        AND feature_id = ${featureId}
 		`);
 		
   return result;

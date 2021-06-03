@@ -1,5 +1,6 @@
 import db from '../db';
 import axios from "axios";
+import redis from "../redis";
 
 export async function getCryptoNews(req, res, next) {
   try {
@@ -111,4 +112,54 @@ export async function getCryptoTickerCandles(req, res, next) {
   const response = await axios.get(url);
 
   return res.send(response.data);
+}
+
+async function fetchCryptoListings(sortColumn, sortDirection, minVolume, limit) {
+  let url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
+  url += `?limit=${limit}&sort=${sortColumn}&sort_dir=${sortDirection}&volume_24h_min=${minVolume}`
+
+  const response = await axios.get(url, {
+        headers: {'X-CMC_PRO_API_KEY':process.env.COIN_MARKET_CAP_KEY}
+      }
+  );
+
+  let data = response.data;
+  if (data) {
+    data = data.data;
+  }
+
+  return data;
+}
+
+export async function getCryptoGainersLosers(req) {
+  let { query } = req;
+  let sortColumn = query.sort_column || 'percent_change_24h';
+  let minVolume = query.min_volume || 100000;
+  let limit = query.limit || 30;
+  let data;
+
+  let key = `CRYPTO:${sortColumn}:${minVolume}`;
+  let cache = await redis.get(key);
+
+  if (!cache) {
+    let gainers = await fetchCryptoListings(sortColumn, 'desc', minVolume, limit);
+    let losers = await fetchCryptoListings(sortColumn, 'asc', minVolume, limit);
+    let gainersLosers = { gainers: gainers, losers: losers };
+
+    redis.set(
+        key,
+        JSON.stringify(gainersLosers),
+        "EX",
+        60 * 5
+    );
+    data = gainersLosers;
+  } else {
+    data = JSON.parse(cache);
+  }
+
+  if (!data) {
+    return {gainers: [], losers: []};
+  }
+
+  return data;
 }
