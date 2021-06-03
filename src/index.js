@@ -64,6 +64,8 @@ import * as features from "./controllers/features";
 import * as featureModule from './controllers/feature_module';
 import * as navbarItems from './controllers/navbar-items';
 import * as signup from './controllers/signup';
+import * as membership from './controllers/membership-plan';
+import * as payment from './controllers/payment-method';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
@@ -3386,6 +3388,63 @@ app.post("/feature/update", async (req, res) => {
     console.log(error);
     res.send(JSON.stringify({ success: false, message: "Failed! Must have valid id and nam." }));
   }
+});
+
+app.use("/payment-method/create", checkAuth);
+app.post("/payment-method/create", async (req, res) => {
+    try {
+        // create payment method
+        await payment.createPaymentMethod(req.body.cardName, req.body.lastFourDigits, req.body.lastPaymentAmount,
+            new Date(req.body.lastPaymentDate), req.body.isPrimary)
+
+        res.status(201).send({
+            success: true, message: "Payment method created!"
+        })
+
+    } catch (error) {
+        res.send({success: false, error: error})
+    }
+});
+
+app.use("/membership-plan/create", checkAuth);
+app.post("/membership-plan/create", async (req, res) => {
+    try {
+        // create membership plan
+        await membership.createMembershipPlan(req.body.title, req.body.price, req.body.note)
+
+        res.status(201).send({
+            success: true, message: "Membership plan created!"
+        })
+
+    } catch (error) {
+        res.send({success: false, error: error})
+    }
+});
+
+app.use("/payment-method/list", checkAuth);
+app.get("/payment-method/list", async (req, res) => {
+    try {
+        // get payment methods
+        const paymentMethods = await payment.getPaymentMethods()
+
+        res.send(paymentMethods)
+
+    } catch (error) {
+        res.send({success: false, error: error})
+    }
+});
+
+app.use("/membership-plan/list", checkAuth);
+app.get("/membership-plan/list", async (_, res) => {
+    try {
+        // get membership plans
+        const membershipPlans = await membership.getMembershipPlans()
+
+        res.send(membershipPlans)
+
+    } catch (error) {
+        res.send({success: false, error: error})
+    }
 });
 
 //app.use("/feature/create", checkAuth);
