@@ -3395,7 +3395,7 @@ app.post("/payment-method/create", async (req, res) => {
     try {
         // create payment method
         await payment.createPaymentMethod(req.body.cardName, req.body.lastFourDigits, req.body.lastPaymentAmount,
-            new Date(req.body.lastPaymentDate), req.body.isPrimary)
+            new Date(req.body.lastPaymentDate), req.body.isPrimary, req.body.userId)
 
         res.status(201).send({
             success: true, message: "Payment method created!"
@@ -3424,8 +3424,9 @@ app.post("/membership-plan/create", async (req, res) => {
 app.use("/payment-method/list", checkAuth);
 app.get("/payment-method/list", async (req, res) => {
     try {
+      if(!req.query.userId) return res.status(400).send({ error: true, message: 'User id is required!' })
         // get payment methods
-        const paymentMethods = await payment.getPaymentMethods()
+        const paymentMethods = await payment.getPaymentMethods(req.query.userId)
 
         res.send(paymentMethods)
 
