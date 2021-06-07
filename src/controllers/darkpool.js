@@ -365,7 +365,8 @@ export async function searchOptions(req) {
 
   let optionsQuery = getSearchOptionsQuery({
     ticker,
-    date: req.query.date
+    date: req.query.date,
+    exps: req.query.exps,
   });
 
   let result;
@@ -597,6 +598,7 @@ const getExpDatesSubquery = ({
 
 const getSearchOptionsQuery = ({
   date,
+  exps,
   ticker
 }) => {
   let startDate, endDate = null;
@@ -616,7 +618,8 @@ const getSearchOptionsQuery = ({
     const optionsSubquery = getSearchOptionsSubquery({
       tablePostfix,
       dateClause,
-      ticker
+      ticker,
+      exps
     });
 
     return `
@@ -633,7 +636,8 @@ const getSearchOptionsQuery = ({
     return getSearchOptionsSubquery({
       tablePostfix,
       dateClause,
-      ticker
+      ticker,
+      exps
     });
   }).join(' UNION ');
 
@@ -647,13 +651,15 @@ const getSearchOptionsQuery = ({
 const getSearchOptionsSubquery = ({
   tablePostfix,
   dateClause,
-  ticker
+  ticker,
+  exps
 }) => {
   return `(
     SELECT ticker
     FROM options${tablePostfix ? tablePostfix : ''}
     ${dateClause}
     AND LOWER(ticker) LIKE '%${ticker}%'
+    ${exps ? `AND exp = ANY('{${exps}}')` : ''}
     GROUP BY ticker
   )`;
 }

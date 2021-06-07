@@ -46,6 +46,8 @@ export let ATS_LAST_TIME = "LAST_TIME";
 export let ATS_SNAPSHOT = "SNAPSHOT:";
 export let ATS_HIGH_DARK_FLOW = "HIGHDARKFLOW";
 export let ATS_TRENDING_HIGH_DARK_FLOW = "TRENDINGHIGHDARKFLOW";
+export let ATS_EQUITIES = "ATSEQUITY:"
+export let ATS_HISTORICAL_TRENDING_HIGH_DARK_FLOW = "HISTTRENDINGHIGHDARKFLOW";
 
 function connectDatabase() {
   let credentials = {

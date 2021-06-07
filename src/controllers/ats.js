@@ -8,12 +8,16 @@ import {
     ATS_LAST_TIME,
     ATS_SNAPSHOT,
     ATS_HIGH_DARK_FLOW,
-    ATS_TRENDING_HIGH_DARK_FLOW
+    ATS_EQUITIES,
+    ATS_TRENDING_HIGH_DARK_FLOW,
+    ATS_HISTORICAL_TRENDING_HIGH_DARK_FLOW
+
 } from './../redis';
 import db from "../atsDB";
 import mainDB from "../db";
 import moment from "moment"
 import * as darkpool from "./darkpool";
+import {getLastPrice} from "./equities";
 
 async function fetchATSDates(ticker) {
     let atsCache = connectATSCache();
@@ -178,6 +182,19 @@ export const getATSTrendingHighDarkFlow = async (req) => {
     return data;
 };
 
+export const getATSHistoricalTrendingHighDarkFlow = async (req) => {
+    let data;
+    let atsCache = connectATSCache();
+
+    data = await atsCache.get(`${ATS_HISTORICAL_TRENDING_HIGH_DARK_FLOW}`);
+
+    if (data) {
+        data = await JSON.parse(data);
+    }
+
+    return data;
+};
+
 export const getATSEquities = async (req) => {
     let { query } = req;
     let ticker;
@@ -185,26 +202,67 @@ export const getATSEquities = async (req) => {
     if (query.ticker && query.ticker.length > 0) {
         ticker = query.ticker.toLowerCase();
     }
-    let last_time = query.last_time;
+    // let last_time = query.last_time;
+    // if (last_time.length <= 2) {
+    //     last_time = null;
+    // }
+    // ${last_time ? `AND "openTime" < ${last_time}` : ''}
     let limit = query.limit || 200;
 
-    let atsQuery = `
+    let atsCache = connectATSCache();
+    let cache = await atsCache.get(`${ATS_EQUITIES}${ticker}`);
+    let equities;
+
+    if (!cache) {
+        let atsQuery = `
         SELECT ticker, "totalTrades", "totalPrice", "totalVolume", "lastTime", "openTime"
         FROM minutes
         WHERE date = (SELECT date FROM minutes ORDER BY date DESC LIMIT 1)
         AND ("totalPrice"/"totalTrades")*"totalVolume" > 100000
         ${ticker ? `AND LOWER(ticker) = '${ticker}'` : ''}
-        ${last_time ? `AND "openTime" < ${last_time}` : ''}
         ORDER BY "openTime" DESC
         LIMIT ${limit}
         `;
 
-    const results = await db(atsQuery);
+        const results = await db(atsQuery);
 
-    return results
+        atsCache.set(
+            `${ATS_EQUITIES}${ticker}`,
+            JSON.stringify(results),
+            "EX",
+            60 * 10
+        );
+        equities = results;
+    } else {
+        equities = JSON.parse(cache);
+    }
+
+    return equities;
 };
 
 export const getTopATS = async () => {
+    let result, top, bot, all;
+    let atsCache = connectATSCache();
+
+    result = await atsCache.get(`TOPTICKERS`);
+
+    if (result) {
+        result = await JSON.parse(result);
+        top = await JSON.parse(result.top);
+        bot = await JSON.parse(result.bot);
+        all = top.concat(bot);
+    } else {
+        return null;
+    }
+
+    const promises = all.map(sec => getAllData(sec.ticker, sec.multiplier));
+
+    const topTicks = await Promise.all(promises);
+
+    return topTicks;
+};
+
+export const getTopATSTops = async () => {
     let result;
     let atsCache = connectATSCache();
 
@@ -212,22 +270,26 @@ export const getTopATS = async () => {
 
     if (result) {
         result = await JSON.parse(result);
+
+        for (let df of result) {
+            const price = await getLastPrice(df.ticker);
+            if (price) {
+                df.last_price = price.last_price;
+            }
+        }
+
+        return result;
     } else {
         return null;
     }
-
-    const promises = result.map(ticker => getAllData(ticker))
-
-    const all = await Promise.all(promises)
-
-    return all;
 };
 
-export const getAllData = async (ticker) => {
+export const getAllData = async (ticker, multiplier) => {
+    let jMin = 2000;
     let all = {};
     let ats = {};
     all.ticker = ticker;
-
+    all.multiplier = multiplier;
 
 
     let sec = await mainDB(`SELECT * FROM securities WHERE ticker = '${ticker}'`);
@@ -286,12 +348,22 @@ export const getAllData = async (ticker) => {
 
     let cachedDate = await atsCache.get(`DATE:${ticker}`);
 
-    let currentMinData = await fetchATSData([cachedDate], ticker, 2000);
+    let currentMinData = await fetchATSData([cachedDate], ticker, jMin);
     if (currentMinData) {
         ats.day_trades = currentMinData.trades;
         ats.day_volume = currentMinData.volume;
         ats.day_price = currentMinData.price;
         ats.day_dollar_volume = ats.day_trades ? (ats.day_price / ats.day_trades) * ats.day_volume : 0;
+        jMin = currentMinData.score;
+    }
+
+    jMin -= 60; // hour ago julian minute
+    let currentHourAgoData = await fetchATSData([cachedDate], ticker, jMin, ats);
+    if (currentHourAgoData) {
+        ats.hour_trades = currentHourAgoData.trades;
+        ats.hour_volume = currentHourAgoData.volume;
+        ats.hour_price = currentHourAgoData.price;
+        ats.hour_dollar_volume = ats.hour_trades ? (ats.hour_price / ats.hour_trades) * ats.hour_volume : 0;
     }
 
     let t = ticker.toLowerCase();
@@ -496,6 +568,3 @@ export const getATSComparisonSnapshot = async (req) => {
         comparedPrice,
     };
 };
-
-
-

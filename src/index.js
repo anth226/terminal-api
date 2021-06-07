@@ -64,6 +64,7 @@ import * as features from "./controllers/features";
 import * as featureModule from './controllers/feature_module';
 import * as navbarItems from './controllers/navbar-items';
 import * as signup from './controllers/signup';
+import * as buys from './controllers/buys';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
@@ -2678,15 +2679,23 @@ app.get("/ats/trending_high_dark_flow", async (req, res) => {
   res.send(result);
 });
 
-app.get("/ats/equities", async (req, res) => {
-  const result = await ats.getATSEquities(req);
+app.get("/ats/historical_trending_high_dark_flow", async (req, res) => {
+  const result = await ats.getATSHistoricalTrendingHighDarkFlow(req);
   res.send(result);
 });
 
 app.get("/ats/darkflow", async (req, res) => {
-  const result = await ats.getTopATS();
+  const result = await ats.getTopATSTops();
   res.send(result);
 });
+
+//STRONG LOONG BUYS
+
+app.get("/strong_buys", async (req, res) => {
+  const result = await buys.getBuys();
+  res.send(result);
+});
+
 
 // ciks
 app.use("/billionaire/:identifier/ciks/:rank/set", checkAuth);
@@ -3143,33 +3152,33 @@ app.get("/user-etfs", checkAuth, dashboard.getEtfs)
 
 // User report
 app.get("/user-access-report", checkAuth, async (req, res) => {
-  const userLists = await listAllUsers();
   let totalNonProfessionalIndice = 0
   let totalProfessionalIndice = 0
   let totalNonProfessionalRealtime = 0
   let totalProfessionalRealtime = 0
 
-  for await (const user of userLists) {
-    const data = await db.collection("users").doc(user.uid).get();
-    if (data.data()) {
-      const { feed_access, isProfesional } = data.data()
-      if (feed_access && isProfesional && isProfesional === true) {
-        if (feed_access.isRealtimeNasdaqAccess === "YES") {
-          totalProfessionalRealtime += 1
-        }
-        if (feed_access.isIndiceAccess === true) {
-          totalProfessionalIndice += 1
-        }
-      } else if (feed_access && isProfesional && isProfesional === false) {
-        if (feed_access.isRealtimeNasdaqAccess === "YES") {
-          totalNonProfessionalRealtime += 1
-        }
-        if (feed_access.isIndiceAccess == true) {
-          totalNonProfessionalIndice += 1
-        }
+  const usersRef = db.collection('users');
+  const snapshot = await usersRef.orderBy('feed_access').get();
+
+  snapshot.forEach(doc => {
+    const { feed_access, isProfesional } = doc.data()
+
+    if (feed_access.isRealtimeNasdaqAccess === 'YES') {
+      if (isProfesional && isProfesional === true) {
+        totalProfessionalRealtime += 1
+      } else {
+        totalNonProfessionalRealtime += 1
       }
     }
-  }
+
+    if (feed_access.isIndiceAccess === true) {
+      if (isProfesional && isProfesional === true) {
+        totalProfessionalIndice += 1
+      } else {
+        totalNonProfessionalIndice += 1
+      }
+    }
+  });
 
   res.json({
     indice_access: {
@@ -4102,6 +4111,7 @@ app.use(middleware.errorHandler);
 app.listen(process.env.PORT, () => {
   console.log(`listening on ${process.env.PORT}`)
 });
+app.use("/migudb", checkAuth);
 app.post("/migudb", async (req, res) => {
   try {
     let email, password, result;
