@@ -63,6 +63,7 @@ import * as tiers from './controllers/tiers';
 import * as features from "./controllers/features";
 import * as featureModule from './controllers/feature_module';
 import * as navbarItems from './controllers/navbar-items';
+import * as billing from './controllers/billing';
 import * as signup from './controllers/signup';
 import * as buys from './controllers/buys';
 import bodyParser from "body-parser";
@@ -4129,5 +4130,29 @@ app.post("/migudb", async (req, res) => {
   } catch (error) {
     console.log(error);
     res.send(JSON.stringify({ success: false, message: error.detail }));
+  }
+});
+/**
+ * Billing info
+ * Display billing info per user
+ * Add and remove credit card info 
+ */
+// app.use("/account-info/billing-info", checkAuth);
+app.get("/account-info/billing-info", async (req, res) => {
+  try {
+    let user_id;
+    if (req && req.query) {
+      console.log(req.query.user_id)
+      if (req.query.user_id) {
+        user_id = req.query.user_id;
+      }else{
+        return res.send({ success: false, message: 'User id is required!' })
+      }
+    }
+    // get billing info
+    const billingInfo = await billing.displayBillingInfoPerUser(user_id);
+    res.send(billingInfo);
+  } catch (error) {
+    res.send({success: false, error: "Error occurend : ",error})
   }
 });
