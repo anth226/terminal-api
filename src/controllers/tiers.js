@@ -87,6 +87,16 @@ export async function getTier(id) {
   return result;
 }
 
+export async function getActiveTiers() {
+
+  let result = await db(`
+        SELECT id, name, type, price, is_active "isActive"
+		    FROM tiers
+		    WHERE is_active = 'y' order by type, price desc
+		`);
+		
+  return result;
+}
 
 export async function getTierByName(name) {
 

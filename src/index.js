@@ -61,10 +61,12 @@ import ChartsController from './controllers/charts';
 import * as delayedChart from './controllers/charts-delayed';
 import * as tiers from './controllers/tiers';
 import * as features from "./controllers/features";
-import * as featureModule from './controllers/feature_module';
+import * as featureModule from './controllers/feature-module';
 import * as navbarItems from './controllers/navbar-items';
 import * as billing from './controllers/billing';
+import * as membership from './controllers/membership';
 import * as signup from './controllers/signup';
+import * as isIntegration from './controllers/is-integration';
 import * as buys from './controllers/buys';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
@@ -72,7 +74,7 @@ import Stripe from "stripe";
 const multer = require("multer");
 const AWS = require("aws-sdk");
 import { v4 as uuidv4 } from "uuid";
-import { isEmpty } from "lodash";
+import { isEmpty} from "lodash";
 import moment from "moment";
 
 import { isAuthorized } from "./middleware/authorized";
@@ -2685,6 +2687,7 @@ app.get("/ats/historical_trending_high_dark_flow", async (req, res) => {
   res.send(result);
 });
 
+
 app.get("/ats/darkflow", async (req, res) => {
   const result = await ats.getTopATSTops();
   res.send(result);
@@ -2696,7 +2699,6 @@ app.get("/strong_buys", async (req, res) => {
   const result = await buys.getBuys();
   res.send(result);
 });
-
 
 // ciks
 app.use("/billionaire/:identifier/ciks/:rank/set", checkAuth);
@@ -4101,11 +4103,28 @@ app.delete("/navbar-items/delete", async (req, res) => {
   }
 });
 
+/**
+ * access control
+ */
+app.get("/tier-navbar/fetch", async (req, res) => {
+  let tier_id;
+  if (req && req.query) {
+    let query = req.query;
+
+    if (query.tier_id) {
+      tier_id = query.tier_id;
+    }
+  }
+  const result = await navbarItems.getNavbarsByTier(tier_id);
+  res.send(result);
+});
+
 app.get("/spark/day", async (req, res) => {
   console.log('req', req.query.tickers);
   const results = await sparklines('day', (req.query?.tickers || []).split(','))
   res.send(results);
 })
+
 
 app.use(middleware.errorHandler);
 
@@ -4124,14 +4143,85 @@ app.post("/migudb", async (req, res) => {
       if (body.password) {
         password = body.password;
       }
-      result = await signup.insertUserInDb(email, password);
+      result = await signup.insertUserInDb(email, password); 
     }
-    res.send(JSON.stringify({ success: true, message: "Data added/updated successfully" }));
+    res.send(JSON.stringify({ success: true, message: "Data added/updated successfully"}));
   } catch (error) {
     console.log(error);
     res.send(JSON.stringify({ success: false, message: error.detail }));
   }
 });
+
+// app.use("/is-usr-int/store", checkAuth);
+app.post("/is-usr-int/store", async (req, res) => {
+  try {
+    if (req && req.body) {
+      let { first_name, last_name, email, password, phone_number, address_1, address_2, city, state, zip, country, cc_type, cc_number, cc_expiry, payment_amount, tier_id, is_user_id, subscription_id, customer_id } = req.body;
+      if (!first_name || (typeof first_name != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide first name and should be string" }));
+      }
+      if (!last_name || (typeof last_name != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide last name." }));
+      }
+      if (!email || (typeof email != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide email." }));
+      }
+      if (!password || (typeof password != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide password." }));
+      }
+      if (!address_1 || (typeof address_1 != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide Address 1" }));
+      }
+      if (!address_2 || (typeof address_2 != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide Address 2." }));
+      }
+      if (!zip || (typeof zip != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide Zip." }));
+      }
+      if (!country || (typeof country != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide Country." }));
+      }
+      if (!state || (typeof state != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide State." }));
+      }
+      if (!city || (typeof city != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide City." }));
+      }
+      if (!cc_type || (typeof cc_type != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide CC Type." }));
+      }
+      if (!cc_number || (typeof cc_number != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide CC Number." }));
+      }
+      if (!cc_expiry || (typeof cc_expiry != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide CC expiry." }));
+      }
+      if (!payment_amount || (typeof payment_amount != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide Payment amount." }));
+      }
+      if (!tier_id || (typeof tier_id != "number")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide tier id." }));
+      }
+      if (!is_user_id || (typeof is_user_id != "number")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide invoice system user ID." }));
+      }
+      if (!subscription_id || (typeof subscription_id != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide subscription ID." }));
+      }
+      if (!customer_id || (typeof customer_id != "string")) {
+        res.send(JSON.stringify({ success: false, message: "Failed! Must provide customer ID." }));
+      }
+      let user_table_result = await isIntegration.insertUser(first_name, last_name, email, password, phone_number, address_1, address_2, city, state, zip, country, cc_type, cc_number, cc_expiry, payment_amount, is_user_id, subscription_id, customer_id, tier_id);
+      res.send(JSON.stringify({ success: true, message: user_table_result }));
+    }else{
+      res.send(JSON.stringify({ success: false, message: "Failed! Request is Null" }));
+    }
+  } catch (error) {
+    console.log(error);
+    res.send(JSON.stringify({ success: false, message: error }));
+  }
+});
+
 /**
  * Billing info
  * Display billing info per user
@@ -4142,17 +4232,101 @@ app.get("/account-info/billing-info", async (req, res) => {
   try {
     let user_id;
     if (req && req.query) {
-      console.log(req.query.user_id)
       if (req.query.user_id) {
         user_id = req.query.user_id;
       }else{
-        return res.send({ success: false, message: 'User id is required!' })
+        return res.send({ success: false, message: 'User id is required!' });
       }
+    }else{
+      return res.send({ success: false, message: 'Request is empty' });
     }
     // get billing info
     const billingInfo = await billing.displayBillingInfoPerUser(user_id);
-    res.send(billingInfo);
+    if(billingInfo.length > 0){
+      res.send(billingInfo);
+    }else{
+      res.send({success: false, error: "Error : No data for provided user id"});
+    }
   } catch (error) {
-    res.send({success: false, error: "Error occurend : ",error})
+    res.send({success: false, error: "Error: "+ error});
+  }
+});
+// app.use("/account-info/rm-card", checkAuth);
+app.post("/account-info/rm-card", async (req, res) => {
+  try {
+    let {user_id, payment_id} = req.body;
+    if (!user_id) {
+      return res.send({ success: false, message: 'User id is required!' });
+    }
+    if (!payment_id) {
+      return res.send({ success: false, message: 'Payment Id is required!' });
+    }
+    let paymentResult = await membership.getCardInfo(payment_id);
+    if (paymentResult.length == 0) {
+      res.send({success: false, error: "Error: Card info is not found"});
+    }
+    if(!paymentResult[0].is_primary){
+      await membership.removeCard(payment_id);
+      res.send({success: true, error: "Card removed"});
+    }
+  } catch (error) {
+    res.send({success: false, error: "Error: "+ error});
+  }
+});
+/**
+ * Membership info
+ * Display membership info for user
+ * Upgrade user membership 
+ */
+// app.use("/account-info/membership-info", checkAuth);
+app.get("/account-info/membership-info", async (req, res) => {
+  try {
+    let user_id;
+    if (req && req.query) {
+      if (req.query.user_id) {
+        user_id = req.query.user_id;
+      }else{
+        return res.send({ success: false, message: 'User id is required!' });
+      }
+    }else{
+      return res.send({ success: false, message: 'Request is empty' });
+    }
+    // TODO - Return Custom return for custom or enterprise customer
+    // Get User membership info by user id
+    const userMembershipInfo = await membership.displayMembershipInfoPerUser(user_id);
+    if(userMembershipInfo.length > 0){
+      const activeTiers = await tiers.getActiveTiers();
+      let userMarketingTier;
+      let upgradeToTier = [];
+      for (const tier of userMembershipInfo) {
+        const userTierId = tier.id;
+        const userTierType = tier.type;
+        if (activeTiers.find( ({ id }) => id == userTierId)) {
+          // Remove tier if user already signup 
+          let index = activeTiers.indexOf(activeTiers.find( ({ id }) => id == userTierId));
+          if (userTierType == 'm') {
+            userMarketingTier = tier;
+          }
+          activeTiers.splice(index, 1);
+        }
+      }
+      for (const tier of activeTiers) {
+        switch (tier.type) {
+          case 'a':
+            upgradeToTier.push(tier);
+            break;
+          case 'm':
+            if (userMarketingTier.price < tier.price) {
+              upgradeToTier.push(tier);
+            }
+            break;
+        }
+      }
+      res.send({ userMembershipInfo: userMembershipInfo, upgradeToTier: upgradeToTier });
+    }else{
+      res.send({success: false, error: "Error : User does not have any membership"});
+    }
+  } catch (error) {
+    res.send({success: false, error: "Error : "+ error});
   }
 });

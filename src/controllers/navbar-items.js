@@ -7,6 +7,17 @@ export const displayAssignFeatureToItem = async (id) => {
     LEFT JOIN navbar_item_list_feature nilf
     ON nil.id=nilf.navbar_item_list_id  ${id ? `WHERE nil.id = ${id}` : ''} GROUP BY nil.id, nil.name, nil.display_order, nil.is_active`);
 };
+export const getNavbarsByTier = async (id) => {
+    if(id){
+        return await db(`
+        SELECT nil.name nav_bar_name, nil.id nav_bar_id FROM navbar_item_list nil
+        LEFT JOIN navbar_item_list_feature nilf
+        ON nil.id = nilf.navbar_item_list_id
+        WHERE feature_id IN (SELECT feature_id from tiers_feature WHERE tier_id = ${id}) GROUP BY nil.id, nil.name`);
+    }else{
+        return false;
+    }
+};
 export const createNavbarItem = async (name, order) => {
     let query = {
       text:
