@@ -15,7 +15,7 @@ const createByUserId = async (object) => {
     isPrimary = false
   } = object
 
-  if (!userId) throw new Error('userId is undefined');
+  if (!userId && userId !== 0) throw new Error('userId is undefined');
 
   return await db(`
   INSERT INTO users_payment_info 
@@ -30,7 +30,7 @@ const createByUserId = async (object) => {
   last_payment_date, 
   is_primary)
   VALUES (
-    ${userId},
+    ${Number(userId)},
     ${last4Digit},
     ${expiry},
     ${nameOnCard},
@@ -39,7 +39,7 @@ const createByUserId = async (object) => {
     ${cardName},
     ${lastPaymentAmount},
     ${lastPaymentDate},
-    ${isPrimary},
+    ${isPrimary}
   )
   `)
 }
@@ -49,8 +49,7 @@ const getAll = async () => {
 }
 
 const getByUserId = async (userId) => {
-  if (!userId) throw new Error('userId is undefined');
-
+  if (!userId && userId !== 0) throw new Error('userId is undefined');
   return await db(`SELECT * FROM users_payment_info WHERE user_id = ${Number(userId)};`)
 }
 
@@ -68,20 +67,21 @@ const updateByUserId = async (object) => {
     isPrimary = false
   } = object
 
-  if (!userId) return new Error('userId is undefined');
+  if (!userId && userId !== 0) throw new Error('userId is undefined');
 
   return await db(`
     UPDATE users_payment_info SET 
-    ${userId ? 'user_id = ' + Number(userId) + ',' : ''}
-    ${last4Digit ? 'cc_4_digit = ' + last4Digit + ',' : ''}
+    ${userId ? 'user_id = ' + Number(userId) + ', ' : ''}
+    ${last4Digit ? 'cc_4_digit = ' + last4Digit + ', ' : ''}
     ${expiry ? 'expiry = ' + expiry + ',' : ''}
-    ${nameOnCard ? 'name_on_card = ' + nameOnCard + ',' : ''}
-    ${createdAt ? 'created_at = ' + createdAt + ',' : ''}
-    ${updatedAt ? 'updated_at = ' + updatedAt + ',' : ''}
-    ${cardName ? 'card_name = ' + cardName + ',' : ''}
-    ${lastPaymentAmount ? 'last_payment_amount = ' + lastPaymentAmount + ',' : ''}
+    ${nameOnCard ? 'name_on_card = ' + nameOnCard + ', ' : ''}
+    ${createdAt ? 'created_at = ' + createdAt + ', ' : ''}
+    ${updatedAt ? 'updated_at = ' + updatedAt + ', ' : ''}
+    ${cardName ? 'card_name = ' + cardName + ', ' : ''}
+    ${lastPaymentAmount ? 'last_payment_amount = ' + lastPaymentAmount + ', ' : ''}
     ${lastPaymentDate ? 'last_payment_date = ' + lastPaymentDate + ',' : ''}
-    ${isPrimary ? 'is_primary = ' + isPrimary + ',' : ''}
+    ${isPrimary ? 'is_primary = ' + isPrimary + ' ' : ''}
+    WHERE user_id = ${Number(userId)}
   `)
 }
 
