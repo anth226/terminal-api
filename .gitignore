@@ -25,5 +25,3 @@ firebase-staging.json
 .idea/vcs.xml
 .idea/workspace.xml
 .idea/misc.xml
-*.rest
-/testing_zone/
