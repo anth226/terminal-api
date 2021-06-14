@@ -4413,7 +4413,7 @@ app.get("/membership-plans", async (req, res) => {
 
 app.get("/membership-plans/:id", async (req, res) => {
   try {
-    const plan = await membershipPlans.getById(req.params.userId)
+    const plan = await membershipPlans.getById(req.params.id)
     return res.status(200).json(plan)
   } catch (error) {
     return res.send({ success: false, error: "Error : " + error });
@@ -4440,7 +4440,7 @@ app.delete("/membership-plans", async (req, res) => {
 
 app.delete("/membership-plans/:id", async (req, res) => {
   try {
-    const plan = await membershipPlans.deleteById(req.params.userId)
+    const plan = await membershipPlans.deleteById(req.params.id)
     return res.status(200).json(plan)
   } catch (error) {
     return res.send({ success: false, error: "Error : " + error });
