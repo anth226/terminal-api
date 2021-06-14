@@ -68,13 +68,15 @@ import * as membership from './controllers/membership';
 import * as signup from './controllers/signup';
 import * as isIntegration from './controllers/is-integration';
 import * as buys from './controllers/buys';
+
+
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
 const multer = require("multer");
 const AWS = require("aws-sdk");
 import { v4 as uuidv4 } from "uuid";
-import { isEmpty} from "lodash";
+import { isEmpty } from "lodash";
 import moment from "moment";
 
 import { isAuthorized } from "./middleware/authorized";
@@ -4143,9 +4145,9 @@ app.post("/migudb", async (req, res) => {
       if (body.password) {
         password = body.password;
       }
-      result = await signup.insertUserInDb(email, password); 
+      result = await signup.insertUserInDb(email, password);
     }
-    res.send(JSON.stringify({ success: true, message: "Data added/updated successfully"}));
+    res.send(JSON.stringify({ success: true, message: "Data added/updated successfully" }));
   } catch (error) {
     console.log(error);
     res.send(JSON.stringify({ success: false, message: error.detail }));
@@ -4213,7 +4215,7 @@ app.post("/is-usr-int/store", async (req, res) => {
       }
       let user_table_result = await isIntegration.insertUser(first_name, last_name, email, password, phone_number, address_1, address_2, city, state, zip, country, cc_type, cc_number, cc_expiry, payment_amount, is_user_id, subscription_id, customer_id, tier_id);
       res.send(JSON.stringify({ success: true, message: user_table_result }));
-    }else{
+    } else {
       res.send(JSON.stringify({ success: false, message: "Failed! Request is Null" }));
     }
   } catch (error) {
@@ -4227,6 +4229,8 @@ app.post("/is-usr-int/store", async (req, res) => {
  * Display billing info per user
  * Add and remove credit card info 
  */
+
+
 // app.use("/account-info/billing-info", checkAuth);
 app.get("/account-info/billing-info", async (req, res) => {
   try {
@@ -4234,27 +4238,28 @@ app.get("/account-info/billing-info", async (req, res) => {
     if (req && req.query) {
       if (req.query.user_id) {
         user_id = req.query.user_id;
-      }else{
+      } else {
         return res.send({ success: false, message: 'User id is required!' });
       }
-    }else{
+    } else {
       return res.send({ success: false, message: 'Request is empty' });
     }
     // get billing info
     const billingInfo = await billing.displayBillingInfoPerUser(user_id);
-    if(billingInfo.length > 0){
+    if (billingInfo.length > 0) {
       res.send(billingInfo);
-    }else{
-      res.send({success: false, error: "Error : No data for provided user id"});
+    } else {
+      res.send({ success: false, error: "Error : No data for provided user id" });
     }
   } catch (error) {
-    res.send({success: false, error: "Error: "+ error});
+    res.send({ success: false, error: "Error: " + error });
   }
 });
+
 // app.use("/account-info/rm-card", checkAuth);
 app.post("/account-info/rm-card", async (req, res) => {
   try {
-    let {user_id, payment_id} = req.body;
+    let { user_id, payment_id } = req.body;
     if (!user_id) {
       return res.send({ success: false, message: 'User id is required!' });
     }
@@ -4263,14 +4268,14 @@ app.post("/account-info/rm-card", async (req, res) => {
     }
     let paymentResult = await membership.getCardInfo(payment_id);
     if (paymentResult.length == 0) {
-      res.send({success: false, error: "Error: Card info is not found"});
+      res.send({ success: false, error: "Error: Card info is not found" });
     }
-    if(!paymentResult[0].is_primary){
+    if (!paymentResult[0].is_primary) {
       await membership.removeCard(payment_id);
-      res.send({success: true, error: "Card removed"});
+      res.send({ success: true, error: "Card removed" });
     }
   } catch (error) {
-    res.send({success: false, error: "Error: "+ error});
+    res.send({ success: false, error: "Error: " + error });
   }
 });
 /**
@@ -4285,25 +4290,25 @@ app.get("/account-info/membership-info", async (req, res) => {
     if (req && req.query) {
       if (req.query.user_id) {
         user_id = req.query.user_id;
-      }else{
+      } else {
         return res.send({ success: false, message: 'User id is required!' });
       }
-    }else{
+    } else {
       return res.send({ success: false, message: 'Request is empty' });
     }
     // TODO - Return Custom return for custom or enterprise customer
     // Get User membership info by user id
     const userMembershipInfo = await membership.displayMembershipInfoPerUser(user_id);
-    if(userMembershipInfo.length > 0){
+    if (userMembershipInfo.length > 0) {
       const activeTiers = await tiers.getActiveTiers();
       let userMarketingTier;
       let upgradeToTier = [];
       for (const tier of userMembershipInfo) {
         const userTierId = tier.id;
         const userTierType = tier.type;
-        if (activeTiers.find( ({ id }) => id == userTierId)) {
+        if (activeTiers.find(({ id }) => id == userTierId)) {
           // Remove tier if user already signup 
-          let index = activeTiers.indexOf(activeTiers.find( ({ id }) => id == userTierId));
+          let index = activeTiers.indexOf(activeTiers.find(({ id }) => id == userTierId));
           if (userTierType == 'm') {
             userMarketingTier = tier;
           }
@@ -4323,10 +4328,70 @@ app.get("/account-info/membership-info", async (req, res) => {
         }
       }
       res.send({ userMembershipInfo: userMembershipInfo, upgradeToTier: upgradeToTier });
-    }else{
-      res.send({success: false, error: "Error : User does not have any membership"});
+    } else {
+      res.send({ success: false, error: "Error : User does not have any membership" });
     }
   } catch (error) {
-    res.send({success: false, error: "Error : "+ error});
+    res.send({ success: false, error: "Error : " + error });
   }
 });
+
+
+// Billing Info
+import billing2 from './controllers/billing-info.js';
+
+app.post('/billing-info', async (req, res) => {
+  try {
+    const billing = await billing2.createByUserId(req.body);
+    return res.status(200).json(billing);
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "Error : " + error })
+  }
+})
+
+app.get('/billing-info/:userId', async (req, res) => {
+  try {
+    console.log({ ...req.params })
+    const { userId } = req.params
+    const billing = await billing2.getByUserId(userId)
+    return res.status(200).json(billing);
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "Error : " + error })
+  }
+})
+
+app.get('/billing-info', async (req, res) => {
+  try {
+    const billing = await billing2.getAll();
+    return res.status(200).json(billing);
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "Error : " + error })
+  }
+})
+
+app.put('/billing-info', async (req, res) => {
+  try {
+    const billing = await billing2.updateByUserId(req.body);
+    return res.status(200).json(billing);
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "Error : " + error })
+  }
+})
+
+app.delete('/billing-info', async (req, res) => {
+  try {
+    const billing = await billing2.deleteAll();
+    return res.status(200).json(billing);
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "Error : " + error })
+  }
+})
+
+app.delete('/billing-info/:userId', async (req, res) => {
+  try {
+    const billing = await billing2.deleteByUserId(req.params.userId);
+    return res.status(200).json(billing);
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "Error : " + error })
+  }
+})
