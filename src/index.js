@@ -68,6 +68,8 @@ import * as membership from './controllers/membership';
 import * as signup from './controllers/signup';
 import * as isIntegration from './controllers/is-integration';
 import * as buys from './controllers/buys';
+import billing2 from './controllers/billing-info';
+import membershipPlans from './controllers/membership-plans';
 import bodyParser from "body-parser";
 import winston, { log } from "winston";
 import Stripe from "stripe";
@@ -4331,11 +4333,10 @@ app.get("/account-info/membership-info", async (req, res) => {
   }
 });
 
+//  #######
 
-import billing2 from './controllers/billing-info';
-import membershipPlans from './controllers/membership-plans';
 
-app.post("/billing-info", async (req, res) => {
+app.post("/billing-info", checkAuth, async (req, res) => {
   try {
     const billing = billing2.createByUserId(req.body)
     return res.status(200).json(billing)
@@ -4344,7 +4345,7 @@ app.post("/billing-info", async (req, res) => {
   }
 });
 
-app.get("/billing-info", async (req, res) => {
+app.get("/billing-info", checkAuth, async (req, res) => {
   try {
     const billing = await billing2.getAll();
     console.log(billing);
@@ -4354,7 +4355,7 @@ app.get("/billing-info", async (req, res) => {
   }
 });
 
-app.get("/billing-info/:userId", async (req, res) => {
+app.get("/billing-info/:userId", checkAuth, async (req, res) => {
   try {
     const billing = await billing2.getByUserId(req.params.userId)
     return res.status(200).json(billing)
@@ -4363,7 +4364,7 @@ app.get("/billing-info/:userId", async (req, res) => {
   }
 });
 
-app.put("/billing-info", async (req, res) => {
+app.put("/billing-info", checkAuth, async (req, res) => {
   try {
     const billing = await billing2.updateByUserId(req.body)
     return res.status(200).json(billing)
@@ -4372,7 +4373,7 @@ app.put("/billing-info", async (req, res) => {
   }
 });
 
-app.delete("/billing-info", async (req, res) => {
+app.delete("/billing-info", checkAuth, async (req, res) => {
   try {
     const billing = await billing2.deleteAll()
     return res.status(200).json(billing)
@@ -4381,7 +4382,7 @@ app.delete("/billing-info", async (req, res) => {
   }
 });
 
-app.delete("/billing-info/:userId", async (req, res) => {
+app.delete("/billing-info/:userId", checkAuth, async (req, res) => {
   try {
     const billing = await billing2.deleteByUserId(req.params.userId)
     return res.status(200).json(billing)
@@ -4393,7 +4394,7 @@ app.delete("/billing-info/:userId", async (req, res) => {
 
 // #####
 
-app.post("/membership-plans", async (req, res) => {
+app.post("/membership-plans", checkAuth, async (req, res) => {
   try {
     const plan = membershipPlans.createByUserId(req.body)
     return res.status(200).json(plan)
@@ -4402,7 +4403,7 @@ app.post("/membership-plans", async (req, res) => {
   }
 });
 
-app.get("/membership-plans", async (req, res) => {
+app.get("/membership-plans", checkAuth, async (req, res) => {
   try {
     const plan = await membershipPlans.getAll();
     return res.status(200).json(plan);
@@ -4411,7 +4412,7 @@ app.get("/membership-plans", async (req, res) => {
   }
 });
 
-app.get("/membership-plans/:id", async (req, res) => {
+app.get("/membership-plans/:id", checkAuth, async (req, res) => {
   try {
     const plan = await membershipPlans.getById(req.params.id)
     return res.status(200).json(plan)
@@ -4420,7 +4421,7 @@ app.get("/membership-plans/:id", async (req, res) => {
   }
 });
 
-app.put("/membership-plans", async (req, res) => {
+app.put("/membership-plans", checkAuth, async (req, res) => {
   try {
     const plan = await membershipPlans.updateById(req.body)
     return res.status(200).json(plan)
@@ -4429,7 +4430,7 @@ app.put("/membership-plans", async (req, res) => {
   }
 });
 
-app.delete("/membership-plans", async (req, res) => {
+app.delete("/membership-plans", checkAuth, async (req, res) => {
   try {
     const plan = await membershipPlans.deleteAll()
     return res.status(200).json(plan)
@@ -4438,7 +4439,7 @@ app.delete("/membership-plans", async (req, res) => {
   }
 });
 
-app.delete("/membership-plans/:id", async (req, res) => {
+app.delete("/membership-plans/:id", checkAuth, async (req, res) => {
   try {
     const plan = await membershipPlans.deleteById(req.params.id)
     return res.status(200).json(plan)
